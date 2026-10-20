@@ -2,6 +2,14 @@
 
 export type EtatRobot = 'disponible' | 'en_mission' | 'hors_ligne' | 'arret_urgence' | 'en_charge';
 
+/** Les bras tenus en position (rigide), ou libres sous compensation de la gravité (mou, on les guide à la main). */
+export type ModeBras = 'rigide' | 'mou';
+
+export type Cote = 'gauche' | 'droite';
+
+/** Le geste que le robot est en train de faire sur ordre de la barre, ou null. */
+export type GesteRobot = 'home' | 'pince_gauche' | 'pince_droite' | null;
+
 export interface Robot {
   id: string;
   nom: string;
@@ -12,6 +20,10 @@ export interface Robot {
   posteCourant: string | null;
   missionCourante: string | null;
   derniereConnexion: string;
+  modeBras: ModeBras;
+  /** L'ouverture de chaque pince, de 0 (fermée) à 1 (grande ouverte), mesurée. */
+  pinces: Record<Cote, number>;
+  geste: GesteRobot;
 }
 
 export type TypePrimitive = 'prise_objet' | 'prise_boite' | 'depose' | 'deplacer' | 'rentrer';

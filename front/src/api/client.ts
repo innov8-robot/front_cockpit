@@ -1,4 +1,4 @@
-import type { EtatCorps, Mission, NouvellePrimitive, Primitive, Robot, Run } from './types';
+import type { Cote, EtatCorps, Mission, ModeBras, NouvellePrimitive, Primitive, Robot, Run } from './types';
 import { apiSimulee } from './mock';
 
 /** Le contrat entre le front et le back. Les écrans ne parlent qu'à lui. */
@@ -6,6 +6,13 @@ export interface Api {
   robots(): Promise<Robot[]>;
   robot(id: string): Promise<Robot | undefined>;
   arretUrgence(robotId: string): Promise<Robot>;
+  /** Acquitte l'arrêt d'urgence ; au réel, c'est la reconnexion des bras. */
+  rearmer(robotId: string): Promise<Robot>;
+  /** Les commandes de la barre du robot : refusées (rejet avec la raison) hors ligne ou en arrêt d'urgence. */
+  modeBras(robotId: string, mode: ModeBras): Promise<Robot>;
+  pince(robotId: string, cote: Cote, ordre: 'ouvrir' | 'fermer'): Promise<Robot>;
+  /** Ramène les bras dans la posture de travail. */
+  home(robotId: string): Promise<Robot>;
   /** L'état de chaque moteur du corps et l'attitude du torse, avec le verdict de la Santé. */
   etatCorps(robotId: string): Promise<EtatCorps>;
 
