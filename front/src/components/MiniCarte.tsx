@@ -17,8 +17,9 @@ interface Carte {
 const SEUIL_OCCUPE = 127;
 /** Le carré montre 2,5 m de côté, quelle que soit sa taille : le zoom est serré sur le robot. */
 const METRES_PAR_COTE = 2.5;
-/** La place du robot dans le carré, en fraction du côté (depuis le coin haut gauche). */
-const DECALAGE = { x: 0.58, y: 0.42 };
+/** La place du robot dans le carré, en fraction du côté (depuis le coin haut gauche) : le centre de la partie
+ * nette de la carte, un quart de disque de rayon ~0,85 côté pris dans le coin haut droit (4r/3π ≈ 0,36 côté). */
+const DECALAGE = { x: 0.64, y: 0.36 };
 /** Sous cette distance (m) d'un nom déjà écrit, un poste n'a que son point. */
 const ECART_NOMS_M = 0.9;
 
