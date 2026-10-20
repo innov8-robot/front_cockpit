@@ -292,6 +292,22 @@ export const apiSimulee: Api = {
     sauver();
     return plusTard(run);
   },
+  arreterMission: (robotId) => {
+    const r = magasin.robots.find((x) => x.id === robotId);
+    if (!r) return Promise.reject(new Error('Robot inconnu'));
+    const m = magasin.missions.find((x) => x.id === r.missionCourante);
+    const run = magasin.runs.find((u) => u.robotId === robotId && u.missionId === r.missionCourante && u.dureeS === 0);
+    if (run) {
+      run.dureeS = Math.round((Date.now() - new Date(run.debut).getTime()) / 1000);
+      run.issue = 'interrompu';
+      run.cause = 'Arrêtée par l’opérateur';
+    }
+    if (m) m.etat = 'prete';
+    if (r.etat === 'en_mission') r.etat = 'disponible';
+    r.missionCourante = null;
+    sauver();
+    return plusTard(r);
+  },
 
   runs: (filtre) =>
     plusTard(

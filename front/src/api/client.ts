@@ -28,6 +28,8 @@ export interface Api {
   enregistrerMission(m: Mission): Promise<Mission>;
   supprimerMission(id: string): Promise<void>;
   lancerMission(missionId: string, robotId: string): Promise<Run>;
+  /** Arrête la mission en cours du robot : il finit son geste et s'immobilise ; le run est noté interrompu. */
+  arreterMission(robotId: string): Promise<Robot>;
 
   runs(filtre?: { robotId?: string; missionId?: string }): Promise<Run[]>;
 }

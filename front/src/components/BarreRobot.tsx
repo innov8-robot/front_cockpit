@@ -32,7 +32,7 @@ const TON_ROBOT: Record<EtatRobot, string> = {
   disponible: 'ok', en_mission: 'ok', en_charge: 'info', hors_ligne: 'danger', arret_urgence: 'danger',
 };
 
-export type FormeBarre = 'bandeau' | 'ile';
+export type FormeBarre = 'bandeau' | 'ile' | 'haut';
 
 interface Groupe { libelle: string; Icone: typeof IconeMains; temperature: number | null; etat: EtatMoteur; chaud: Moteur | null }
 
@@ -142,7 +142,7 @@ export function BarreRobot({ robotId, forme }: { robotId: string; forme: FormeBa
         <span className={`barre-valeur ton-${tonBatterie}`}>{robot.batterie}%</span>
       </section>
 
-      <Link to={`/flotte/${robot.id}/corps`} className="barre-groupe barre-temperatures" aria-label="Températures : le détail du corps">
+      <Link to="/robot/corps" className="barre-groupe barre-temperatures" aria-label="Températures : le détail du corps">
         {groupes(corps).map(({ libelle, Icone, temperature, etat: e, chaud }) => (
           <span key={libelle} className="barre-temperature"
             title={chaud ? `${libelle} : le plus chaud est « ${chaud.nom} », ${chaud.temperature}°${chaud.rouge != null ? ` (rouge à ${chaud.rouge}°)` : ''}` : `${libelle} : —`}>
