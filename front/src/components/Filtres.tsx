@@ -34,22 +34,45 @@ export function FiltresRail(p: ProprietesFiltres) {
   );
 }
 
+/** Une ligne d'interrupteur : l'icône du calque, son nom et son détail, l'interrupteur. */
+function LigneInterrupteur({ c, actif, basculer }: { c: DescriptionCalque; actif: boolean; basculer(cle: Calque): void }) {
+  const Icone = ICONES[c.cle];
+  return (
+    <button role="switch" aria-checked={actif} className={actif ? 'actif' : ''} onClick={() => basculer(c.cle)}>
+      <Icone />
+      <span className="filtres-textes"><span>{c.libelle}</span><small>{c.detail}</small></span>
+      <span className="filtres-interrupteur" aria-hidden="true"><i /></span>
+    </button>
+  );
+}
+
+/**
+ * Les filtres retenus pour l'accueil : les interrupteurs (B) dans la coque repliable (D). Repliés, un bouton et le
+ * compte des calques montrés ; dépliés, chaque calque avec son détail et son interrupteur.
+ */
+export function FiltresCalques(p: ProprietesFiltres & { className?: string }) {
+  const [ouvert, setOuvert] = useState(false);
+  return (
+    <nav className={`filtres filtres-dock filtres-repliable ${ouvert ? 'ouvert' : ''} ${p.className ?? ''}`} aria-label="Calques">
+      <button className="filtres-dock-tete" aria-expanded={ouvert} onClick={() => setOuvert(!ouvert)}>
+        <IconeGrille /><span>CALQUES</span><span className="filtres-compte">{compte(p)}</span>
+        <span className="filtres-chevron" aria-hidden="true">▾</span>
+      </button>
+      <div className="filtres-depli" inert={!ouvert}>
+        <div className="filtres-interrupteurs filtres-depli-liste">
+          {p.calques.map((c) => <LigneInterrupteur key={c.cle} c={c} actif={p.actifs[c.cle]} basculer={p.basculer} />)}
+        </div>
+      </div>
+    </nav>
+  );
+}
+
 /** B · Les interrupteurs : chaque calque, son détail et un interrupteur ; le compte des calques montrés en tête. */
 export function FiltresInterrupteurs(p: ProprietesFiltres) {
   return (
     <nav className="filtres filtres-interrupteurs" aria-label="Calques">
       <p className="filtres-tete"><span>CALQUES</span><span>{compte(p)}</span></p>
-      {p.calques.map((c) => {
-        const Icone = ICONES[c.cle];
-        return (
-          <button key={c.cle} role="switch" aria-checked={p.actifs[c.cle]} className={p.actifs[c.cle] ? 'actif' : ''}
-            onClick={() => p.basculer(c.cle)}>
-            <Icone />
-            <span className="filtres-textes"><span>{c.libelle}</span><small>{c.detail}</small></span>
-            <span className="filtres-interrupteur" aria-hidden="true"><i /></span>
-          </button>
-        );
-      })}
+      {p.calques.map((c) => <LigneInterrupteur key={c.cle} c={c} actif={p.actifs[c.cle]} basculer={p.basculer} />)}
     </nav>
   );
 }

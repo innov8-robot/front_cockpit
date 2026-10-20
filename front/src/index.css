@@ -289,23 +289,8 @@ input[type='radio'] { width: auto; min-height: 0; }
   text-transform: uppercase;
 }
 
-/* Les calques de la vue 3D : une colonne compacte à gauche, entre le titre et la carte. */
-.hud-calques {
-  left: 24px; top: calc(176px + env(safe-area-inset-top));
-  display: flex; flex-direction: column; gap: 2px; padding: 5px; border: 1px solid rgb(255 255 255 / 0.09); border-radius: 12px;
-  background: rgb(10 12 15 / 0.55); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-}
-.hud-calque {
-  display: flex; align-items: center; min-width: 0; padding: 6px 12px 6px 10px;
-  border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--hud-2); font: inherit; cursor: pointer;
-}
-.hud-calque:hover { color: var(--hud); }
-.hud-calque.actif { color: var(--hud); border-color: rgb(255 255 255 / 0.14); background: rgb(255 255 255 / 0.04); }
-.hud-calque.actif .hud-calque-nom::before {
-  content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--hud-accent);
-  margin-right: 7px; vertical-align: middle; box-shadow: 0 0 8px var(--hud-accent);
-}
-.hud-calque-nom { font-size: 0.78rem; font-weight: 600; white-space: nowrap; }
+/* Les filtres des calques de la vue 3D (FiltresCalques) : à gauche, entre le titre et la carte. */
+.hud-calques { left: 24px; top: calc(146px + env(safe-area-inset-top)); }
 
 @media (max-width: 699px) {
   .hud-haut { padding: calc(14px + env(safe-area-inset-top)) 16px 0; gap: 12px; flex-wrap: wrap; }
@@ -315,7 +300,6 @@ input[type='radio'] { width: auto; min-height: 0; }
   .hud-jauges { right: 16px; top: auto; bottom: calc(110px + env(safe-area-inset-bottom)); }
   .hud-console { display: none; }
   .hud-calques { left: 12px; top: calc(186px + env(safe-area-inset-top)); }
-  .hud-calque { padding: 5px 9px 5px 8px; }
 }
 
 /* Éditeur de mission : un canevas de nœuds, toujours sombre, qui prend toute la place. */
@@ -1016,6 +1000,18 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .filtres-dock-liste button.actif { color: var(--f-texte); }
 .filtres-coche { margin-left: auto; color: #ff2d3a; font-size: 9px; }
 .filtres-dock-liste button:not(.actif) .filtres-coche { color: #5b636e; }
+
+/* B repliable : la liste des interrupteurs se déplie en hauteur sous le bouton. */
+.filtres-repliable .filtres-dock-tete { width: 100%; }
+.filtres-repliable .filtres-chevron { margin-left: auto; }
+.filtres-depli { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.28s ease; }
+.filtres-repliable.ouvert .filtres-depli { grid-template-rows: 1fr; }
+.filtres-depli-liste {
+  min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 2px; width: 210px;
+  border-top: 1px solid transparent; transition: border-color 0.28s, padding 0.28s;
+}
+.filtres-repliable.ouvert .filtres-depli-liste { margin-top: 3px; padding-top: 4px; border-top-color: var(--f-bord); }
+@media (prefers-reduced-motion: reduce) { .filtres-depli, .filtres-depli-liste { transition: none; } }
 
 /* La page d'essai des filtres. */
 .essai-calques { overflow-y: auto; }

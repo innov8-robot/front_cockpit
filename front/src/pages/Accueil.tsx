@@ -5,6 +5,7 @@ import { ETATS_ROBOT } from '../api/libelles';
 import { reinitialiserSimulation } from '../api/mock';
 import { BarreRobot } from '../components/BarreRobot';
 import { CALQUES } from '../components/calques';
+import { FiltresCalques } from '../components/Filtres';
 import { Demarrage } from '../components/Demarrage';
 import { IntroLogo } from '../components/IntroLogo';
 import { MiniCarte } from '../components/MiniCarte';
@@ -181,14 +182,8 @@ export function Accueil() {
         </div>
       )}
 
-      <nav className="hud-calques" aria-label="Calques de la vue 3D">
-        {CALQUES.map((c) => (
-          <button key={c.cle} className={`hud-calque ${calques[c.cle] ? 'actif' : ''}`} aria-pressed={calques[c.cle]}
-            onClick={() => basculer(c.cle)} title={`${c.libelle} · ${c.cle === 'objets' && nbObjets ? `${nbObjets} ${c.detail}` : c.detail}`}>
-            <span className="hud-calque-nom">{c.libelle}</span>
-          </button>
-        ))}
-      </nav>
+      <FiltresCalques className="hud-calques" actifs={calques} basculer={basculer}
+        calques={CALQUES.map((c) => (c.cle === 'objets' && nbObjets ? { ...c, detail: `${nbObjets} ${c.detail}` } : c))} />
 
       {robot && <BarreRobot robotId={robot.id} forme="ile" />}
 

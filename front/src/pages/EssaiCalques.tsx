@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { CALQUES } from '../components/calques';
-import { FiltresDock, FiltresInterrupteurs, FiltresLegende, FiltresRail, type ProprietesFiltres } from '../components/Filtres';
+import {
+  FiltresCalques, FiltresDock, FiltresInterrupteurs, FiltresLegende, FiltresRail, type ProprietesFiltres,
+} from '../components/Filtres';
 import type { Calque } from '../vue3d/scene';
 
 const PROPOSITIONS: { lettre: string; nom: string; idee: string; Filtres: (p: ProprietesFiltres) => React.JSX.Element }[] = [
+  { lettre: '✓', nom: 'B repliable · retenue', idee: 'Les interrupteurs de B dans la coque de D : c’est celle de l’accueil.', Filtres: FiltresCalques },
   { lettre: 'A', nom: 'Rail d’icônes', idee: 'Le plus discret : 40 px de large, le nom et le détail au survol.', Filtres: FiltresRail },
   { lettre: 'B', nom: 'Interrupteurs', idee: 'Tout se lit sans survoler : le nom, le détail, l’état de l’interrupteur.', Filtres: FiltresInterrupteurs },
   { lettre: 'C', nom: 'Légende', idee: 'Filtre et légende à la fois : la couleur de chaque calque dans la scène.', Filtres: FiltresLegende },
