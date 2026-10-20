@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Route, Routes, matchPath, useLocation, useNavigate } from 'react-router-dom';
+import { CorpsRobot } from '../pages/CorpsRobot';
 import { Flotte } from '../pages/Flotte';
 import { MissionEditeur } from '../pages/MissionEditeur';
 import { Missions } from '../pages/Missions';
@@ -9,7 +10,7 @@ import { RobotDetail } from '../pages/RobotDetail';
 import { Icone } from './ui';
 
 /** Les écrans qui prennent toute la scène ; les autres s'ouvrent en panneau sur le côté. */
-const GRANDS = ['/missions/:id', '/primitives/nouvelle'];
+const GRANDS = ['/missions/:id', '/primitives/nouvelle', '/flotte/:id/corps'];
 
 /** Les écrans de l'appli, ouverts par-dessus la vue 3D. L'adresse dit lequel ; « / » n'en ouvre aucun. */
 export function Overlay() {
@@ -40,6 +41,7 @@ export function Overlay() {
           <Routes>
             <Route path="flotte" element={<Flotte />} />
             <Route path="flotte/:id" element={<RobotDetail />} />
+            <Route path="flotte/:id/corps" element={<CorpsRobot />} />
             <Route path="missions" element={<Missions />} />
             <Route path="missions/:id" element={<MissionEditeur />} />
             <Route path="primitives" element={<Primitives />} />

@@ -1,4 +1,4 @@
-import type { Mission, NouvellePrimitive, Primitive, Robot, Run } from './types';
+import type { EtatCorps, Mission, NouvellePrimitive, Primitive, Robot, Run } from './types';
 import { apiSimulee } from './mock';
 
 /** Le contrat entre le front et le back. Les écrans ne parlent qu'à lui. */
@@ -6,6 +6,8 @@ export interface Api {
   robots(): Promise<Robot[]>;
   robot(id: string): Promise<Robot | undefined>;
   arretUrgence(robotId: string): Promise<Robot>;
+  /** L'état de chaque moteur du corps et l'attitude du torse, avec le verdict de la Santé. */
+  etatCorps(robotId: string): Promise<EtatCorps>;
 
   primitives(): Promise<Primitive[]>;
   primitive(id: string): Promise<Primitive | undefined>;

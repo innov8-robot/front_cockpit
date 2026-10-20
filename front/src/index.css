@@ -725,3 +725,58 @@ input[type='radio'] { width: auto; min-height: 0; }
 .hud-pret .hud-carte { transition-delay: 0s !important; }
 .hud-carte-zone { border: none; background: none; padding: 0; }
 .hud-carte-zone:focus-visible { outline: 2px solid #ff2d3a; outline-offset: -30vmin; }
+
+/* L'image de la caméra, sous l'habillage : elle apparaît en fondu une fois la plongée finie. */
+.vue-camera-image {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1;
+  /* Assombrie un peu : l'habillage cyan doit rester lisible sur une table blanche. */
+  filter: brightness(0.8) saturate(0.85) contrast(1.05); animation: vue-camera-entree 0.5s ease 0.15s both;
+}
+.vue-camera-source {
+  position: absolute; right: 48px; bottom: calc(46px + env(safe-area-inset-bottom)); margin: 0;
+  font: 10px/1 ui-monospace, monospace; letter-spacing: 0.14em; color: #8fe3ff; opacity: 0.75;
+}
+
+/* La planche des moteurs (CorpsRobot.tsx), reprise du cockpit réel : figure au centre, rangées à la hauteur
+   de leur point, un trait de chaque rangée à son point. */
+.page-corps { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.corps-barre { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding-right: 48px; margin-bottom: 10px; }
+.corps-barre .retour { margin: 0; }
+.corps-barre h1 { font-size: 1.05rem; letter-spacing: 0.14em; }
+.corps-barre .espace { flex: 1; }
+.corps-planche {
+  --c-ok: #6bd88a; --c-alerte: #ffb02e; --c-danger: #ff5a64; --c-muet: #6b7480; --c-info: #8fb4ff;
+  position: relative; flex: 1; min-height: 560px; font: 12px/1 ui-monospace, 'JetBrains Mono', monospace; color: #d6dde8;
+}
+.corps-figure { position: absolute; top: 0; opacity: 0.9; filter: brightness(1.15); pointer-events: none; }
+.corps-traits { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.corps-traits line, .corps-traits polyline { stroke: rgb(205 214 228 / 0.35); stroke-width: 1; fill: none; }
+.corps-traits circle { fill: var(--c-muet); stroke: rgb(0 0 0 / 0.5); stroke-width: 1; }
+.corps-traits circle.ton-ok { fill: var(--c-ok); filter: drop-shadow(0 0 4px rgb(107 216 138 / 0.7)); }
+.corps-traits circle.ton-alerte { fill: var(--c-alerte); filter: drop-shadow(0 0 4px rgb(255 176 46 / 0.8)); }
+.corps-traits circle.ton-danger { fill: var(--c-danger); filter: drop-shadow(0 0 5px rgb(255 90 100 / 0.9)); animation: corps-alarme 0.8s steps(2) infinite; }
+@keyframes corps-alarme { 50% { opacity: 0.35; } }
+.corps-tableau { position: absolute; top: 0; bottom: 0; width: 440px; }
+.corps-tableau h2, .corps-liste h2 { margin: 0 0 8px; font-size: 12px; letter-spacing: 0.12em; color: #e9eef7; font-weight: 600; }
+.corps-titre-torse { position: absolute; left: 0; }
+.corps-entete, .corps-rangee { display: grid; grid-template-columns: 136px 72px 140px 84px; align-items: center; }
+.corps-entete { color: #8a93a3; font-size: 10.5px; letter-spacing: 0.06em; padding: 0 6px 6px; border-bottom: 1px solid rgb(255 255 255 / 0.1); }
+.corps-rangee { position: absolute; left: 0; right: 0; height: 22px; padding: 0 6px; border-left: 1px solid rgb(255 255 255 / 0.06); }
+.corps-rangee:nth-of-type(even) { background: rgb(255 255 255 / 0.035); }
+.corps-rangee > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.corps-imu { grid-template-columns: 136px auto; right: auto; }
+.corps-imu > span { overflow: visible; }
+.corps-rouge { color: inherit; opacity: 0.75; }
+.ton-ok { color: var(--c-ok); } .ton-alerte { color: var(--c-alerte); } .ton-danger { color: var(--c-danger); }
+.ton-muet { color: var(--c-muet); } .ton-info { color: var(--c-info); }
+.corps-etat.ton-danger { font-weight: 700; }
+.corps-replie { display: flex; flex-direction: column; gap: 18px; }
+.corps-figure-repliee { position: relative; width: min(360px, 80%); margin: 0 auto; aspect-ratio: 983 / 1100; }
+.corps-figure-repliee img { width: 100%; height: 100%; opacity: 0.9; filter: brightness(1.15); }
+.corps-point { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: currentColor; box-shadow: 0 0 6px currentColor; }
+.corps-liste .corps-rangee { position: static; }
+.corps-liste .corps-entete, .corps-liste .corps-rangee { grid-template-columns: minmax(110px, 1.4fr) 0.7fr 1.3fr 0.8fr; }
+.lien-corps { width: 100%; justify-content: flex-start; margin-bottom: 14px; }
+a.hud-jauges { color: inherit; cursor: pointer; }
+a.hud-jauges:hover .hud-corps { color: #ff5a64; }
+.hud-corps { color: #8a93a3; }

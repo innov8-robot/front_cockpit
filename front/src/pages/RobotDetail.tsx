@@ -50,6 +50,10 @@ export function RobotDetail() {
       {robot.erreur && <Erreur message={robot.erreur} />}
       {message && <div className={`alerte alerte-${message.ton}`}>{message.texte}</div>}
 
+      <Link to={`/flotte/${r.id}/corps`} className="bouton lien-corps">
+        <Icone nom="robot" taille={16} />État du corps · moteurs, températures, couples
+      </Link>
+
       <section className="carte">
         <dl className="faits faits-larges">
           <div><dt>État</dt><dd><Badge ton={etat.ton}>{etat.libelle}</Badge></dd></div>

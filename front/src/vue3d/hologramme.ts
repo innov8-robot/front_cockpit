@@ -101,6 +101,14 @@ export function creerHologramme(rendu: THREE.WebGLRenderer, scene: THREE.Scene, 
   groupe.add(affiche);
 
   let image = 0;
+  // Une vraie image de la caméra de tête, si un run en a laissé une (scripts/copier-camera.mjs) : l'écran la
+  // montre à la place de la scène filmée, qu'il cesse alors de rendre.
+  let photo = false;
+  new THREE.TextureLoader().load('camera/apercu.jpg', (texture) => {
+    texture.colorSpace = THREE.SRGBColorSpace;
+    materiau.uniforms.uImage.value = texture;
+    photo = true;
+  }, undefined, () => undefined);
   let survol = 0;
   let cibleSurvol = 0;
   return {
@@ -121,7 +129,7 @@ export function creerHologramme(rendu: THREE.WebGLRenderer, scene: THREE.Scene, 
       survol += (cibleSurvol - survol) * 0.18;
       materiau.uniforms.uSurvol.value = survol;
       traits.opacity = 0.55 + 0.45 * survol * (0.6 + 0.4 * Math.sin(t * 7));
-      if (!groupe.visible || image++ % UNE_SUR) return;
+      if (photo || !groupe.visible || image++ % UNE_SUR) return;
       // L'hologramme ne se filme pas lui-même.
       const visible = affiche.visible;
       affiche.visible = false;

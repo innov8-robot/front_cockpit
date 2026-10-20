@@ -87,3 +87,21 @@ export interface NouvellePrimitive {
   vitesse: number;
   robotId: string;
 }
+
+/** Le verdict d'un moteur, rendu par le back (la Santé) : le front le peint, il ne le calcule pas. */
+export type EtatMoteur = 'ok' | 'chaud' | 'trop_chaud' | 'defaut' | 'inconnu';
+
+/** Un moteur du corps ; `nom` est celui de la Santé du robot (« D épaule tangage », « pince gauche »…). */
+export interface Moteur {
+  nom: string;
+  etat: EtatMoteur;
+  temperature: number | null;
+  rouge: number | null;
+  couple: number | null;
+}
+
+export interface EtatCorps {
+  moteurs: Moteur[];
+  imu: { roulis: number; tangage: number; lacet: number; temperature: number } | null;
+  date: string;
+}

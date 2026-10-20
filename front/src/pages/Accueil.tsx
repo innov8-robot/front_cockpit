@@ -139,7 +139,7 @@ export function Accueil() {
       </section>
 
       {robot && (
-        <aside className="hud-jauges" aria-label="Télémétrie">
+        <NavLink to={`/flotte/${robot.id}/corps`} className="hud-jauges" aria-label="État du corps">
           <Jauge libelle="BAT" valeur={robot.batterie} />
           <Jauge libelle="SIG" valeur={robot.etat === 'hors_ligne' ? 0 : 86} />
           <div className="hud-console nombre">
@@ -147,8 +147,10 @@ export function Accueil() {
             <span className="hud-vert">[......OK]</span>
             <span>[RGBD.....]</span>
             <span className="hud-vert">[......OK]</span>
+            <span className="hud-corps">[CORPS....]</span>
+            <span className="hud-corps">[.......▸]</span>
           </div>
-        </aside>
+        </NavLink>
       )}
 
 
@@ -157,6 +159,7 @@ export function Accueil() {
 
       {(plein === 'camera') && (
         <div className="vue-camera" aria-label="Vue de la caméra de tête">
+          <ApercuCamera />
           <div className="vue-camera-coins" aria-hidden="true" />
           <p className="vue-camera-titre">CAMÉRA TÊTE · REALSENSE D435i · 87° × 58° · 30 i/s</p>
           <p className="vue-camera-rec"><span /> EN DIRECT</p>
@@ -192,5 +195,21 @@ function Jauge({ libelle, valeur }: { libelle: string; valeur: number }) {
       <div className="hud-jauge-barre"><div style={{ height: `${valeur}%` }} /></div>
       <span className="nombre">{libelle}</span>
     </div>
+  );
+}
+
+/** La dernière image réelle de la caméra de tête (scripts/copier-camera.mjs), tant que le back ne sert pas le flux. */
+function ApercuCamera() {
+  const [run, setRun] = useState<string | null>(null);
+  const [vue, setVue] = useState(true);
+  useEffect(() => {
+    fetch('camera/apercu.json').then((r) => r.json()).then((m: { run: string }) => setRun(m.run)).catch(() => setVue(false));
+  }, []);
+  if (!vue || !run) return null;
+  return (
+    <>
+      <img className="vue-camera-image" src="camera/apercu.jpg" alt="Dernière image de la caméra de tête" onError={() => setVue(false)} />
+      <p className="vue-camera-source">IMAGE D'ARCHIVE · {run}</p>
+    </>
   );
 }

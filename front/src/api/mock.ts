@@ -1,5 +1,5 @@
 import type { Api } from './client';
-import type { Mission, Primitive, Robot, Run } from './types';
+import type { EtatCorps, Mission, Primitive, Robot, Run } from './types';
 
 const CLE = 'mpc.front.simulation.v2';
 const LATENCE_MS = 120;
@@ -139,9 +139,41 @@ export function reinitialiserSimulation(): void {
   sauver();
 }
 
+/** Les seuils de la Santé, copiés du dépôt (scripts/copier-corps.mjs) : le back simulé juge avec eux. */
+let seuilsCorps: Promise<Record<string, { jaune: number; rouge: number }>> | null = null;
+const lireSeuils = () => (seuilsCorps ??= fetch('robot/corps.json').then((r) => r.json()).then((c) => c.seuils));
+
+/** Température de repos et couple moyen simulés par moteur, de l'ordre de ceux d'un G1-D au travail. */
+const REPOS: Record<string, [number, number]> = {
+  'D épaule tangage': [58, -3.4], 'D épaule roulis': [54, -1.1], 'D épaule lacet': [49, -0.6], 'D coude': [49, -3.2],
+  'D poignet roulis': [42, -0.1], 'D poignet tangage': [41, -1.1], 'D poignet lacet': [40, -0.1], 'pince droite': [40, -0.1],
+  'G épaule tangage': [57, 2.5], 'G épaule roulis': [50, 0.7], 'G épaule lacet': [44, 0.8], 'G coude': [48, -2.3],
+  'G poignet roulis': [42, -0.1], 'G poignet tangage': [41, -1.2], 'G poignet lacet': [39, -0.1], 'pince gauche': [40, 0],
+  'torse lacet': [29, -0.5],
+};
+
+async function etatCorpsSimule(robotId: string): Promise<EtatCorps> {
+  const seuils = await lireSeuils();
+  const r = magasin.robots.find((x) => x.id === robotId);
+  const vivant = r && r.etat !== 'hors_ligne';
+  const t = Date.now() / 1000;
+  const moteurs = Object.entries(REPOS).map(([nom, [temp, couple]], i) => {
+    const s = seuils[nom];
+    if (!vivant) return { nom, etat: 'inconnu' as const, temperature: null, rouge: s?.rouge ?? null, couple: null };
+    // Un bras en mission chauffe un peu ; le couple respire avec le geste.
+    const chaleur = r.etat === 'en_mission' ? 4 * (0.5 + 0.5 * Math.sin(t / 40 + i)) : 0;
+    const temperature = Math.round(temp + chaleur + Math.sin(t / 7 + i) * 0.6);
+    const etat = !s ? 'inconnu' as const : temperature >= s.rouge ? 'trop_chaud' as const : temperature >= s.jaune ? 'chaud' as const : 'ok' as const;
+    return { nom, etat, temperature, rouge: s?.rouge ?? null, couple: Math.round((couple + Math.sin(t * 1.3 + i) * 0.4) * 10) / 10 };
+  });
+  const imu = vivant ? { roulis: 0, tangage: 0, lacet: 0, temperature: 0 } : null;
+  return plusTard({ moteurs, imu, date: new Date().toISOString() });
+}
+
 export const apiSimulee: Api = {
   robots: () => plusTard(magasin.robots),
   robot: (id) => plusTard(magasin.robots.find((r) => r.id === id)),
+  etatCorps: (robotId) => etatCorpsSimule(robotId),
   arretUrgence: (robotId) => {
     const r = magasin.robots.find((x) => x.id === robotId);
     if (!r) return Promise.reject(new Error('Robot inconnu'));
