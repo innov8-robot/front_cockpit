@@ -10,8 +10,8 @@ import { creerEnvironnement, type Segmentation } from './environnement';
 import { creerHologramme } from './hologramme';
 import { CAMERA_TETE, creerNuages, type Nuages } from './nuages';
 import { allumerRobot, animerRobot, chargerRobot } from './robot';
-import { creerSol } from './sol';
-import { mettreAJourSonar } from './sonar';
+import { creerBandeSol, creerSol } from './sol';
+import { fixerObstacles, mettreAJourSonar } from './sonar';
 
 /** Le fond de la scène, le gris très sombre qu'on voyait déjà (la mini-carte s'y accorde). */
 const FOND = '#1a1f23';
@@ -85,6 +85,8 @@ export function monterScene(hote: HTMLElement): Scene3D {
 
   const sol = creerSol();
   scene.add(sol);
+  const bandeSol = creerBandeSol();
+  scene.add(bandeSol);
 
   // Le repère du robot (x devant, z en haut) tourné dans celui de three.js (y en haut).
   const monde = new THREE.Group();
@@ -140,6 +142,8 @@ export function monterScene(hote: HTMLElement): Scene3D {
     monde.add(atelier);
     nuages = creerNuages(teteLocale, env.lancer, env.objets);
     monde.add(env.masque);
+    // Les ombres du sonar : les obstacles de l'atelier, ramenés dans le monde.
+    fixerObstacles(env.obstacles.map((b) => b.clone().applyMatrix4(monde.matrixWorld)));
     peau = env.peau;
     monde.add(peau);
     segmentation = env.segmentation;
@@ -154,6 +158,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
 
   function appliquerVisibilite(): void {
     sol.visible = visibles.sol;
+    bandeSol.visible = visibles.sol;
     if (atelier) atelier.visible = visibles.atelier;
     if (peau) peau.visible = visibles.atelier;
     if (nuages) {

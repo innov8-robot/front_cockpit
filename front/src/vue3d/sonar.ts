@@ -8,6 +8,8 @@ const SILENCE_S = 0.6;
 const EVANESCENCE_M = 2.6;
 /** La couleur de l'impulsion. */
 export const BLEU_SONAR = new THREE.Color('#3d9bff');
+/** Le nombre d'obstacles dont l'impulsion tient compte pour ses ombres. */
+const MAX_OBSTACLES = 48;
 
 /**
  * Les uniformes de l'impulsion, partagés par tous les matériaux qui la montrent (nuages, sol, arêtes des meubles) :
@@ -18,23 +20,51 @@ export const SONAR = {
   uSonarRayon: { value: 0 },
   uSonarForce: { value: 0 },
   uSonarCouleur: { value: BLEU_SONAR },
+  uObstaclesMin: { value: Array.from({ length: MAX_OBSTACLES }, () => new THREE.Vector3()) },
+  uObstaclesMax: { value: Array.from({ length: MAX_OBSTACLES }, () => new THREE.Vector3()) },
+  uNbObstacles: { value: 0 },
 };
 
 /**
  * L'intensité de l'impulsion en un point du monde : un front net sur la sphère, une traîne derrière lui, et le tout
- * s'éteint avec la distance parcourue, comme l'écho d'un sonar.
+ * s'éteint avec la distance parcourue, comme l'écho d'un sonar. Un obstacle entre l'origine et le point lui fait
+ * de l'ombre : l'impulsion ne le traverse pas.
  */
 export const GLSL_SONAR = /* glsl */ `
   uniform vec3 uSonarOrigine;
   uniform float uSonarRayon;
   uniform float uSonarForce;
   uniform vec3 uSonarCouleur;
+  uniform vec3 uObstaclesMin[${MAX_OBSTACLES}];
+  uniform vec3 uObstaclesMax[${MAX_OBSTACLES}];
+  uniform int uNbObstacles;
+  // 1 si l'impulsion atteint p, 0 si un obstacle est entre l'origine et p. Le segment s'arrête 3 cm avant p :
+  // la surface sur laquelle p est posé ne s'ombre pas elle-même.
+  float eclaire(vec3 p) {
+    vec3 d = p - uSonarOrigine;
+    float l = length(d);
+    if (l < 0.05) return 1.0;
+    vec3 inv = 1.0 / (d / l + vec3(1e-6));
+    float fin = l - 0.03;
+    for (int i = 0; i < ${MAX_OBSTACLES}; i++) {
+      if (i >= uNbObstacles) break;
+      vec3 t0 = (uObstaclesMin[i] - uSonarOrigine) * inv;
+      vec3 t1 = (uObstaclesMax[i] - uSonarOrigine) * inv;
+      vec3 a = min(t0, t1);
+      vec3 b = max(t0, t1);
+      float entree = max(max(a.x, a.y), a.z);
+      float sortie = min(min(b.x, b.y), b.z);
+      if (sortie >= max(entree, 0.0) && entree < fin) return 0.0;
+    }
+    return 1.0;
+  }
   float sonar(vec3 p) {
     float x = uSonarRayon - distance(p, uSonarOrigine);
     float front = smoothstep(0.1, 0.0, abs(x));
     float traine = x > 0.0 ? exp(-x / 0.3) * 0.55 : 0.0;
     float attenue = exp(-uSonarRayon / ${EVANESCENCE_M.toFixed(2)}) * (1.0 - smoothstep(${(PORTEE * 0.55).toFixed(1)}, ${PORTEE.toFixed(1)}, uSonarRayon));
-    return (front + traine) * attenue * uSonarForce;
+    float s = (front + traine) * attenue * uSonarForce;
+    return s > 0.01 ? s * eclaire(p) : 0.0;
   }
 `;
 
@@ -44,6 +74,16 @@ export function mettreAJourSonar(t: number, origine: THREE.Vector3, force: numbe
   SONAR.uSonarRayon.value = (t % periode) * VITESSE;
   SONAR.uSonarOrigine.value.copy(origine);
   SONAR.uSonarForce.value = force;
+}
+
+/** Déclare les obstacles qui font de l'ombre à l'impulsion : leurs boîtes englobantes, dans le monde. */
+export function fixerObstacles(boites: THREE.Box3[]): void {
+  const n = Math.min(boites.length, MAX_OBSTACLES);
+  for (let i = 0; i < n; i++) {
+    SONAR.uObstaclesMin.value[i].copy(boites[i].min);
+    SONAR.uObstaclesMax.value[i].copy(boites[i].max);
+  }
+  SONAR.uNbObstacles.value = n;
 }
 
 /** L'éclat de l'anneau sous le robot à l'émission : fort au départ de l'impulsion, nul quand elle s'est éloignée. */
