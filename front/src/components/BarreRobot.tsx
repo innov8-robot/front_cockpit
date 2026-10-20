@@ -12,6 +12,8 @@ const RAFRAICHI_MS = 1000;
 const CONFIRMATION_MS = 3000;
 /** Une erreur reste affichée ce temps (ms). */
 const ERREUR_MS = 4000;
+/** La durée de l'animation de retour des bords de l'écran au réarmement (index.css, estop-retour). */
+const RETOUR_MS = 900;
 
 /** Les groupes de moteurs dont la barre montre la température, chacun au pire de ses moteurs. */
 const GROUPES: { libelle: string; Icone: typeof IconeMains; contient: (nom: string) => boolean }[] = [
@@ -44,6 +46,22 @@ function groupes(corps: EtatCorps | null): Groupe[] {
   });
 }
 
+/** Les bords de l'écran : rouges tant que l'arrêt d'urgence est engagé, puis l'animation de retour au réarmement. */
+function useBordsEstop(engage: boolean): 'engage' | 'retour' | null {
+  const [precedent, setPrecedent] = useState(engage);
+  const [retour, setRetour] = useState(false);
+  if (engage !== precedent) {
+    setPrecedent(engage);
+    setRetour(!engage);
+  }
+  useEffect(() => {
+    if (!retour) return;
+    const t = setTimeout(() => setRetour(false), RETOUR_MS);
+    return () => clearTimeout(t);
+  }, [retour]);
+  return engage ? 'engage' : retour ? 'retour' : null;
+}
+
 /**
  * La barre du robot : son état d'un coup d'œil (connexion, batterie, températures) et les ordres les plus
  * fréquents du cockpit (posture de travail, pinces, bras mou ou rigide), l'arrêt d'urgence toujours à droite.
@@ -66,6 +84,7 @@ export function BarreRobot({ robotId, forme }: { robotId: string; forme: FormeBa
     return () => clearInterval(t);
   }, [relire]);
   useEffect(() => () => clearTimeout(minuterie.current), []);
+  const bords = useBordsEstop(robot?.etat === 'arret_urgence');
 
   const dire = (e: unknown) => {
     setErreur(e instanceof Error ? e.message : String(e));
@@ -181,7 +200,9 @@ export function BarreRobot({ robotId, forme }: { robotId: string; forme: FormeBa
         </button>
       )}
       {/* Hors de la barre : son flou d'arrière-plan et sa translation confineraient le liseré à sa propre boîte. */}
-      {estop && createPortal(<div className="estop-bords" role="alert" aria-label="Arrêt d'urgence engagé" />, document.body)}
+      {bords && createPortal(bords === 'engage'
+        ? <div className="estop-bords" role="alert" aria-label="Arrêt d'urgence engagé" />
+        : <div className="estop-bords estop-retour" aria-hidden="true" />, document.body)}
     </div>
   );
 }
