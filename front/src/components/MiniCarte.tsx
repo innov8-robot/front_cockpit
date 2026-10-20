@@ -47,7 +47,9 @@ function rendreGrille(c: Carte): { murs: HTMLCanvasElement; libre: HTMLCanvasEle
 }
 
 /** La carte 2D du châssis en bas à gauche du HUD, cap en haut, centrée sur le robot. */
-export function MiniCarte({ poste }: { poste: string | null }) {
+export function MiniCarte({ poste, plein, basculer }: { poste: string | null; plein: boolean; basculer(plein: boolean): void }) {
+  const pleinRef = useRef(plein);
+  pleinRef.current = plein;
   const toile = useRef<HTMLCanvasElement>(null);
   const [carte, setCarte] = useState<Carte | null>(null);
   const [erreur, setErreur] = useState(false);
@@ -62,6 +64,7 @@ export function MiniCarte({ poste }: { poste: string | null }) {
     const grille = rendreGrille(carte);
     const robot = (poste && carte.postes[poste]) || Object.values(carte.postes)[0] || { x: 0, y: 0, yaw: 0 };
     let image = 0;
+    let k = pleinRef.current ? 1 : 0;
 
     const dessiner = (t: number) => {
       const ratio = Math.min(devicePixelRatio, 2);
@@ -71,17 +74,26 @@ export function MiniCarte({ poste }: { poste: string | null }) {
       const ctx = c.getContext('2d')!;
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
       ctx.clearRect(0, 0, L, H);
-      // Le fondu mange le haut et la droite : le robot va au centre de ce qui reste visible.
-      const cx = L * DECALAGE.x;
-      const cy = H * DECALAGE.y;
-      const PIXELS_PAR_METRE = L / METRES_PAR_COTE;
+      // k va de 0 (coin, cap en haut, centrée sur le robot) à 1 (plein écran, nord en haut, carte entière).
+      k += ((pleinRef.current ? 1 : 0) - k) * 0.12;
+      const lerp = (a: number, b: number) => a + (b - a) * k;
+      const centreCarte = { x: carte.x0 + (carte.w * carte.res) / 2, y: carte.y0 + (carte.h * carte.res) / 2 };
+      const ajuste = Math.min(L / (carte.w * carte.res), H / (carte.h * carte.res)) * 0.88;
+      const echelle = lerp(Math.min(L, H) / METRES_PAR_COTE, ajuste);
+      let cap = robot.yaw - Math.PI / 2;
+      cap -= Math.round(cap / (2 * Math.PI)) * 2 * Math.PI;
+      const rotation = lerp(cap, 0);
+      const ancre = { x: lerp(L * DECALAGE.x, L / 2), y: lerp(H * DECALAGE.y, H / 2) };
+      const vise = { x: lerp(robot.x, centreCarte.x), y: lerp(robot.y, centreCarte.y) };
 
-      // Repère monde (x, y en mètres, y vers le haut) vers l'écran, cap du robot en haut.
+      // Repère monde (x, y en mètres, y vers le haut) vers l'écran.
       ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(robot.yaw - Math.PI / 2);
-      ctx.scale(PIXELS_PAR_METRE, -PIXELS_PAR_METRE);
-      ctx.translate(-robot.x, -robot.y);
+      ctx.translate(ancre.x, ancre.y);
+      ctx.rotate(rotation);
+      ctx.scale(echelle, -echelle);
+      ctx.translate(-vise.x, -vise.y);
+      // Du monde vers les pixels CSS de la toile (le ratio d'écran retiré après coup).
+      const versEcran = new DOMMatrix().scale(1 / ratio, 1 / ratio).multiply(ctx.getTransform());
       ctx.imageSmoothingEnabled = false;
       ctx.save();
       ctx.translate(carte.x0, carte.y0 + carte.h * carte.res);
@@ -91,55 +103,62 @@ export function MiniCarte({ poste }: { poste: string | null }) {
       ctx.shadowBlur = 8;
       ctx.drawImage(grille.murs, 0, 0);
       ctx.restore();
-
-      const nommes: Pose[] = [robot];
-      for (const [nom, p] of Object.entries(carte.postes)) {
-        if (nom === poste) continue;
-        const libre = nommes.every((q) => Math.hypot(q.x - p.x, q.y - p.y) > ECART_NOMS_M);
-        if (libre) nommes.push(p);
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.scale(1 / PIXELS_PAR_METRE, -1 / PIXELS_PAR_METRE);
-        ctx.rotate(-(robot.yaw - Math.PI / 2));
-        ctx.fillStyle = '#8fa0bd';
-        ctx.beginPath();
-        ctx.arc(0, 0, 2.2, 0, Math.PI * 2);
-        ctx.fill();
-        if (libre) {
-          ctx.font = '9px ui-monospace, monospace';
-          ctx.fillStyle = 'rgb(170 182 202 / 0.9)';
-          ctx.fillText(nom.toUpperCase(), 5, 3);
-        }
-        ctx.restore();
-      }
       ctx.restore();
 
-      // Le robot : un triangle rouge cap en haut, et une onde qui part de lui.
+      // Les postes, en pixels d'écran : un point, et un nom s'il ne touche pas un autre (plus serrés en grand).
+      const ecran = (x: number, y: number) => versEcran.transformPoint(new DOMPoint(x, y));
+      const ecart = lerp(ECART_NOMS_M, 0.3);
+      const nommes: Pose[] = [robot];
+      ctx.font = `${Math.round(lerp(9, 12))}px ui-monospace, monospace`;
+      for (const [nom, p] of Object.entries(carte.postes)) {
+        if (nom === poste) continue;
+        const libre = nommes.every((q) => Math.hypot(q.x - p.x, q.y - p.y) > ecart);
+        if (libre) nommes.push(p);
+        const e = ecran(p.x, p.y);
+        ctx.fillStyle = '#8fa0bd';
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, lerp(2.2, 3.2), 0, Math.PI * 2);
+        ctx.fill();
+        if (libre) {
+          ctx.fillStyle = 'rgb(170 182 202 / 0.9)';
+          ctx.fillText(nom.toUpperCase(), e.x + 6, e.y + 3);
+        }
+      }
+
+      // Le robot : un triangle rouge dans son cap, et une onde qui part de lui.
+      const r0 = ecran(robot.x, robot.y);
+      const r1 = ecran(robot.x + Math.cos(robot.yaw), robot.y + Math.sin(robot.yaw));
+      const angle = Math.atan2(r1.y - r0.y, r1.x - r0.x) + Math.PI / 2;
+      const cx = r0.x;
+      const cy = r0.y;
       const onde = (t / 1600) % 1;
       ctx.strokeStyle = `rgb(255 45 58 / ${0.5 * (1 - onde)})`;
       ctx.lineWidth = 1.2;
       ctx.beginPath();
       ctx.arc(cx, cy, 6 + onde * 26, 0, Math.PI * 2);
       ctx.stroke();
-      const cone = ctx.createRadialGradient(cx, cy, 0, cx, cy, 60);
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(angle);
+      const cone = ctx.createRadialGradient(0, 0, 0, 0, 0, 60);
       cone.addColorStop(0, 'rgb(255 45 58 / 0.28)');
       cone.addColorStop(1, 'rgb(255 45 58 / 0)');
       ctx.fillStyle = cone;
       ctx.beginPath();
-      ctx.moveTo(cx, cy);
-      ctx.arc(cx, cy, 60, -Math.PI / 2 - 0.5, -Math.PI / 2 + 0.5);
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, 60, -Math.PI / 2 - 0.5, -Math.PI / 2 + 0.5);
       ctx.fill();
       ctx.shadowColor = '#ff2d3a';
       ctx.shadowBlur = 12;
       ctx.fillStyle = '#ff2d3a';
       ctx.beginPath();
-      ctx.moveTo(cx, cy - 9);
-      ctx.lineTo(cx + 6.5, cy + 7);
-      ctx.lineTo(cx, cy + 3.5);
-      ctx.lineTo(cx - 6.5, cy + 7);
+      ctx.moveTo(0, -9);
+      ctx.lineTo(6.5, 7);
+      ctx.lineTo(0, 3.5);
+      ctx.lineTo(-6.5, 7);
       ctx.closePath();
       ctx.fill();
-      ctx.shadowBlur = 0;
+      ctx.restore();
 
       image = requestAnimationFrame(dessiner);
     };
@@ -147,15 +166,29 @@ export function MiniCarte({ poste }: { poste: string | null }) {
     return () => cancelAnimationFrame(image);
   }, [carte, poste]);
 
+  useEffect(() => {
+    if (!plein) return;
+    const touche = (e: KeyboardEvent) => e.key === 'Escape' && basculer(false);
+    addEventListener('keydown', touche);
+    return () => removeEventListener('keydown', touche);
+  }, [plein, basculer]);
+
   if (erreur) return null;
   return (
-    <aside className="hud-carte" aria-label={carte ? `Carte ${carte.nom}` : 'Carte'}>
+    <aside className={`hud-carte ${plein ? 'plein' : ''}`} aria-label={carte ? `Carte ${carte.nom}` : 'Carte'}>
       <canvas ref={toile} />
+      <button className="hud-carte-zone" aria-label="Agrandir la carte" onClick={() => basculer(true)} />
       {carte && (
         <div className="hud-carte-legende">
           <span>CARTE · {carte.nom.toUpperCase()}</span>
           <span className="nombre">{poste ? `POSTE ${poste.toUpperCase()}` : ''}</span>
+          {!plein && <span className="hud-carte-indice">⤢ AGRANDIR</span>}
         </div>
+      )}
+      {plein && (
+        <button className="hud-plein-fermer" onClick={(e) => { e.stopPropagation(); basculer(false); }}>
+          RÉDUIRE <span aria-hidden="true">⤡</span>
+        </button>
       )}
     </aside>
   );

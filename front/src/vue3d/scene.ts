@@ -14,6 +14,9 @@ import { creerSol } from './sol';
 
 /** Le fond de la scène, le gris très sombre qu'on voyait déjà (la mini-carte s'y accorde). */
 const FOND = '#1a1f23';
+const PLAN_SOL = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+/** La durée du plongeon dans l'écran de la caméra, et celle du retour (s). */
+const PLONGEON_S = 1.15;
 
 /** Le clignotement du robot seul (s), puis le déploiement de l'onde (s) jusqu'à RAYON_FINAL (m). */
 const ALLUMAGE_S = 1.4;
@@ -39,6 +42,13 @@ export interface Scene3D {
   afficher(calque: Calque, visible: boolean): void;
   /** Lance l'apparition : le robot s'allume seul, puis le reste se déploie depuis lui en onde. */
   demarrer(): void;
+  /** Le point du sol sous un pixel de l'écran, dans le repère du robot (m, x devant, y à gauche) ; null hors du sol. */
+  projeterSol(clientX: number, clientY: number): { x: number; y: number } | null;
+  /** Ce que le pointeur survole et qu'on peut ouvrir : l'écran de la caméra, ou rien. */
+  cibleSous(clientX: number, clientY: number): 'camera' | null;
+  survolerCamera(actif: boolean): void;
+  /** Plonge dans l'écran de la caméra jusqu'à voir par l'œil du robot (true), ou en ressort (false). */
+  plongerCamera(entrer: boolean): Promise<void>;
   detruire(): void;
   pret: Promise<void>;
   /** Les objets déclarés de l'atelier : leur nom et leur couleur, une fois la scène prête. */
@@ -144,7 +154,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
     composeur.setSize(l, h);
     halo.setSize(l, h);
     camera.aspect = l / h;
-    camera.fov = l < 700 ? 52 : 38;
+    if (!dansCamera && !vol) camera.fov = l < 700 ? 52 : 38;
     camera.updateProjectionMatrix();
     for (const m of nuages?.materiaux ?? []) m.uniforms.uEchelle.value = (h * rendu.getPixelRatio()) / 900;
   }
@@ -168,8 +178,39 @@ export function monterScene(hote: HTMLElement): Scene3D {
     nuages?.colorerObjets(visibles.objets ? teinte : 0);
   }
 
+  const rayonSouris = new THREE.Raycaster();
   const horloge = new THREE.Clock();
   let image = 0;
+  /** Le vol de la vue entre son orbite et l'œil du robot ; `retour` garde la pose d'orbite pour y revenir. */
+  interface Pose { position: THREE.Vector3; quaternion: THREE.Quaternion; fov: number }
+  let vol: { de: Pose; vers: () => Pose; debut: number; entre: boolean; fin: () => void } | null = null;
+  let dansCamera = false;
+  let retour: Pose | null = null;
+  const poseActuelle = (): Pose => ({ position: camera.position.clone(), quaternion: camera.quaternion.clone(), fov: camera.fov });
+  const poseOeil = (): Pose => {
+    const oeil = hologramme!.oeil;
+    oeil.updateMatrixWorld(true);
+    return { position: oeil.getWorldPosition(new THREE.Vector3()), quaternion: oeil.getWorldQuaternion(new THREE.Quaternion()), fov: oeil.fov };
+  };
+
+  function voler(t: number): void {
+    if (!vol) return;
+    const k = Math.min(1, (t - vol.debut) / PLONGEON_S);
+    const e = k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2;
+    const vers = vol.vers();
+    camera.position.lerpVectors(vol.de.position, vers.position, e);
+    camera.quaternion.slerpQuaternions(vol.de.quaternion, vers.quaternion, e);
+    camera.fov = THREE.MathUtils.lerp(vol.de.fov, vers.fov, e);
+    camera.updateProjectionMatrix();
+    // En approchant de l'écran, on le traverse : il disparaît juste avant qu'on soit dedans.
+    if (vol.entre) hologramme?.masquer(e > 0.82);
+    if (k >= 1) {
+      const fin = vol.fin;
+      vol = null;
+      fin();
+    }
+  }
+
   function boucle(): void {
     image = requestAnimationFrame(boucle);
     const t = horloge.getElapsedTime();
@@ -178,7 +219,8 @@ export function monterScene(hote: HTMLElement): Scene3D {
     if (robot) animerRobot(robot, t);
     nuages?.mettreAJour(t);
     hologramme?.mettreAJour(t);
-    controles.update();
+    voler(t);
+    if (!vol && !dansCamera) controles.update();
     composeur.render();
     if (nuages) detections?.mettreAJour(t, camera, monde, deploye, nuages.pointsParObjet);
   }
@@ -187,6 +229,44 @@ export function monterScene(hote: HTMLElement): Scene3D {
   return {
     pret,
     objets: () => objets,
+    projeterSol(clientX, clientY) {
+      const r = rendu.domElement.getBoundingClientRect();
+      rayonSouris.setFromCamera(new THREE.Vector2(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1), camera);
+      const point = rayonSouris.ray.intersectPlane(PLAN_SOL, new THREE.Vector3());
+      if (!point) return null;
+      const local = monde.worldToLocal(point);
+      return { x: local.x, y: local.y };
+    },
+    cibleSous(clientX, clientY) {
+      if (!hologramme || !hologramme.groupe.visible || dansCamera || vol) return null;
+      const r = rendu.domElement.getBoundingClientRect();
+      rayonSouris.setFromCamera(new THREE.Vector2(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1), camera);
+      return rayonSouris.intersectObject(hologramme.panneau, false).length ? 'camera' : null;
+    },
+    survolerCamera(actif) {
+      hologramme?.survoler(actif);
+    },
+    plongerCamera(entrer) {
+      return new Promise((fini) => {
+        if (!hologramme || entrer === dansCamera || vol) return fini();
+        const t = horloge.getElapsedTime();
+        if (entrer) {
+          retour = poseActuelle();
+          controles.enabled = false;
+          dansCamera = true;
+          hologramme.survoler(false);
+          vol = { de: retour, vers: poseOeil, debut: t, entre: true, fin: fini };
+        } else {
+          hologramme.masquer(false);
+          const arrivee = retour!;
+          vol = { de: poseActuelle(), vers: () => arrivee, debut: t, entre: false, fin: () => {
+            dansCamera = false;
+            controles.enabled = true;
+            fini();
+          } };
+        }
+      });
+    },
     demarrer() {
       if (debutApparition === null) debutApparition = horloge.getElapsedTime();
     },

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { api, enSimulation } from '../api/client';
 import { ETATS_ROBOT } from '../api/libelles';
@@ -6,6 +6,7 @@ import { reinitialiserSimulation } from '../api/mock';
 import { Demarrage } from '../components/Demarrage';
 import { IntroLogo } from '../components/IntroLogo';
 import { MiniCarte } from '../components/MiniCarte';
+import { Reticule } from '../components/Reticule';
 import { Overlay } from '../components/Overlay';
 import { useCharge } from '../components/useCharge';
 import { monterScene, type Calque, type Scene3D } from '../vue3d/scene';
@@ -30,9 +31,52 @@ export function Accueil() {
   const [nbObjets, setNbObjets] = useState(0);
   const [etape, setEtape] = useState<'bios' | 'logo' | 'pret'>('bios');
   const demarre = etape === 'pret';
+  // 'sortie-camera' : le vol de retour, pendant lequel le HUD reste caché.
+  const [plein, setPlein] = useState<null | 'carte' | 'camera' | 'sortie-camera'>(null);
+  const [survolCamera, setSurvolCamera] = useState(false);
+  const appui = useRef<{ x: number; y: number } | null>(null);
+
+  function survoler(e: React.PointerEvent) {
+    const s = scene.current;
+    if (!s || plein) return;
+    const dessus = s.cibleSous(e.clientX, e.clientY) === 'camera';
+    if (dessus !== survolCamera) {
+      setSurvolCamera(dessus);
+      s.survolerCamera(dessus);
+    }
+  }
+
+  // Un clic, pas un glisser (le glisser fait tourner la vue) : on plonge dans l'écran de la caméra.
+  function relacher(e: React.PointerEvent) {
+    const a = appui.current;
+    appui.current = null;
+    if (!a || Math.hypot(e.clientX - a.x, e.clientY - a.y) > 5 || plein) return;
+    if (scene.current?.cibleSous(e.clientX, e.clientY) === 'camera') {
+      setSurvolCamera(false);
+      setPlein('camera');
+      scene.current.plongerCamera(true);
+    }
+  }
+
+  const sortirCamera = useCallback(() => {
+    setPlein('sortie-camera');
+    scene.current?.plongerCamera(false).then(() => setPlein(null));
+  }, []);
 
   useEffect(() => {
-    if (demarre) scene.current?.demarrer();
+    if (plein !== 'camera') return;
+    const touche = (e: KeyboardEvent) => e.key === 'Escape' && sortirCamera();
+    addEventListener('keydown', touche);
+    return () => removeEventListener('keydown', touche);
+  }, [plein, sortirCamera]);
+
+  // Le HUD n'attend la fin du déploiement qu'à sa première apparition (index.css, .hud-pret).
+  const [hudPret, setHudPret] = useState(false);
+  useEffect(() => {
+    if (!demarre) return;
+    scene.current?.demarrer();
+    const t = setTimeout(() => setHudPret(true), 3600);
+    return () => clearTimeout(t);
   }, [demarre]);
   const [calques, setCalques] = useState<Record<Calque, boolean>>({ robot: true, atelier: true, camera: true, lidar: true, objets: true, sol: true });
   const [maintenant, setMaintenant] = useState(heure);
@@ -62,8 +106,9 @@ export function Accueil() {
   }
 
   return (
-    <div className={`accueil ${demarre ? 'accueil-demarre' : ''}`}>
-      <div className="accueil-scene" ref={hote} />
+    <div className={`accueil ${demarre ? 'accueil-demarre' : ''} ${hudPret ? 'hud-pret' : ''} ${plein ? `plein-${plein}` : ''}`}>
+      <div className={`accueil-scene ${survolCamera ? 'survol-camera' : ''}`} ref={hote} onPointerMove={survoler}
+        onPointerDown={(e) => { appui.current = { x: e.clientX, y: e.clientY }; }} onPointerUp={relacher} />
       <div className="accueil-vignette" aria-hidden="true" />
 
       <header className="hud-haut">
@@ -107,7 +152,17 @@ export function Accueil() {
       )}
 
 
-      <MiniCarte poste={robot?.posteCourant ?? null} />
+      <MiniCarte poste={robot?.posteCourant ?? null} plein={plein === 'carte'}
+        basculer={(p) => setPlein(p ? 'carte' : null)} />
+
+      {(plein === 'camera') && (
+        <div className="vue-camera" aria-label="Vue de la caméra de tête">
+          <div className="vue-camera-coins" aria-hidden="true" />
+          <p className="vue-camera-titre">CAMÉRA TÊTE · REALSENSE D435i · 87° × 58° · 30 i/s</p>
+          <p className="vue-camera-rec"><span /> EN DIRECT</p>
+          <button className="hud-plein-fermer" onClick={sortirCamera}>QUITTER LA CAMÉRA <span aria-hidden="true">⤡</span></button>
+        </div>
+      )}
 
       <footer className="hud-bas">
         {CALQUES.map((c) => (
@@ -119,6 +174,11 @@ export function Accueil() {
         ))}
       </footer>
 
+      {demarre && (
+        <Reticule projeterSol={(x, y) => scene.current?.projeterSol(x, y) ?? null}
+          indice={(x, y) => (scene.current?.cibleSous(x, y) === 'camera' ? 'CLIC · PLEIN ÉCRAN CAMÉRA'
+            : document.elementFromPoint(x, y)?.closest('.hud-carte-zone') ? 'CLIC · CARTE EN GRAND' : null)} />
+      )}
       <Overlay />
       {etape === 'bios' && <Demarrage pret={pret} onFini={() => setEtape('logo')} />}
       {etape === 'logo' && <IntroLogo onFini={() => setEtape('pret')} />}

@@ -1,3 +1,5 @@
+/* --cote s'anime (taille et arc de fondu de la mini-carte, quand elle passe en plein écran). */
+@property --cote { syntax: '<length>'; inherits: true; initial-value: 420px; }
 :root {
   --fond: #f6f7f9;
   --surface: #ffffff;
@@ -602,6 +604,23 @@ input[type='radio'] { width: auto; min-height: 0; }
   --cote: 420px;
   left: 0; bottom: 0; width: var(--cote); height: var(--cote); pointer-events: none;
 }
+/* La zone cliquable : un cercle invisible dans le coin, là où la carte se voit. Le dessin, lui, n'est pas
+   découpé (une découpe tranchait net la fin du fondu). */
+.hud-carte-zone {
+  position: absolute; left: calc(var(--cote) * -0.75); bottom: calc(var(--cote) * -0.75);
+  width: calc(var(--cote) * 1.5); height: calc(var(--cote) * 1.5); border-radius: 50%;
+  pointer-events: auto; cursor: zoom-in;
+}
+.avec-reticule .hud-carte-zone { cursor: zoom-in; }
+.hud-carte.plein .hud-carte-zone { display: none; }
+.hud-carte:not(.plein):has(.hud-carte-zone:hover) canvas { filter: brightness(1.35) drop-shadow(0 0 6px rgb(160 190 255 / 0.5)); }
+.hud-carte canvas { transition: filter 0.25s; }
+.hud-carte-indice { color: #ff5a64; opacity: 0; transition: opacity 0.25s; }
+.hud-carte:has(.hud-carte-zone:hover) .hud-carte-indice { opacity: 1; animation: indice-pulse 1.2s ease-in-out infinite; }
+@keyframes indice-pulse { 50% { opacity: 0.45; } }
+/* En plein écran : toute la fenêtre, l'arc si grand qu'il ne fond plus rien. */
+.hud-carte.plein { --cote: 170vmax; width: 100vw; height: 100dvh; z-index: 8; pointer-events: auto; }
+.hud-carte.plein .hud-carte-legende { left: 28px; bottom: 26px; font-size: 11px; }
 /* Le fond tient plus loin dans l'arc que la carte : la scène ne transparaît jamais derrière elle.
    Les deux arcs s'achèvent sur les bords haut et droit (rayon = côté) : aucun bord du carré ne se voit. */
 .hud-carte::before {
@@ -625,3 +644,84 @@ input[type='radio'] { width: auto; min-height: 0; }
   .hud-carte { --cote: 230px; bottom: calc(70px + env(safe-area-inset-bottom)); }
   .hud-carte-legende { bottom: 10px; font-size: 7.5px; }
 }
+
+/* Le réticule CAO, à la souris seulement (Reticule.tsx) : croix de visée, deux lignes, badge de télémétrie. */
+.avec-reticule, .avec-reticule * { cursor: crosshair; }
+.avec-reticule input:not([type='range']), .avec-reticule textarea, .avec-reticule select { cursor: text; }
+/* OrbitControls pose son propre curseur en style inline sur la toile : la croix doit l'emporter. */
+.avec-reticule .accueil-scene canvas { cursor: crosshair !important; }
+.avec-reticule .react-flow__node, .avec-reticule .react-flow__handle, .avec-reticule .palette-item { cursor: grab; }
+.reticule { position: fixed; inset: 0; z-index: 30; pointer-events: none; opacity: 0; transition: opacity 0.2s; }
+.reticule-actif .reticule { opacity: 1; }
+.reticule-x, .reticule-y, .reticule-badge { position: absolute; left: 0; top: 0; will-change: transform; }
+.reticule-x { bottom: 0; width: 1px; margin-left: -0.5px;
+  background: linear-gradient(to bottom, transparent, rgb(233 238 247 / 0.42) 12%, rgb(233 238 247 / 0.42) 88%, transparent); }
+.reticule-y { right: 0; height: 1px; margin-top: -0.5px;
+  background: linear-gradient(to right, transparent, rgb(233 238 247 / 0.42) 12%, rgb(233 238 247 / 0.42) 88%, transparent); }
+.reticule-badge {
+  white-space: pre; padding: 3px 6px; border: 1px solid rgb(255 255 255 / 0.12); border-radius: 3px;
+  background: rgb(8 10 13 / 0.72); color: #c9d1dd; font: 10px/1.5 ui-monospace, 'JetBrains Mono', monospace;
+  letter-spacing: 0.06em; font-variant-numeric: tabular-nums;
+}
+@media (prefers-reduced-motion: reduce) { .reticule { transition: none; } }
+
+/* Pendant le démarrage (BIOS, logo), la flèche pixel art des vieux systèmes ; la croix de visée vient après. */
+.boot, .boot *, .intro, .intro * { cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2222%22%20height%3D%2234%22%20shape-rendering%3D%22crispEdges%22%3E%3Crect%20x%3D%220%22%20y%3D%220%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%220%22%20y%3D%222%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%222%22%20y%3D%222%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%220%22%20y%3D%224%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%222%22%20y%3D%224%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%224%22%20y%3D%224%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%220%22%20y%3D%226%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%222%22%20y%3D%226%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%224%22%20y%3D%226%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%226%22%20y%3D%226%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%220%22%20y%3D%228%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%222%22%20y%3D%228%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%224%22%20y%3D%228%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%226%22%20y%3D%228%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%228%22%20y%3D%228%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%220%22%20y%3D%2210%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%222%22%20y%3D%2210%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%224%22%20y%3D%2210%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%226%22%20y%3D%2210%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%228%22%20y%3D%2210%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%2210%22%20y%3D%2210%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%220%22%20y%3D%2212%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%222%22%20y%3D%2212%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%224%22%20y%3D%2212%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%226%22%20y%3D%2212%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%228%22%20y%3D%2212%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%2210%22%20y%3D%2212%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%2212%22%20y%3D%2212%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%220%22%20y%3D%2214%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%222%22%20y%3D%2214%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%224%22%20y%3D%2214%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%226%22%20y%3D%2214%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%228%22%20y%3D%2214%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%2210%22%20y%3D%2214%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%2212%22%20y%3D%2214%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%2214%22%20y%3D%2214%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%220%22%20y%3D%2216%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%222%22%20y%3D%2216%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%224%22%20y%3D%2216%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%226%22%20y%3D%2216%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%228%22%20y%3D%2216%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%2210%22%20y%3D%2216%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%2212%22%20y%3D%2216%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%2214%22%20y%3D%2216%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%2216%22%20y%3D%2216%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%220%22%20y%3D%2218%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%222%22%20y%3D%2218%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%224%22%20y%3D%2218%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%226%22%20y%3D%2218%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%228%22%20y%3D%2218%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%2210%22%20y%3D%2218%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%2212%22%20y%3D%2218%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%2214%22%20y%3D%2218%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%2216%22%20y%3D%2218%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%2218%22%20y%3D%2218%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%220%22%20y%3D%2220%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%222%22%20y%3D%2220%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%224%22%20y%3D%2220%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%226%22%20y%3D%2220%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%228%22%20y%3D%2220%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%2210%22%20y%3D%2220%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%2212%22%20y%3D%2220%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%2214%22%20y%3D%2220%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%2216%22%20y%3D%2220%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%2218%22%20y%3D%2220%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%2220%22%20y%3D%2220%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%220%22%20y%3D%2222%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%222%22%20y%3D%2222%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%224%22%20y%3D%2222%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%226%22%20y%3D%2222%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%228%22%20y%3D%2222%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%2210%22%20y%3D%2222%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%2212%22%20y%3D%2222%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%220%22%20y%3D%2224%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%222%22%20y%3D%2224%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%224%22%20y%3D%2224%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%228%22%20y%3D%2224%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%2210%22%20y%3D%2224%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%2212%22%20y%3D%2224%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%2214%22%20y%3D%2224%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%220%22%20y%3D%2226%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%222%22%20y%3D%2226%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%228%22%20y%3D%2226%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%2210%22%20y%3D%2226%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%2212%22%20y%3D%2226%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%2214%22%20y%3D%2226%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%220%22%20y%3D%2228%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%2210%22%20y%3D%2228%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%2212%22%20y%3D%2228%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%2214%22%20y%3D%2228%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%2216%22%20y%3D%2228%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%2210%22%20y%3D%2230%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%2212%22%20y%3D%2230%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%2214%22%20y%3D%2230%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23fff%22/%3E%3Crect%20x%3D%2216%22%20y%3D%2230%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%2212%22%20y%3D%2232%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3Crect%20x%3D%2214%22%20y%3D%2232%22%20width%3D%222%22%20height%3D%222%22%20fill%3D%22%23000%22/%3E%3C/svg%3E") 0 0, default; }
+
+/* Plein écran (carte ou caméra) : le reste du HUD s'efface. */
+.accueil[class*='plein-'] .hud-haut, .accueil[class*='plein-'] .hud-titre, .accueil[class*='plein-'] .hud-jauges,
+.accueil[class*='plein-'] .hud-bas { opacity: 0 !important; pointer-events: none; transition-delay: 0s !important; }
+.accueil.plein-camera .hud-carte, .accueil.plein-sortie-camera .hud-carte { opacity: 0 !important; pointer-events: none; }
+.hud-plein-fermer {
+  position: absolute; top: calc(22px + env(safe-area-inset-top)); right: 24px; z-index: 2; padding: 9px 14px;
+  border: 1px solid rgb(255 255 255 / 0.18); border-radius: 8px; background: rgb(8 10 13 / 0.6); color: #e9eef7;
+  font: 600 11px/1 ui-monospace, monospace; letter-spacing: 0.16em; cursor: pointer; backdrop-filter: blur(8px);
+  animation: plein-entree 0.5s ease 0.45s both;
+}
+.hud-plein-fermer:hover { border-color: #ff2d3a; color: #fff; }
+@keyframes plein-entree { from { opacity: 0; transform: translateY(-6px); } }
+
+/* La scène : un écran de caméra survolé se signale par la loupe. */
+.avec-reticule .accueil-scene.survol-camera canvas { cursor: zoom-in !important; }
+
+/* La vue par la caméra de tête : l'habillage hologramme posé sur la scène vue de l'œil du robot. */
+.vue-camera { position: absolute; inset: 0; z-index: 7; pointer-events: none; animation: vue-camera-entree 0.6s ease 0.9s both; }
+.vue-camera::before {
+  content: ''; position: absolute; inset: 0;
+  background: repeating-linear-gradient(to bottom, rgb(143 227 255 / 0.05) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at 50% 50%, transparent 55%, rgb(20 60 80 / 0.55) 100%);
+  mix-blend-mode: screen;
+}
+.vue-camera-coins {
+  position: absolute; inset: 28px;
+  background:
+    linear-gradient(#8fe3ff, #8fe3ff) top left / 34px 2px no-repeat, linear-gradient(#8fe3ff, #8fe3ff) top left / 2px 34px no-repeat,
+    linear-gradient(#8fe3ff, #8fe3ff) top right / 34px 2px no-repeat, linear-gradient(#8fe3ff, #8fe3ff) top right / 2px 34px no-repeat,
+    linear-gradient(#8fe3ff, #8fe3ff) bottom left / 34px 2px no-repeat, linear-gradient(#8fe3ff, #8fe3ff) bottom left / 2px 34px no-repeat,
+    linear-gradient(#8fe3ff, #8fe3ff) bottom right / 34px 2px no-repeat, linear-gradient(#8fe3ff, #8fe3ff) bottom right / 2px 34px no-repeat;
+  opacity: 0.7;
+}
+.vue-camera-titre, .vue-camera-rec {
+  position: absolute; left: 48px; margin: 0; font: 11px/1 ui-monospace, monospace; letter-spacing: 0.16em; color: #8fe3ff;
+}
+.vue-camera-titre { top: calc(46px + env(safe-area-inset-top)); }
+.vue-camera-rec { bottom: calc(46px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 8px; color: #ff5a64; }
+.vue-camera-rec span { width: 8px; height: 8px; border-radius: 50%; background: #ff2d3a; animation: boot-curseur 1s steps(1) infinite; }
+.vue-camera .hud-plein-fermer { pointer-events: auto; }
+@keyframes vue-camera-entree { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .hud-carte { transition-duration: 0.01s; }
+  .vue-camera { animation: none; }
+}
+/* La mini-carte garde ses transitions de taille ; seule l'opacité attend la fin de l'apparition. */
+.accueil .hud-carte {
+  transition: --cote 0.7s cubic-bezier(0.7, 0, 0.2, 1), width 0.7s cubic-bezier(0.7, 0, 0.2, 1),
+    height 0.7s cubic-bezier(0.7, 0, 0.2, 1), opacity 0.8s ease 0.15s;
+}
+.accueil-demarre .hud-carte { transition-delay: 0s, 0s, 0s, 2.4s; }
+.accueil[class*='plein-'] .hud-carte { transition-delay: 0s; }
+/* Après la première apparition, le HUD revient sans attendre (au retour d'un plein écran). */
+.hud-pret .hud-haut, .hud-pret .hud-titre, .hud-pret .hud-jauges, .hud-pret .hud-bas { transition-delay: 0s !important; }
+.hud-pret .hud-carte { transition-delay: 0s !important; }
+.hud-carte-zone { border: none; background: none; padding: 0; }
+.hud-carte-zone:focus-visible { outline: 2px solid #ff2d3a; outline-offset: -30vmin; }
