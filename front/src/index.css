@@ -247,8 +247,7 @@ input[type='radio'] { width: auto; min-height: 0; }
   position: absolute; inset: 0; pointer-events: none;
   background: radial-gradient(ellipse at 50% 55%, transparent 45%, rgb(0 0 0 / 0.75) 100%);
 }
-.hud-haut, .hud-titre, .hud-jauges, .hud-bas, .hud-carte { position: absolute; z-index: 1; }
-.hud-marque { font-weight: 800; letter-spacing: 0.12em; font-size: 0.8rem; }
+.hud-haut, .hud-titre, .hud-jauges, .hud-calques, .hud-carte { position: absolute; z-index: 1; }
 .hud-haut {
   top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 24px;
   padding: calc(18px + env(safe-area-inset-top)) 32px 0;
@@ -259,9 +258,11 @@ input[type='radio'] { width: auto; min-height: 0; }
 .hud-nav a.active { color: var(--hud); text-decoration: underline; text-underline-offset: 6px; }
 .hud-heure { font-size: 0.85rem; color: var(--hud-2); }
 
-.hud-titre { left: 32px; top: 22%; max-width: 520px; pointer-events: none; }
+.hud-titre { left: 32px; top: calc(16px + env(safe-area-inset-top)); max-width: 520px; pointer-events: none; }
+.hud-titre .hud-sur { margin: 0; }
+.hud-titre .hud-etat { margin: 0; }
 .hud-titre h1 {
-  font-size: clamp(2.4rem, 6vw, 4.4rem); font-weight: 800; letter-spacing: -0.01em; line-height: 1; margin: 6px 0 14px;
+  font-size: clamp(2rem, 4.4vw, 3.4rem); font-weight: 800; letter-spacing: -0.01em; line-height: 1; margin: 6px 0 10px;
   text-transform: uppercase; text-shadow: 0 0 24px rgb(233 238 247 / 0.25);
 }
 .hud-sur { color: var(--hud-2); font-size: 0.8rem; letter-spacing: 0.18em; text-transform: uppercase; }
@@ -288,23 +289,8 @@ input[type='radio'] { width: auto; min-height: 0; }
   text-transform: uppercase;
 }
 
-.hud-bas {
-  left: 50%; transform: translateX(-50%); bottom: calc(22px + env(safe-area-inset-bottom));
-  display: flex; gap: 6px; padding: 6px; border: 1px solid rgb(255 255 255 / 0.09); border-radius: 14px;
-  background: rgb(10 12 15 / 0.55); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-}
-.hud-calque {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 112px; padding: 9px 14px;
-  border: 1px solid transparent; border-radius: 10px; background: transparent; color: var(--hud-2); font: inherit; cursor: pointer;
-}
-.hud-calque:hover { color: var(--hud); }
-.hud-calque.actif { color: var(--hud); border-color: rgb(255 255 255 / 0.14); background: rgb(255 255 255 / 0.04); }
-.hud-calque.actif .hud-calque-nom::before {
-  content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--hud-accent);
-  margin-right: 7px; vertical-align: middle; box-shadow: 0 0 8px var(--hud-accent);
-}
-.hud-calque-nom { font-size: 0.85rem; font-weight: 600; white-space: nowrap; }
-.hud-calque-detail { font-size: 0.7rem; color: var(--hud-2); font-variant-numeric: tabular-nums; }
+/* Les filtres des calques de la vue 3D (FiltresCalques) : à gauche, entre le titre et la carte. */
+.hud-calques { left: 24px; top: calc(146px + env(safe-area-inset-top)); }
 
 @media (max-width: 699px) {
   .hud-haut { padding: calc(14px + env(safe-area-inset-top)) 16px 0; gap: 12px; flex-wrap: wrap; }
@@ -313,9 +299,7 @@ input[type='radio'] { width: auto; min-height: 0; }
   .hud-titre { left: 16px; top: calc(96px + env(safe-area-inset-top)); }
   .hud-jauges { right: 16px; top: auto; bottom: calc(110px + env(safe-area-inset-bottom)); }
   .hud-console { display: none; }
-  .hud-bas { left: 16px; right: 16px; transform: none; overflow-x: auto; }
-  .hud-calque { min-width: 0; flex: 1; padding: 8px 10px; }
-  .hud-calque-detail { display: none; }
+  .hud-calques { left: 12px; top: calc(186px + env(safe-area-inset-top)); }
 }
 
 /* Éditeur de mission : un canevas de nœuds, toujours sombre, qui prend toute la place. */
@@ -540,8 +524,8 @@ input[type='radio'] { width: auto; min-height: 0; }
   36%, 100% { opacity: 0; filter: none; }
 }
 /* Le HUD entre après le démarrage. */
-.accueil .hud-haut, .accueil .hud-titre, .accueil .hud-jauges, .accueil .hud-bas, .accueil .hud-carte { opacity: 0; transition: opacity 0.8s ease 0.15s; }
-.accueil-demarre .hud-haut, .accueil-demarre .hud-titre, .accueil-demarre .hud-jauges, .accueil-demarre .hud-bas, .accueil-demarre .hud-carte { opacity: 1; transition-delay: 2.4s; }
+.accueil .hud-haut, .accueil .hud-titre, .accueil .hud-jauges, .accueil .hud-calques, .accueil .hud-carte { opacity: 0; transition: opacity 0.8s ease 0.15s; }
+.accueil-demarre .hud-haut, .accueil-demarre .hud-titre, .accueil-demarre .hud-jauges, .accueil-demarre .hud-calques, .accueil-demarre .hud-carte { opacity: 1; transition-delay: 2.4s; }
 /* Le HUD attend que le robot se soit allumé et que l'onde ait déployé la scène (scene.ts, ALLUMAGE_S + DEPLOIEMENT_S). */
 @media (prefers-reduced-motion: reduce) { .boot, .boot-curseur { animation: none; } .boot-sortie > *, .boot-sortie::after { animation: boot-neon 0.6s steps(2) forwards; } }
 @media (max-width: 699px) {
@@ -641,7 +625,7 @@ input[type='radio'] { width: auto; min-height: 0; }
   font-family: ui-monospace, monospace; font-size: 9px; letter-spacing: 0.18em; color: #8a93a3;
 }
 @media (max-width: 699px) {
-  .hud-carte { --cote: 230px; bottom: calc(70px + env(safe-area-inset-bottom)); }
+  .hud-carte { --cote: 230px; bottom: calc(84px + env(safe-area-inset-bottom)); }
   .hud-carte-legende { bottom: 10px; font-size: 7.5px; }
 }
 
@@ -670,7 +654,7 @@ input[type='radio'] { width: auto; min-height: 0; }
 
 /* Plein écran (carte ou caméra) : le reste du HUD s'efface. */
 .accueil[class*='plein-'] .hud-haut, .accueil[class*='plein-'] .hud-titre, .accueil[class*='plein-'] .hud-jauges,
-.accueil[class*='plein-'] .hud-bas { opacity: 0 !important; pointer-events: none; transition-delay: 0s !important; }
+.accueil[class*='plein-'] .hud-calques { opacity: 0 !important; pointer-events: none; transition-delay: 0s !important; }
 .accueil.plein-camera .hud-carte, .accueil.plein-sortie-camera .hud-carte { opacity: 0 !important; pointer-events: none; }
 .hud-plein-fermer {
   position: absolute; top: calc(22px + env(safe-area-inset-top)); right: 24px; z-index: 2; padding: 9px 14px;
@@ -708,6 +692,8 @@ input[type='radio'] { width: auto; min-height: 0; }
 .vue-camera-rec { bottom: calc(46px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 8px; color: #ff5a64; }
 .vue-camera-rec span { width: 8px; height: 8px; border-radius: 50%; background: #ff2d3a; animation: boot-curseur 1s steps(1) infinite; }
 .vue-camera .hud-plein-fermer { pointer-events: auto; }
+.vue-camera .vue-camera-bascule { right: 220px; }
+.vue-camera-bascule[aria-pressed='true'] { border-color: #8fe3ff; color: #8fe3ff; }
 @keyframes vue-camera-entree { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
   .hud-carte { transition-duration: 0.01s; }
@@ -721,7 +707,7 @@ input[type='radio'] { width: auto; min-height: 0; }
 .accueil-demarre .hud-carte { transition-delay: 0s, 0s, 0s, 2.4s; }
 .accueil[class*='plein-'] .hud-carte { transition-delay: 0s; }
 /* Après la première apparition, le HUD revient sans attendre (au retour d'un plein écran). */
-.hud-pret .hud-haut, .hud-pret .hud-titre, .hud-pret .hud-jauges, .hud-pret .hud-bas { transition-delay: 0s !important; }
+.hud-pret .hud-haut, .hud-pret .hud-titre, .hud-pret .hud-jauges, .hud-pret .hud-calques { transition-delay: 0s !important; }
 .hud-pret .hud-carte { transition-delay: 0s !important; }
 .hud-carte-zone { border: none; background: none; padding: 0; }
 .hud-carte-zone:focus-visible { outline: 2px solid #ff2d3a; outline-offset: -30vmin; }
@@ -781,38 +767,275 @@ a.hud-jauges { color: inherit; cursor: pointer; }
 a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .hud-corps { color: #8a93a3; }
 
-/* Le sélecteur image réelle / vue 3D de l'œil du robot, en haut au centre de la vue caméra. */
-.vue-camera-image { transition: opacity 0.35s ease; }
-.vue-camera-image.cachee { opacity: 0; }
-.vue-camera-modes {
-  position: absolute; left: 50%; top: calc(22px + env(safe-area-inset-top)); transform: translateX(-50%);
-  display: flex; align-items: center; gap: 2px; padding: 3px; pointer-events: auto;
-  border: 1px solid rgb(143 227 255 / 0.3); border-radius: 9px; background: rgb(8 10 13 / 0.6); backdrop-filter: blur(8px);
-  animation: plein-entree 0.5s ease 0.45s both;
+/* La barre du robot (BarreRobot.tsx) : bandeau en bas de l'écran, ou île qui flotte. Toujours sombre. */
+.barre-robot {
+  --b-texte: #e9eef7; --b-2: #8a93a3; --b-bord: rgb(255 255 255 / 0.09);
+  --b-ok: #3dff8a; --b-alerte: #ffb02e; --b-danger: #ff2d3a; --b-muet: #5b636e; --b-info: #5ab8ff;
+  position: absolute; z-index: 5; display: flex; align-items: center; gap: 0; color: var(--b-texte);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; backdrop-filter: blur(14px);
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
-.vue-camera-modes button {
-  border: none; border-radius: 6px; background: transparent; color: #8fe3ff; padding: 7px 14px; cursor: pointer;
-  font: 600 11px/1 ui-monospace, monospace; letter-spacing: 0.16em; opacity: 0.65;
+.barre-defile { display: flex; align-items: center; min-width: 0; flex: 0 1 auto; overflow-x: auto; scrollbar-width: none; }
+.barre-defile::-webkit-scrollbar { display: none; }
+.barre-bandeau {
+  left: 0; right: 0; bottom: 0; padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  background: rgb(6 8 11 / 0.84); border-top: 1px solid var(--b-bord);
 }
-.vue-camera-modes button:hover { opacity: 1; }
-.vue-camera-modes button.actif { background: rgb(143 227 255 / 0.16); opacity: 1; box-shadow: inset 0 0 0 1px rgb(143 227 255 / 0.4); }
-.vue-camera-touche {
-  margin: 0 6px 0 4px; padding: 2px 5px; border: 1px solid rgb(143 227 255 / 0.3); border-radius: 3px;
-  font: 9px/1 ui-monospace, monospace; color: #8fe3ff; opacity: 0.6;
+.barre-ile {
+  left: 50%; bottom: calc(22px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  max-width: calc(100% - 32px); padding: 7px 7px 7px 6px; border-radius: 18px;
+  background: rgb(10 13 17 / 0.74); border: 1px solid var(--b-bord); box-shadow: 0 14px 44px rgb(0 0 0 / 0.55);
 }
-@media (hover: none) { .vue-camera-touche { display: none; } }
+.barre-robot.barre-estop { border-color: rgb(255 45 58 / 0.7); box-shadow: 0 0 0 1px rgb(255 45 58 / 0.35), 0 14px 44px rgb(0 0 0 / 0.55); }
+.barre-groupe {
+  display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; flex: none;
+  border-left: 1px solid var(--b-bord); color: inherit; text-decoration: none;
+}
+.barre-groupe:first-child { border-left: 0; }
+.barre-identite { gap: 10px; }
+.barre-identite-textes { display: flex; flex-direction: column; gap: 4px; }
+.barre-nom { font: 700 13px/1 'Inter', system-ui, sans-serif; letter-spacing: 0.03em; white-space: nowrap; }
+.barre-modele { font: 600 9px/1 ui-monospace, monospace; letter-spacing: 0.16em; text-transform: uppercase; color: var(--b-2); white-space: nowrap; }
+.barre-point { width: 8px; height: 8px; border-radius: 50%; flex: none; background: currentColor; box-shadow: 0 0 10px currentColor; }
+.barre-valeur { font-size: 13px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.barre-robot .icone-robot { display: block; flex: none; color: var(--b-2); }
+.icone-mors { transition: transform 0.6s ease; }
+.barre-muet { font-size: 11px; color: var(--b-2); padding: 10px 14px; }
+.barre-robot .ton-ok { color: var(--b-ok); }
+.barre-robot .ton-alerte { color: var(--b-alerte); }
+.barre-robot .ton-danger { color: var(--b-danger); }
+.barre-robot .ton-muet { color: var(--b-muet); }
+.barre-robot .ton-info { color: var(--b-info); }
+.barre-robot .fond-ok { background: var(--b-ok); }
+.barre-robot .fond-alerte { background: var(--b-alerte); }
+.barre-robot .fond-danger { background: var(--b-danger); }
+.barre-batterie { width: 30px; height: 12px; padding: 1.5px; border: 1px solid var(--b-2); border-radius: 3px; display: flex; position: relative; }
+.barre-batterie::after { content: ''; position: absolute; right: -4px; top: 3px; width: 2px; height: 4px; background: var(--b-2); border-radius: 0 1px 1px 0; }
+.barre-batterie span { display: block; height: 100%; border-radius: 1px; }
+.barre-temperatures { gap: 14px; cursor: pointer; border-radius: 0; }
+.barre-temperatures:hover .icone-robot { color: var(--b-texte); }
+.barre-temperature { display: flex; align-items: center; gap: 5px; }
+.barre-segment { display: inline-flex; padding: 2px; border: 1px solid var(--b-bord); border-radius: 9px; background: rgb(255 255 255 / 0.03); }
+.barre-segment button {
+  height: 28px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; color: var(--b-2);
+  font: 700 10.5px/1 ui-monospace, monospace; letter-spacing: 0.12em; cursor: pointer; white-space: nowrap;
+}
+.barre-segment button.actif { background: rgb(255 255 255 / 0.12); color: var(--b-texte); }
+.barre-segment button:disabled { cursor: not-allowed; opacity: 0.4; }
+.barre-bouton {
+  height: 34px; padding: 0 12px; display: inline-flex; align-items: center; gap: 8px; flex: none;
+  border: 1px solid var(--b-bord); border-radius: 9px; background: rgb(255 255 255 / 0.04); color: var(--b-texte);
+  font: 700 11px/1 ui-monospace, monospace; letter-spacing: 0.12em; cursor: pointer; white-space: nowrap;
+}
+.barre-bouton + .barre-bouton { margin-left: 2px; }
+.barre-bouton:hover:not(:disabled) { border-color: rgb(255 255 255 / 0.3); }
+.barre-bouton:disabled { cursor: not-allowed; opacity: 0.38; }
+.barre-home { margin-left: 10px; }
+.barre-robot .arme { border-color: var(--b-alerte) !important; color: var(--b-alerte) !important; animation: barre-arme 0.7s ease-in-out infinite; }
+@keyframes barre-arme { 50% { box-shadow: 0 0 0 3px rgb(255 176 46 / 0.22); } }
+.barre-pince { gap: 6px; padding: 0 10px 0 8px; }
+.barre-pince .icone-robot { color: var(--b-texte); }
+.barre-lettre { line-height: 1; }
+.barre-espace { flex: 1 1 18px; min-width: 18px; }
+.barre-erreur { flex: none; max-width: 280px; margin-right: 12px; font-size: 11px; color: var(--b-alerte); line-height: 1.3; }
+.barre-estop-bouton {
+  flex: none; height: 46px; min-width: 128px; padding: 0 18px; border: 0; border-radius: 12px; cursor: pointer;
+  background: #c4121f; color: #fff; font: 800 13px/1 ui-monospace, monospace; letter-spacing: 0.16em;
+  box-shadow: 0 0 0 3px rgb(255 45 58 / 0.28), 0 0 26px rgb(255 45 58 / 0.4);
+  display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+}
+.barre-estop-bouton:hover:not(:disabled) { background: #e01624; }
+.barre-estop-bouton:disabled { opacity: 0.35; cursor: not-allowed; box-shadow: none; }
+.barre-estop-bouton.engage { min-width: 168px; letter-spacing: 0.1em; background: #3a070b; color: #ff5a64; box-shadow: 0 0 0 2px #ff2d3a; animation: barre-engage 1s steps(1) infinite; }
+.barre-estop-bouton.engage small { font-size: 9.5px; letter-spacing: 0.2em; color: #fff; opacity: 0.85; }
+@keyframes barre-engage { 50% { box-shadow: 0 0 0 2px #ff2d3a, 0 0 30px rgb(255 45 58 / 0.6); } }
+@media (prefers-reduced-motion: reduce) { .barre-robot .arme, .barre-estop-bouton.engage { animation: none; } }
+@media (max-width: 700px) {
+  .barre-ile { left: 12px; right: 12px; transform: none; max-width: none; }
+  .barre-defile { flex: 1 1 auto; mask-image: linear-gradient(90deg, #000 85%, transparent); }
+  .barre-espace { flex: 0 0 8px; min-width: 8px; }
+  .barre-estop-bouton { min-width: 96px; padding: 0 12px; }
+  .barre-estop-bouton.engage { min-width: 112px; font-size: 11px; }
+}
 
-/* Les pastilles, en bas au centre : le point dit la santé, pas la visibilité. */
-.hud-calque.actif .hud-calque-nom::before { content: none; }
+/* La page d'essai de la barre (#/essai/barre). */
+.essai-barre { position: fixed; inset: 0; background: #030405; color: #e9eef7; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; }
+/* Le fond du HUD : une lueur bleue sur une grille de 48 px. Réutilisable (éditeur de mission, primitives…). */
+.fond-hud {
+  background-color: #030405;
+  background-image: radial-gradient(ellipse at 50% 70%, rgb(80 120 170 / 0.18), transparent 60%),
+    linear-gradient(rgb(255 255 255 / 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.04) 1px, transparent 1px);
+  background-size: auto, 48px 48px, 48px 48px;
+}
+.essai-barre-scene { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.essai-barre-tete { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-between; align-items: flex-end; padding: 28px 32px 0; }
+.essai-barre-tete h1 { margin: 4px 0 0; font-size: 1.6rem; letter-spacing: 0.02em; }
+.essai-barre-sur { margin: 0; font: 600 10px/1 ui-monospace, monospace; letter-spacing: 0.2em; color: #8a93a3; }
+.essai-barre-reglages { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-end; }
+.essai-barre-reglages label { display: flex; flex-direction: column; gap: 6px; font: 600 9.5px/1 ui-monospace, monospace; letter-spacing: 0.16em; color: #8a93a3; }
+.essai-barre-reglages .barre-segment button { color: #8a93a3; }
+.essai-barre-reglages .barre-segment button.actif { color: #e9eef7; }
+.essai-barre-reglages select, .essai-barre-raz {
+  height: 34px; padding: 0 10px; border-radius: 9px; border: 1px solid rgb(255 255 255 / 0.12); background: #0b0e12;
+  color: #e9eef7; font: 600 11px/1 ui-monospace, monospace; letter-spacing: 0.08em;
+}
+.essai-barre-raz { cursor: pointer; }
+.essai-barre-ordre { position: relative; z-index: 1; margin: 22px 32px 0; padding-left: 18px; max-width: 760px; color: #8a93a3; font-size: 0.85rem; line-height: 1.7; }
+.essai-barre-ordre strong { color: #e9eef7; font-weight: 600; }
+@media (max-width: 700px) {
+  .essai-barre-tete, .essai-barre-ordre { padding-left: 16px; padding-right: 16px; margin-left: 0; margin-right: 0; }
+  .essai-barre-ordre { padding-left: 32px; }
+}
+
+/* La barre du robot sur l'accueil : elle apparaît avec le HUD, et reste au-dessus de tout (plein écran, écrans
+   ouverts) pour que l'E-STOP soit toujours à portée ; les écrans ouverts s'arrêtent au-dessus d'elle. */
+.accueil .barre-robot { z-index: 9; opacity: 0; transition: opacity 0.8s ease 0.15s, border-color 0.2s, box-shadow 0.2s; }
+.accueil-demarre .barre-robot { opacity: 1; transition-delay: 2.4s, 0s, 0s; }
+.hud-pret .barre-robot { transition-delay: 0s; }
+.accueil:not(.accueil-demarre) .barre-robot { pointer-events: none; }
+.avec-barre .overlay-cote, .avec-barre .overlay-grand { bottom: calc(92px + env(safe-area-inset-bottom)); }
+
+/* L'arrêt d'urgence engagé : les quatre bords de l'écran rougissent, d'un éclair puis d'une respiration lente,
+   jusqu'au réarmement. Au-dessus de toute la page, sans rien intercepter. */
+.estop-bords {
+  position: fixed; inset: 0; z-index: 40; pointer-events: none;
+  box-shadow: inset 0 0 0 4px #ff2d3a, inset 0 0 70px 18px rgb(255 45 58 / 0.55), inset 0 0 220px 40px rgb(255 45 58 / 0.22);
+  animation: estop-eclair 0.5s ease-out, estop-respire 1.6s ease-in-out 0.5s infinite;
+}
+@keyframes estop-eclair {
+  0% { opacity: 0; } 15% { opacity: 1; box-shadow: inset 0 0 0 10px #ff2d3a, inset 0 0 160px 60px rgb(255 45 58 / 0.8); }
+  100% { opacity: 1; }
+}
+@keyframes estop-respire { 50% { opacity: 0.55; } }
+/* Le réarmement : le rouge se resserre contre les bords, vire au vert un instant, puis s'efface. */
+.estop-bords.estop-retour { animation: estop-retour 0.9s ease-out forwards; }
+@keyframes estop-retour {
+  0% { opacity: 1; box-shadow: inset 0 0 0 4px #ff2d3a, inset 0 0 70px 18px rgb(255 45 58 / 0.55), inset 0 0 220px 40px rgb(255 45 58 / 0.22); }
+  35% { opacity: 1; box-shadow: inset 0 0 0 3px #3dff8a, inset 0 0 46px 8px rgb(61 255 138 / 0.4), inset 0 0 120px 10px rgb(61 255 138 / 0.12); }
+  100% { opacity: 0; box-shadow: inset 0 0 0 0 #3dff8a, inset 0 0 0 0 rgb(61 255 138 / 0), inset 0 0 0 0 rgb(61 255 138 / 0); }
+}
+@media (prefers-reduced-motion: reduce) { .estop-bords { animation: none; } .estop-bords.estop-retour { display: none; } }
+
+/* Les propositions de filtres des calques (Filtres.tsx), essayées sur #/essai/calques. */
+.filtres {
+  --f-texte: #e9eef7; --f-2: #8a93a3; --f-bord: rgb(255 255 255 / 0.09);
+  display: flex; flex-direction: column; gap: 2px; padding: 5px; color: var(--f-texte); width: max-content;
+  border: 1px solid var(--f-bord); border-radius: 12px; background: rgb(10 12 15 / 0.62);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font-family: 'Inter', system-ui, sans-serif;
+}
+.filtres button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+.filtres .icone-robot { display: block; flex: none; }
+.filtres-tete {
+  display: flex; justify-content: space-between; gap: 16px; margin: 2px 6px 4px;
+  font: 600 9px/1 ui-monospace, monospace; letter-spacing: 0.18em; color: var(--f-2);
+}
+
+/* A · le rail */
+.filtres-rail { padding: 4px; gap: 2px; }
+.filtres-rail button {
+  position: relative; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 8px;
+  color: var(--f-2); opacity: 0.45; transition: opacity 0.15s, background 0.15s;
+}
+.filtres-rail button:hover { opacity: 1; background: rgb(255 255 255 / 0.06); }
+.filtres-rail button.actif { opacity: 1; color: var(--f-texte); }
+.filtres-rail button.actif::before {
+  content: ''; position: absolute; left: -4px; top: 9px; bottom: 9px; width: 2px; border-radius: 1px;
+  background: #ff2d3a; box-shadow: 0 0 8px #ff2d3a;
+}
+.filtres-bulle {
+  position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%); pointer-events: none;
+  display: flex; flex-direction: column; gap: 3px; padding: 7px 10px; white-space: nowrap; opacity: 0; transition: opacity 0.12s;
+  border: 1px solid var(--f-bord); border-radius: 8px; background: rgb(10 12 15 / 0.92);
+  font: 500 10.5px/1 ui-monospace, monospace; color: var(--f-2); text-align: left;
+}
+.filtres-bulle strong { font: 600 12px/1 'Inter', system-ui, sans-serif; color: var(--f-texte); }
+.filtres-rail button:hover .filtres-bulle, .filtres-rail button:focus-visible .filtres-bulle { opacity: 1; }
+
+/* B · les interrupteurs */
+.filtres-interrupteurs { width: 210px; }
+.filtres-interrupteurs button {
+  display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 8px; text-align: left; color: var(--f-2);
+}
+.filtres-interrupteurs button:hover { background: rgb(255 255 255 / 0.05); }
+.filtres-interrupteurs button.actif { color: var(--f-texte); }
+.filtres-textes { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.filtres-textes span { font-size: 0.8rem; font-weight: 600; line-height: 1; }
+.filtres-textes small { font: 500 9.5px/1 ui-monospace, monospace; color: var(--f-2); letter-spacing: 0.04em; }
+.filtres-interrupteur {
+  position: relative; width: 26px; height: 14px; flex: none; border-radius: 7px; background: rgb(255 255 255 / 0.12); transition: background 0.2s;
+}
+.filtres-interrupteur i {
+  position: absolute; left: 2px; top: 2px; width: 10px; height: 10px; border-radius: 50%; background: #8a93a3; transition: transform 0.2s, background 0.2s;
+}
+.filtres-interrupteurs .actif .filtres-interrupteur { background: rgb(255 45 58 / 0.45); }
+.filtres-interrupteurs .actif .filtres-interrupteur i { transform: translateX(12px); background: #fff; box-shadow: 0 0 8px #ff2d3a; }
+
+/* C · la légende */
+.filtres-legende { width: 220px; }
+.filtres-legende button {
+  display: grid; grid-template-columns: 12px auto 1fr; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 8px;
+  text-align: left; color: var(--f-2); opacity: 0.55; transition: opacity 0.15s;
+}
+.filtres-legende button:hover { background: rgb(255 255 255 / 0.05); opacity: 0.85; }
+.filtres-legende button.actif { color: var(--f-texte); opacity: 1; }
+.filtres-pastille { width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 0 8px rgb(255 255 255 / 0.15); }
+.filtres-legende button:not(.actif) .filtres-pastille { background: transparent !important; box-shadow: inset 0 0 0 1.5px #5b636e; }
+.filtres-nom { font-size: 0.8rem; font-weight: 600; }
+.filtres-legende small { justify-self: end; font: 500 9.5px/1 ui-monospace, monospace; color: var(--f-2); white-space: nowrap; }
+
+/* D · le repliable */
+.filtres-dock { padding: 4px; }
+.filtres-dock-tete {
+  display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: 8px;
+  font: 600 10.5px/1 ui-monospace, monospace !important; letter-spacing: 0.16em;
+}
+.filtres-dock-tete:hover { background: rgb(255 255 255 / 0.05); }
+.filtres-compte { color: #ff5a64; }
+.filtres-chevron { color: var(--f-2); transition: transform 0.2s; }
+.filtres-dock.ouvert .filtres-chevron { transform: rotate(180deg); }
+.filtres-dock-liste { display: flex; flex-direction: column; gap: 1px; margin-top: 3px; padding-top: 4px; border-top: 1px solid var(--f-bord); }
+.filtres-dock-liste button { display: flex; align-items: center; gap: 9px; padding: 6px 10px; border-radius: 7px; color: var(--f-2); font-size: 0.8rem; }
+.filtres-dock-liste button:hover { background: rgb(255 255 255 / 0.05); }
+.filtres-dock-liste button.actif { color: var(--f-texte); }
+.filtres-coche { margin-left: auto; color: #ff2d3a; font-size: 9px; }
+.filtres-dock-liste button:not(.actif) .filtres-coche { color: #5b636e; }
+
+/* B repliable : la liste des interrupteurs se déplie en hauteur sous le bouton. */
+.filtres-repliable .filtres-dock-tete { width: 100%; }
+.filtres-repliable .filtres-chevron { margin-left: auto; }
+.filtres-depli { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.28s ease; }
+.filtres-repliable.ouvert .filtres-depli { grid-template-rows: 1fr; }
+.filtres-depli-liste {
+  min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 2px; width: 210px;
+  border-top: 1px solid transparent; transition: border-color 0.28s, padding 0.28s;
+}
+.filtres-repliable.ouvert .filtres-depli-liste { margin-top: 3px; padding-top: 4px; border-top-color: var(--f-bord); }
+@media (prefers-reduced-motion: reduce) { .filtres-depli, .filtres-depli-liste { transition: none; } }
+
+/* La page d'essai des filtres. */
+.essai-calques { overflow-y: auto; }
+.essai-calques-note { margin: 0; max-width: 360px; color: #8a93a3; font-size: 0.85rem; }
+.essai-calques-grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; padding: 24px 32px 32px; }
+.essai-calques-case { display: flex; flex-direction: column; gap: 6px; }
+.essai-calques-titre { margin: 0; display: flex; align-items: center; gap: 10px; font-weight: 700; }
+.essai-calques-titre span {
+  display: grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; background: #ff2d3a; color: #fff;
+  font: 800 11px/1 ui-monospace, monospace;
+}
+.essai-calques-idee { margin: 0 0 6px; color: #8a93a3; font-size: 0.82rem; min-height: 2.4em; }
+.essai-calques-scene {
+  position: relative; height: 330px; padding: 16px; border: 1px dashed rgb(255 255 255 / 0.1); border-radius: 12px;
+  background: radial-gradient(ellipse at 70% 60%, rgb(80 120 170 / 0.16), transparent 70%);
+}
+@media (max-width: 700px) { .essai-calques-grille { padding: 16px; } }
+/* Le point de santé d'un calque (Filtres.tsx) : vert, rouge clignotant, gris. */
 .hud-verdict {
   display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 7px; vertical-align: middle;
   background: #6b7480;
 }
 .verdict-ok { background: #3dff8a; box-shadow: 0 0 8px rgb(61 255 138 / 0.8); }
 .verdict-pb { background: #ff2d3a; box-shadow: 0 0 9px #ff2d3a; animation: corps-alarme 0.8s steps(2) infinite; }
-.hud-calque.masque { opacity: 0.45; }
-.hud-calque.masque .hud-calque-nom { text-decoration: line-through; text-decoration-color: rgb(255 255 255 / 0.4); }
-.hud-calque.fixe { cursor: pointer; text-decoration: none; }
 
 /* L'overlay qui épouse son contenu (la planche du corps), centré dans la scène. */
 .overlay-ajuste {
@@ -827,3 +1050,7 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
   .overlay-ajuste { inset: 0; transform: none; width: auto; max-width: none; max-height: none; border-radius: 0; border: none; }
   .overlay-ajuste .overlay-corps { padding: 56px 16px calc(24px + env(safe-area-inset-bottom)); }
 }
+
+/* Un calque toujours montré (le robot) : pas d'interrupteur, une mention à la place. */
+.filtres-fixe { display: flex; align-items: center; gap: 10px; cursor: default; }
+.filtres-toujours { margin-left: auto; font: 10px/1 ui-monospace, monospace; letter-spacing: 0.1em; color: #6b7480; text-transform: uppercase; }

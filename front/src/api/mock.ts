@@ -1,8 +1,13 @@
 import type { Api } from './client';
-import type { EtatCapteurs, EtatCorps, Mission, Primitive, Robot, Run } from './types';
+import type { Cote, EtatCapteurs, EtatCorps, GesteRobot, Mission, Primitive, Robot, Run } from './types';
 
-const CLE = 'mpc.front.simulation.v3';
+const CLE = 'mpc.front.simulation.v4';
 const LATENCE_MS = 120;
+/** La durée simulée d'un geste : le retour en posture de travail, l'ouverture ou la fermeture d'une pince. */
+const DUREE_HOME_MS = 2600;
+const DUREE_PINCE_MS = 700;
+/** Les commandes de la barre dans l'état d'un robot neuf de la graine. */
+const COMMANDES = { modeBras: 'rigide' as const, pinces: { gauche: 1, droite: 1 }, geste: null };
 
 interface Magasin {
   robots: Robot[];
@@ -17,8 +22,8 @@ function graine(): Magasin {
   return {
     robots: [
       {
-        id: 'r1', nom: 'G1-D · 01', modele: 'Unitree G1-D', site: 'Atelier A', etat: 'disponible',
-        batterie: 72, posteCourant: 'table', missionCourante: null, derniereConnexion: ilYA(0),
+        id: 'r1', nom: 'Mégatron', modele: 'Unitree G1-D', site: 'Atelier A', etat: 'disponible',
+        batterie: 72, posteCourant: 'table', missionCourante: null, derniereConnexion: ilYA(0), ...structuredClone(COMMANDES),
       },
     ],
     primitives: [
@@ -96,13 +101,16 @@ function graine(): Magasin {
 }
 
 function charger(): Magasin {
+  let m = graine();
   try {
     const brut = localStorage.getItem(CLE);
-    if (brut) return JSON.parse(brut) as Magasin;
+    if (brut) m = JSON.parse(brut) as Magasin;
   } catch {
     // Stockage indisponible : on repart de la graine.
   }
-  return graine();
+  // Un geste interrompu par le rechargement de la page ne se terminera jamais : aucun n'est en cours au départ.
+  for (const r of m.robots) r.geste = null;
+  return m;
 }
 
 const magasin = charger();
@@ -158,6 +166,37 @@ async function etatCorpsSimule(robotId: string): Promise<EtatCorps> {
   return plusTard({ moteurs, imu, date: new Date().toISOString() });
 }
 
+/** Le robot `robotId`, s'il peut recevoir un ordre ; sinon le rejet, avec la raison qu'en donnerait la session. */
+function commandable(robotId: string): Robot {
+  const r = magasin.robots.find((x) => x.id === robotId);
+  if (!r) throw new Error('Robot inconnu');
+  if (r.etat === 'hors_ligne') throw new Error(`${r.nom} est hors ligne`);
+  if (r.etat === 'arret_urgence') throw new Error('Arrêt d’urgence engagé : réarmer d’abord');
+  if (r.geste) throw new Error('Un geste est déjà en cours');
+  return r;
+}
+
+/** Joue un geste simulé : il est visible dans `geste` pendant `duree`, puis `fin` l'applique. */
+function geste(r: Robot, nom: GesteRobot, duree: number, fin: () => void): Promise<Robot> {
+  r.geste = nom;
+  sauver();
+  return new Promise((ok) => setTimeout(() => {
+    // Un arrêt d'urgence pendant le geste l'interrompt : rien n'est appliqué.
+    if (r.etat !== 'arret_urgence') fin();
+    r.geste = null;
+    sauver();
+    ok(structuredClone(r));
+  }, duree));
+}
+
+const commande = <T>(f: () => Promise<T>): Promise<T> => {
+  try {
+    return f();
+  } catch (e) {
+    return Promise.reject(e);
+  }
+};
+
 export const apiSimulee: Api = {
   robots: () => plusTard(magasin.robots),
   robot: (id) => plusTard(magasin.robots.find((r) => r.id === id)),
@@ -172,9 +211,36 @@ export const apiSimulee: Api = {
     if (!r) return Promise.reject(new Error('Robot inconnu'));
     r.etat = 'arret_urgence';
     r.missionCourante = null;
+    r.geste = null;
     sauver();
     return plusTard(r);
   },
+  rearmer: (robotId) => {
+    const r = magasin.robots.find((x) => x.id === robotId);
+    if (!r) return Promise.reject(new Error('Robot inconnu'));
+    if (r.etat === 'arret_urgence') r.etat = 'disponible';
+    sauver();
+    return plusTard(r);
+  },
+  modeBras: (robotId, mode) => commande(() => {
+    const r = commandable(robotId);
+    r.modeBras = mode;
+    sauver();
+    return plusTard(r);
+  }),
+  pince: (robotId, cote: Cote, ordre) => commande(() => {
+    const r = commandable(robotId);
+    return geste(r, cote === 'gauche' ? 'pince_gauche' : 'pince_droite', DUREE_PINCE_MS, () => {
+      r.pinces[cote] = ordre === 'ouvrir' ? 1 : 0;
+    });
+  }),
+  home: (robotId) => commande(() => {
+    const r = commandable(robotId);
+    // La posture de travail se rejoint bras tenus : un bras mou ne suivrait pas la trajectoire.
+    return geste(r, 'home', DUREE_HOME_MS, () => {
+      r.modeBras = 'rigide';
+    });
+  }),
 
   primitives: () => plusTard(magasin.primitives),
   primitive: (id) => plusTard(magasin.primitives.find((p) => p.id === id)),

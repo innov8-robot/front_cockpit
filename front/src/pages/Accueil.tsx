@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { api, enSimulation, robotUnique } from '../api/client';
+import { api, enSimulation } from '../api/client';
 import type { EtatCapteurs, EtatCorps, Robot, Verdict } from '../api/types';
 import { ETATS_ROBOT } from '../api/libelles';
 import { reinitialiserSimulation } from '../api/mock';
+import { BarreRobot } from '../components/BarreRobot';
+import { CALQUES } from '../components/calques';
+import { FiltresCalques } from '../components/Filtres';
 import { Demarrage } from '../components/Demarrage';
 import { IntroLogo } from '../components/IntroLogo';
 import { MiniCarte } from '../components/MiniCarte';
@@ -12,17 +15,7 @@ import { Overlay } from '../components/Overlay';
 import { useCharge } from '../components/useCharge';
 import { monterScene, type Calque, type Scene3D } from '../vue3d/scene';
 
-/** Les pastilles du HUD : chacune dit si son élément va bien ; celles qu'on peut masquer basculent au clic. */
-type Pastille = 'robot' | 'atelier' | 'camera' | 'lidar' | 'objets';
-const PASTILLES: { cle: Pastille; libelle: string; detail: string; masquable: boolean }[] = [
-  { cle: 'robot', libelle: 'Robot', detail: 'G1-D', masquable: false },
-  { cle: 'atelier', libelle: 'Atelier', detail: 'simulé', masquable: true },
-  { cle: 'camera', libelle: 'Caméra', detail: 'RGBD · 30 i/s', masquable: true },
-  { cle: 'lidar', libelle: 'Lidar', detail: '360° · 200 k pts/s', masquable: true },
-  { cle: 'objets', libelle: 'Objets', detail: 'déclarés', masquable: true },
-];
 const SANTE_MS = 2000;
-const TITRES_VERDICT: Record<Verdict, string> = { ok: 'tout va bien', pb: 'problème', inconnu: 'pas de nouvelles' };
 
 /** Le verdict du robot : arrêt d'urgence ou moteur trop chaud / en défaut = problème ; hors ligne = inconnu. */
 function verdictRobot(r: Robot | undefined, corps: EtatCorps | null): { verdict: Verdict; raison: string } {
@@ -48,6 +41,9 @@ export function Accueil() {
   const [plein, setPlein] = useState<null | 'carte' | 'camera' | 'sortie-camera'>(null);
   const [survolCamera, setSurvolCamera] = useState(false);
   const appui = useRef<{ x: number; y: number } | null>(null);
+  // Par l'œil du robot : la scène et ses objets segmentés, ou la dernière image réelle s'il y en a une.
+  const [apercu, setApercu] = useApercuCamera();
+  const [imageReelle, setImageReelle] = useState(false);
 
   function survoler(e: React.PointerEvent) {
     const s = scene.current;
@@ -93,21 +89,24 @@ export function Accueil() {
   }, [demarre]);
   const [calques, setCalques] = useState<Record<Calque, boolean>>({ robot: true, atelier: true, camera: true, lidar: true, objets: true, sol: true });
   const [maintenant, setMaintenant] = useState(heure);
-  const robot = useCharge(robotUnique).donnee;
-  const [sante, setSante] = useState<{ robot?: Robot; corps: EtatCorps | null; capteurs: EtatCapteurs | null }>({ corps: null, capteurs: null });
+  const robots = useCharge(() => api.robots());
+  // L'état du robot change sous nos yeux (arrêt d'urgence, mission) : le titre le relit comme la barre.
+  const { recharger: relireRobots } = robots;
   useEffect(() => {
+    const t = setInterval(relireRobots, 2000);
+    return () => clearInterval(t);
+  }, [relireRobots]);
+  const robot = robots.donnee?.find((r) => r.etat === 'en_mission') ?? robots.donnee?.[0];
+  const [sante, setSante] = useState<{ corps: EtatCorps | null; capteurs: EtatCapteurs | null }>({ corps: null, capteurs: null });
+  useEffect(() => {
+    if (!robot) return;
     let vivant = true;
-    const lire = async () => {
-      const r = await robotUnique().catch(() => undefined);
-      const [corps, capteurs] = r
-        ? await Promise.all([api.etatCorps(r.id).catch(() => null), api.etatCapteurs(r.id).catch(() => null)])
-        : [null, null];
-      if (vivant) setSante({ robot: r, corps, capteurs });
-    };
+    const lire = () => Promise.all([api.etatCorps(robot.id).catch(() => null), api.etatCapteurs(robot.id).catch(() => null)])
+      .then(([corps, capteurs]) => vivant && setSante({ corps, capteurs }));
     lire();
     const t = setInterval(lire, SANTE_MS);
     return () => { vivant = false; clearInterval(t); };
-  }, []);
+  }, [robot?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!hote.current) return;
@@ -132,13 +131,12 @@ export function Accueil() {
   }
 
   return (
-    <div className={`accueil ${demarre ? 'accueil-demarre' : ''} ${hudPret ? 'hud-pret' : ''} ${plein ? `plein-${plein}` : ''}`}>
+    <div className={`accueil ${demarre ? 'accueil-demarre' : ''} ${hudPret ? 'hud-pret' : ''} ${plein ? `plein-${plein}` : ''} ${robot ? 'avec-barre' : ''}`}>
       <div className={`accueil-scene ${survolCamera ? 'survol-camera' : ''}`} ref={hote} onPointerMove={survoler}
         onPointerDown={(e) => { appui.current = { x: e.clientX, y: e.clientY }; }} onPointerUp={relacher} />
       <div className="accueil-vignette" aria-hidden="true" />
 
       <header className="hud-haut">
-        <div className="hud-marque">ROBOTIQUE</div>
         <nav className="hud-nav">
           <NavLink to="/" end>Vue</NavLink>
           <NavLink to="/robot">Robot</NavLink>
@@ -185,7 +183,19 @@ export function Accueil() {
 
       {(plein === 'camera') && (
         <div className="vue-camera" aria-label="Vue de la caméra de tête">
-          <ApercuCamera />
+          {apercu && imageReelle && (
+            <>
+              <img className="vue-camera-image" src="camera/apercu.jpg" alt="Dernière image de la caméra de tête"
+                onError={() => setApercu(null)} />
+              <p className="vue-camera-source">IMAGE D'ARCHIVE · {apercu}</p>
+            </>
+          )}
+          {apercu && (
+            <button className="hud-plein-fermer vue-camera-bascule" aria-pressed={imageReelle}
+              onClick={() => setImageReelle(!imageReelle)}>
+              {imageReelle ? 'OBJETS SEGMENTÉS' : 'IMAGE RÉELLE'}
+            </button>
+          )}
           <div className="vue-camera-coins" aria-hidden="true" />
           <p className="vue-camera-titre">CAMÉRA TÊTE · REALSENSE D435i · 87° × 58° · 30 i/s</p>
           <p className="vue-camera-rec"><span /> EN DIRECT</p>
@@ -193,28 +203,17 @@ export function Accueil() {
         </div>
       )}
 
-      <footer className="hud-bas">
-        {PASTILLES.map((c) => {
-          const { verdict, raison } = c.cle === 'robot' ? verdictRobot(sante.robot, sante.corps)
-            : c.cle === 'camera' || c.cle === 'lidar' ? { verdict: sante.capteurs?.[c.cle] ?? 'inconnu', raison: '' }
-            : c.cle === 'objets' ? { verdict: nbObjets ? 'ok' as const : 'inconnu' as const, raison: nbObjets ? '' : 'aucun objet déclaré' }
-            : { verdict: pret ? 'ok' as const : 'inconnu' as const, raison: '' };
-          const visible = !c.masquable || calques[c.cle];
-          const titre = `${c.libelle} : ${TITRES_VERDICT[verdict]}${raison ? ` (${raison})` : ''}${c.masquable ? ` · clic pour ${visible ? 'masquer' : 'afficher'}` : ''}`;
-          const contenu = (
-            <>
-              <span className="hud-calque-nom"><span className={`hud-verdict verdict-${verdict}`} />{c.libelle}</span>
-              <span className="hud-calque-detail">{c.cle === 'objets' && nbObjets ? `${nbObjets} ${c.detail}` : c.detail}</span>
-            </>
-          );
-          return c.masquable ? (
-            <button key={c.cle} className={`hud-calque ${visible ? 'actif' : 'masque'}`} aria-pressed={visible} title={titre}
-              onClick={() => basculer(c.cle as Calque)}>{contenu}</button>
-          ) : (
-            <NavLink key={c.cle} to="/robot/corps" className="hud-calque actif fixe" title={titre}>{contenu}</NavLink>
-          );
-        })}
-      </footer>
+      <FiltresCalques className="hud-calques" actifs={calques} basculer={basculer} fixes={['robot']}
+        verdicts={{
+          robot: verdictRobot(robot, sante.corps),
+          camera: { verdict: sante.capteurs?.camera ?? 'inconnu', raison: '' },
+          lidar: { verdict: sante.capteurs?.lidar ?? 'inconnu', raison: '' },
+          objets: nbObjets ? { verdict: 'ok', raison: '' } : { verdict: 'inconnu', raison: 'aucun objet déclaré' },
+          atelier: { verdict: pret ? 'ok' : 'inconnu', raison: '' },
+        }}
+        calques={CALQUES.map((c) => (c.cle === 'objets' && nbObjets ? { ...c, detail: `${nbObjets} ${c.detail}` } : c))} />
+
+      {robot && <BarreRobot robotId={robot.id} forme="ile" />}
 
       {demarre && (
         <Reticule projeterSol={(x, y) => scene.current?.projeterSol(x, y) ?? null}
@@ -237,41 +236,11 @@ function Jauge({ libelle, valeur }: { libelle: string; valeur: number }) {
   );
 }
 
-/** La dernière image réelle de la caméra de tête (scripts/copier-camera.mjs), tant que le back ne sert pas le flux. */
-type ModeCamera = 'image' | 'fpv';
-
-/**
- * La dernière image réelle de la caméra de tête (scripts/copier-camera.mjs), tant que le back ne sert pas le
- * flux ; un sélecteur bascule vers la vue 3D vue de l'œil du robot (la scène, déjà rendue derrière l'image).
- */
-function ApercuCamera() {
+/** Le run de la dernière image réelle de la caméra de tête (scripts/copier-camera.mjs), ou null sans image. */
+function useApercuCamera(): [string | null, (run: string | null) => void] {
   const [run, setRun] = useState<string | null>(null);
-  const [vue, setVue] = useState(true);
-  const [mode, setMode] = useState<ModeCamera>('image');
   useEffect(() => {
-    fetch('camera/apercu.json').then((r) => r.json()).then((m: { run: string }) => setRun(m.run)).catch(() => setVue(false));
+    fetch('camera/apercu.json').then((r) => r.json()).then((m: { run: string }) => setRun(m.run)).catch(() => setRun(null));
   }, []);
-  useEffect(() => {
-    const touche = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === 'v' && !(e.target as HTMLElement).closest('input, textarea, select')) {
-        setMode((m) => (m === 'image' ? 'fpv' : 'image'));
-      }
-    };
-    addEventListener('keydown', touche);
-    return () => removeEventListener('keydown', touche);
-  }, []);
-  if (!vue || !run) return null;
-  return (
-    <>
-      <img className={`vue-camera-image ${mode === 'fpv' ? 'cachee' : ''}`} src="camera/apercu.jpg"
-        alt="Dernière image de la caméra de tête" onError={() => setVue(false)} />
-      <div className="vue-camera-modes" role="group" aria-label="Ce que montre la caméra">
-        {([['image', 'IMAGE'], ['fpv', 'VUE 3D']] as [ModeCamera, string][]).map(([m, l]) => (
-          <button key={m} className={mode === m ? 'actif' : ''} aria-pressed={mode === m} onClick={() => setMode(m)}>{l}</button>
-        ))}
-        <span className="vue-camera-touche" aria-hidden="true">V</span>
-      </div>
-      <p className="vue-camera-source">{mode === 'image' ? `IMAGE D'ARCHIVE · ${run}` : 'VUE 3D · ŒIL DU ROBOT · NUAGES SIMULÉS'}</p>
-    </>
-  );
+  return [run, setRun];
 }
