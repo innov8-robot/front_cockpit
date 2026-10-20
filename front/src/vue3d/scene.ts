@@ -7,11 +7,12 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { RGBShiftShader } from 'three/examples/jsm/shaders/RGBShiftShader.js';
 import type { URDFRobot } from 'urdf-loader';
+import { creerEnvironnement } from './environnement';
 import { creerNuages, type Nuages } from './nuages';
 import { animerRobot, chargerRobot } from './robot';
 import { creerSol } from './sol';
 
-export type Calque = 'robot' | 'camera' | 'lidar' | 'sol';
+export type Calque = 'robot' | 'atelier' | 'camera' | 'lidar' | 'sol';
 
 export interface Scene3D {
   afficher(calque: Calque, visible: boolean): void;
@@ -29,7 +30,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
   const scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2('#030405', 0.07);
   const camera = new THREE.PerspectiveCamera(38, 1, 0.05, 200);
-  camera.position.set(2.5, 1.5, -2.7);
+  camera.position.set(3.7, 2.0, 1.6);
 
   const controles = new OrbitControls(camera, rendu.domElement);
   controles.target.set(0.35, 0.75, 0);
@@ -37,7 +38,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
   controles.autoRotate = true;
   controles.autoRotateSpeed = 0.35;
   controles.minDistance = 1.2;
-  controles.maxDistance = 9;
+  controles.maxDistance = 12;
   controles.maxPolarAngle = Math.PI * 0.49;
   controles.enablePan = false;
   controles.addEventListener('start', () => (controles.autoRotate = false));
@@ -61,7 +62,8 @@ export function monterScene(hote: HTMLElement): Scene3D {
 
   let robot: URDFRobot | null = null;
   let nuages: Nuages | null = null;
-  const visibles: Record<Calque, boolean> = { robot: true, camera: true, lidar: true, sol: true };
+  const visibles: Record<Calque, boolean> = { robot: true, atelier: true, camera: true, lidar: true, sol: true };
+  let atelier: THREE.Object3D | null = null;
 
   const pret = chargerRobot().then((r) => {
     robot = r;
@@ -75,7 +77,10 @@ export function monterScene(hote: HTMLElement): Scene3D {
     const lienTete = r.links.head_link ?? r.links.torso_link;
     const teteLocale = monde.worldToLocal(new THREE.Box3().setFromObject(lienTete).getCenter(new THREE.Vector3()));
 
-    nuages = creerNuages(teteLocale, zSol);
+    const env = creerEnvironnement(zSol);
+    atelier = env.objet;
+    monde.add(atelier);
+    nuages = creerNuages(teteLocale, env.lancer);
     for (const p of [nuages.camera, nuages.lidar]) {
       p.frustumCulled = false;
       monde.add(p);
@@ -86,6 +91,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
   function appliquerVisibilite(): void {
     sol.visible = visibles.sol;
     if (robot) robot.visible = visibles.robot;
+    if (atelier) atelier.visible = visibles.atelier;
     if (nuages) {
       nuages.camera.visible = visibles.camera;
       nuages.lidar.visible = visibles.lidar;

@@ -1,61 +1,10 @@
 import * as THREE from 'three';
+import type { Lancer } from './environnement';
 
 /**
- * Nuages simulés : on lance les rayons des deux capteurs de tête dans une cellule fictive (repère du robot,
+ * Nuages simulés : on lance les rayons des deux capteurs de tête dans l'atelier fictif (repère du robot,
  * x devant, z en haut). Le back les remplacera par les vrais nuages ; la forme des tampons ne change pas.
  */
-
-interface Boite { min: THREE.Vector3; max: THREE.Vector3 }
-
-const boite = (x0: number, y0: number, z0: number, x1: number, y1: number, z1: number): Boite => ({
-  min: new THREE.Vector3(x0, y0, z0), max: new THREE.Vector3(x1, y1, z1),
-});
-
-function cellule(sol: number): { boites: Boite[]; piece: Boite } {
-  const t = sol + 0.75;
-  const boites = [
-    boite(0.38, -0.6, t - 0.03, 1.08, 0.6, t),
-    ...[[0.4, -0.58], [1.02, -0.58], [0.4, 0.54], [1.02, 0.54]].map(([x, y]) => boite(x, y, sol, x + 0.04, y + 0.04, t - 0.03)),
-    boite(0.46, -0.21, t, 0.58, -0.11, t + 0.06),
-    boite(0.6, 0.02, t, 0.7, 0.1, t + 0.09),
-    boite(0.36, -0.12, t, 0.47, -0.01, t + 0.23),
-    boite(0.72, 0.18, t, 1.02, 0.2, t + 0.13), boite(0.72, 0.4, t, 1.02, 0.42, t + 0.13),
-    boite(0.72, 0.18, t, 0.74, 0.42, t + 0.13), boite(1.0, 0.18, t, 1.02, 0.42, t + 0.13),
-    boite(0.72, 0.18, t, 1.02, 0.42, t + 0.01),
-    boite(1.9, -3.2, sol, 2.8, -1.7, sol + 1.6),
-    boite(2.0, -1.6, sol + 0.9, 2.6, -1.4, sol + 1.2),
-    boite(-0.4, 2.2, sol, 1.8, 2.6, sol + 1.9),
-    boite(-0.4, 2.2, sol + 0.6, 1.8, 2.0, sol + 0.63), boite(-0.4, 2.2, sol + 1.2, 1.8, 2.0, sol + 1.23),
-    boite(3.2, 0.6, sol, 3.8, 1.4, sol + 0.9),
-  ];
-  return { boites, piece: boites[5] };
-}
-
-const SALLE = { min: new THREE.Vector3(-4, -5, 0), max: new THREE.Vector3(6, 5, 3.2) };
-
-function rayon(o: THREE.Vector3, d: THREE.Vector3, boites: Boite[], sol: number): number {
-  let meilleur = Infinity;
-  for (const b of boites) {
-    let tmin = -Infinity;
-    let tmax = Infinity;
-    for (const k of ['x', 'y', 'z'] as const) {
-      const inv = 1 / d[k];
-      let t0 = (b.min[k] - o[k]) * inv;
-      let t1 = (b.max[k] - o[k]) * inv;
-      if (t0 > t1) [t0, t1] = [t1, t0];
-      tmin = Math.max(tmin, t0);
-      tmax = Math.min(tmax, t1);
-    }
-    if (tmax >= tmin && tmin > 0.02 && tmin < meilleur) meilleur = tmin;
-  }
-  for (const k of ['x', 'y', 'z'] as const) {
-    const bas = k === 'z' ? sol : SALLE.min[k];
-    const haut = k === 'z' ? sol + SALLE.max.z : SALLE.max[k];
-    const t = d[k] > 0 ? (haut - o[k]) / d[k] : (bas - o[k]) / d[k];
-    if (t > 0 && t < meilleur) meilleur = t;
-  }
-  return meilleur;
-}
 
 function materiauPoints(couleur: string, taille: number, vie: number): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
@@ -102,8 +51,7 @@ export interface Nuages {
 }
 
 /** Construit les deux nuages ; `tete` est le point de la tête du robot dans son repère. */
-export function creerNuages(tete: THREE.Vector3, sol: number): Nuages {
-  const { boites } = cellule(sol);
+export function creerNuages(tete: THREE.Vector3, lancer: Lancer): Nuages {
 
   const L = 200;
   const H = 150;
@@ -128,7 +76,7 @@ export function creerNuages(tete: THREE.Vector3, sol: number): Nuages {
         const c = Math.cos(tangage);
         const s = Math.sin(tangage);
         d.set(d.x * c + d.z * s, d.y, -d.x * s + d.z * c);
-        let t = rayon(origineCam, d, boites, sol);
+        let t = lancer(origineCam, d);
         if (t > 3.2) t = NaN;
         t *= 1 + (Math.random() - 0.5) * 0.004;
         posCam[n++] = origineCam.x + d.x * t;
@@ -157,7 +105,7 @@ export function creerNuages(tete: THREE.Vector3, sol: number): Nuages {
       const az = Math.random() * Math.PI * 2;
       const el = elevMin + Math.random() * (elevMax - elevMin);
       d.set(Math.cos(el) * Math.cos(az), Math.cos(el) * Math.sin(az), Math.sin(el));
-      const r = rayon(origineLid, d, boites, sol);
+      const r = lancer(origineLid, d);
       const i = curseur * 3;
       const ok = r < 12;
       posLid[i] = ok ? origineLid.x + d.x * r : NaN;

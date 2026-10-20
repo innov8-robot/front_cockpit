@@ -7,6 +7,7 @@ import { monterScene, type Calque, type Scene3D } from '../vue3d/scene';
 
 const CALQUES: { cle: Calque; libelle: string; detail: string }[] = [
   { cle: 'robot', libelle: 'Robot', detail: 'G1-D' },
+  { cle: 'atelier', libelle: 'Atelier', detail: 'simulé' },
   { cle: 'camera', libelle: 'Caméra', detail: 'RGBD · 30 i/s' },
   { cle: 'lidar', libelle: 'Lidar', detail: '360° · 200 k pts/s' },
   { cle: 'sol', libelle: 'Grille', detail: '1 m' },
@@ -20,7 +21,7 @@ export function Accueil() {
   const hote = useRef<HTMLDivElement>(null);
   const scene = useRef<Scene3D | null>(null);
   const [pret, setPret] = useState(false);
-  const [calques, setCalques] = useState<Record<Calque, boolean>>({ robot: true, camera: true, lidar: true, sol: true });
+  const [calques, setCalques] = useState<Record<Calque, boolean>>({ robot: true, atelier: true, camera: true, lidar: true, sol: true });
   const [maintenant, setMaintenant] = useState(heure);
   const robots = useCharge(() => api.robots());
   const robot = robots.donnee?.find((r) => r.etat === 'en_mission') ?? robots.donnee?.[0];
