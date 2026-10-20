@@ -85,6 +85,12 @@ export function Accueil() {
   const [calques, setCalques] = useState<Record<Calque, boolean>>({ robot: true, atelier: true, camera: true, lidar: true, objets: true, sol: true });
   const [maintenant, setMaintenant] = useState(heure);
   const robots = useCharge(() => api.robots());
+  // L'état du robot change sous nos yeux (arrêt d'urgence, mission) : le titre le relit comme la barre.
+  const { recharger: relireRobots } = robots;
+  useEffect(() => {
+    const t = setInterval(relireRobots, 2000);
+    return () => clearInterval(t);
+  }, [relireRobots]);
   const robot = robots.donnee?.find((r) => r.etat === 'en_mission') ?? robots.donnee?.[0];
 
   useEffect(() => {

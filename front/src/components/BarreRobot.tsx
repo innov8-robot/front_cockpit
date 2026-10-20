@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { ETATS_ROBOT } from '../api/libelles';
@@ -132,14 +133,14 @@ export function BarreRobot({ robotId, forme }: { robotId: string; forme: FormeBa
         ))}
       </Link>
 
-      <section className="barre-groupe" aria-label="Bras : rigides ou mous" title="Bras : rigides, ou mous sous compensation de la gravité">
+      <section className="barre-groupe" aria-label="Bras : rigides ou en gravité" title="Bras : rigides, ou libres sous compensation de la gravité">
         <IconeBras />
         <span className="barre-segment" role="radiogroup">
           {(['rigide', 'mou'] as const).map((m) => (
             <button key={m} role="radio" aria-checked={robot.modeBras === m} disabled={bloque}
               className={`${robot.modeBras === m ? 'actif' : ''} ${arme === m ? 'arme' : ''}`} onClick={() => changerMode(m)}
               title={m === 'mou' ? 'Compensation de la gravité : les bras se guident à la main' : 'Les bras tiennent leur position'}>
-              {arme === m ? 'CONFIRMER ?' : m === 'mou' ? 'MOU · GRAVITÉ' : 'RIGIDE'}
+              {arme === m ? 'CONFIRMER ?' : m === 'mou' ? 'GRAVITÉ' : 'RIGIDE'}
             </button>
           ))}
         </span>
@@ -179,6 +180,8 @@ export function BarreRobot({ robotId, forme }: { robotId: string; forme: FormeBa
           <span>■ E-STOP</span>
         </button>
       )}
+      {/* Hors de la barre : son flou d'arrière-plan et sa translation confineraient le liseré à sa propre boîte. */}
+      {estop && createPortal(<div className="estop-bords" role="alert" aria-label="Arrêt d'urgence engagé" />, document.body)}
     </div>
   );
 }

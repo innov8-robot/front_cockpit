@@ -11,7 +11,7 @@ const HIERARCHIE: [string, string][] = [
   ['Connexion', '209 clics (le premier geste de chaque session) · pastille d’état à gauche'],
   ['Home', '36 clics · posture de travail, second clic pour confirmer'],
   ['Pinces', '31 clics « Ouvrir » · une par main, second clic pour confirmer'],
-  ['Mou / Rigide', '18 / 2 clics · « mou » se confirme, « rigide » non'],
+  ['Gravité / Rigide', '18 / 2 clics · « gravité » se confirme, « rigide » non'],
   ['Températures, batterie', 'lecture seule · le pire moteur de chaque groupe ; clic : le détail du corps'],
 ];
 
