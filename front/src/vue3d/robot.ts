@@ -9,7 +9,7 @@ const verre = new THREE.ShaderMaterial({
   polygonOffset: true,
   polygonOffsetFactor: 1,
   polygonOffsetUnits: 1,
-  uniforms: { uCouleur: { value: new THREE.Color('#e9f0ff') }, uPuissance: { value: 2.6 } },
+  uniforms: { uCouleur: { value: new THREE.Color('#e9f0ff') }, uPuissance: { value: 2.6 }, uAllume: { value: 1 } },
   vertexShader: /* glsl */ `
     varying vec3 vNormale;
     varying vec3 vVue;
@@ -22,11 +22,12 @@ const verre = new THREE.ShaderMaterial({
   fragmentShader: /* glsl */ `
     uniform vec3 uCouleur;
     uniform float uPuissance;
+    uniform float uAllume;
     varying vec3 vNormale;
     varying vec3 vVue;
     void main() {
       float f = pow(1.0 - abs(dot(normalize(vNormale), normalize(vVue))), uPuissance);
-      gl_FragColor = vec4(vec3(0.012, 0.016, 0.022) + uCouleur * f * 1.6, 1.0);
+      gl_FragColor = vec4(vec3(0.012, 0.016, 0.022) + uCouleur * f * 1.6 * uAllume, 1.0);
     }`,
 });
 
@@ -84,4 +85,11 @@ export function animerRobot(robot: URDFRobot, t: number): void {
     robot.setJointValue(`${cote}_elbow_joint`, POSTURE[`${cote}_elbow_joint`] + Math.sin(t * 0.9) * 0.05);
     robot.setJointValue(`${cote}_shoulder_pitch_joint`, POSTURE[`${cote}_shoulder_pitch_joint`] + Math.sin(t * 0.6) * 0.04);
   }
+}
+
+/** L'allumage du robot, de 0 (éteint) à 1 : au-dessous de 0,15 il disparaît, au-dessus son éclat suit. */
+export function allumerRobot(robot: URDFRobot, niveau: number): void {
+  robot.visible = niveau > 0.15;
+  verre.uniforms.uAllume.value = niveau;
+  aretes.opacity = 0.55 * niveau;
 }

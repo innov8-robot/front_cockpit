@@ -49,3 +49,8 @@ L'enregistrement d'une primitive est simulé (2,5 s) : au réel, il pilotera la 
   SIMULÉS en lançant des rayons dans une cellule fictive. Le back les remplacera par les vrais nuages.
 - `sol.ts` : la grille, l'anneau sous le robot et l'onde de balayage.
 - `scene.ts` : caméra orbitale, halo (bloom) et aberration chromatique.
+
+**Le fond de la scène est `scene.background`, jamais `setClearColor`.** three.js convertit la couleur
+d'effacement selon la cible de rendu active au moment où on la règle : réglée écran actif puis appliquée au
+tampon linéaire du post-traitement, elle sortait grise ; chaque rendu de l'hologramme (cible linéaire) la
+re-réglait en noir. L'image alternait entre les deux, une sur deux.

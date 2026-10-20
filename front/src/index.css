@@ -539,7 +539,8 @@ input[type='radio'] { width: auto; min-height: 0; }
 }
 /* Le HUD entre après le démarrage. */
 .accueil .hud-haut, .accueil .hud-titre, .accueil .hud-jauges, .accueil .hud-bas, .accueil .hud-carte { opacity: 0; transition: opacity 0.8s ease 0.15s; }
-.accueil-demarre .hud-haut, .accueil-demarre .hud-titre, .accueil-demarre .hud-jauges, .accueil-demarre .hud-bas, .accueil-demarre .hud-carte { opacity: 1; }
+.accueil-demarre .hud-haut, .accueil-demarre .hud-titre, .accueil-demarre .hud-jauges, .accueil-demarre .hud-bas, .accueil-demarre .hud-carte { opacity: 1; transition-delay: 2.4s; }
+/* Le HUD attend que le robot se soit allumé et que l'onde ait déployé la scène (scene.ts, ALLUMAGE_S + DEPLOIEMENT_S). */
 @media (prefers-reduced-motion: reduce) { .boot, .boot-curseur { animation: none; } .boot-sortie > *, .boot-sortie::after { animation: boot-neon 0.6s steps(2) forwards; } }
 @media (max-width: 699px) {
   .boot { flex-direction: column; gap: 16px; padding: calc(20px + env(safe-area-inset-top)) 16px 20px; font-size: 9.5px; }

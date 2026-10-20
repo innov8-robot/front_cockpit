@@ -28,6 +28,10 @@ export function Accueil() {
   const [pret, setPret] = useState(false);
   const [etape, setEtape] = useState<'bios' | 'logo' | 'pret'>('bios');
   const demarre = etape === 'pret';
+
+  useEffect(() => {
+    if (demarre) scene.current?.demarrer();
+  }, [demarre]);
   const [calques, setCalques] = useState<Record<Calque, boolean>>({ robot: true, atelier: true, camera: true, lidar: true, sol: true });
   const [maintenant, setMaintenant] = useState(heure);
   const robots = useCharge(() => api.robots());

@@ -17,6 +17,8 @@ interface Carte {
 const SEUIL_OCCUPE = 127;
 /** Le carré montre 2,5 m de côté, quelle que soit sa taille : le zoom est serré sur le robot. */
 const METRES_PAR_COTE = 2.5;
+/** La place du robot dans le carré, en fraction du côté (depuis le coin haut gauche). */
+const DECALAGE = { x: 0.42, y: 0.58 };
 /** Sous cette distance (m) d'un nom déjà écrit, un poste n'a que son point. */
 const ECART_NOMS_M = 0.9;
 
@@ -69,8 +71,9 @@ export function MiniCarte({ poste }: { poste: string | null }) {
       const ctx = c.getContext('2d')!;
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
       ctx.clearRect(0, 0, L, H);
-      const cx = L / 2;
-      const cy = H / 2;
+      // Le fondu mange le haut et la droite : le robot va au centre de ce qui reste visible.
+      const cx = L * DECALAGE.x;
+      const cy = H * DECALAGE.y;
       const PIXELS_PAR_METRE = L / METRES_PAR_COTE;
 
       // Repère monde (x, y en mètres, y vers le haut) vers l'écran, cap du robot en haut.

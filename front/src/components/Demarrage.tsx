@@ -81,7 +81,8 @@ export function Demarrage({ pret, onFini }: { pret: boolean; onFini(): void }) {
   const [statuts, setStatuts] = useState(0);
   const [sortie, setSortie] = useState(false);
   const reduit = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const vitesse = reduit ? 0.3 : 1;
+  // Un facteur sur tous les délais du journal : 0,4 = deux fois et demie plus vite que les délais écrits.
+  const vitesse = reduit ? 0.15 : 0.4;
   const finir = useRef(onFini);
   finir.current = onFini;
 
@@ -103,7 +104,8 @@ export function Demarrage({ pret, onFini }: { pret: boolean; onFini(): void }) {
       const t = setTimeout(() => setLignes(lignes + 1), JOURNAL[lignes][2] * vitesse);
       return () => clearTimeout(t);
     }
-    const t = setTimeout(() => setSortie(true), 700 * vitesse);
+    // « SYSTEM READY » reste lisible un instant, quelle que soit la vitesse.
+    const t = setTimeout(() => setSortie(true), 650);
     return () => clearTimeout(t);
   }, [colonnes, lignes, statuts, pret, vitesse]);
 

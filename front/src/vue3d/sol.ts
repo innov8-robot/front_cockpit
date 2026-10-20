@@ -7,6 +7,7 @@ export function creerSol(): THREE.Mesh {
     depthWrite: false,
     uniforms: {
       uTemps: { value: 0 },
+      uRevele: { value: 1000 },
       uLigne: { value: new THREE.Color('#cfd6e4') },
       uAccent: { value: new THREE.Color('#ff2d3a') },
     },
@@ -19,6 +20,7 @@ export function creerSol(): THREE.Mesh {
       }`,
     fragmentShader: /* glsl */ `
       uniform float uTemps;
+      uniform float uRevele;
       uniform vec3 uLigne;
       uniform vec3 uAccent;
       varying vec2 vXZ;
@@ -43,7 +45,11 @@ export function creerSol(): THREE.Mesh {
         float anneau = smoothstep(0.025, 0.0, abs(r - 0.62)) * 2.2;
         float onde = smoothstep(0.08, 0.0, abs(r - mod(uTemps * 1.4, 7.0))) * 0.8 * exp(-r * 0.25);
         vec3 couleur = uLigne * (lignes + points) * fondu + uAccent * (anneau + onde);
-        float alpha = clamp((lignes + points) * fondu + anneau + onde, 0.0, 1.0);
+        // Le déploiement : la grille n'existe qu'en deçà du front, qui brille en rouge en passant.
+        float front = smoothstep(0.25, 0.0, abs(r - uRevele)) * step(0.05, uRevele) * step(uRevele, 30.0);
+        float dedans = 1.0 - smoothstep(uRevele - 0.3, uRevele, r);
+        couleur = couleur * dedans + uAccent * front * 1.4;
+        float alpha = clamp(((lignes + points) * fondu + anneau + onde) * dedans + front, 0.0, 1.0);
         gl_FragColor = vec4(couleur, alpha);
       }`,
     extensions: { derivatives: true } as never,

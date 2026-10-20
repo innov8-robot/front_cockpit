@@ -25,6 +25,7 @@ function materiauCanal(couleur: string, taille: number, vie: number, canal: THRE
       uTemps: { value: 0 },
       uVie: { value: vie },
       uEchelle: { value: 1 },
+      uRevele: { value: 1000 },
       uDecalage: { value: decalage },
     },
     vertexShader: /* glsl */ `
@@ -33,13 +34,18 @@ function materiauCanal(couleur: string, taille: number, vie: number, canal: THRE
       uniform float uTemps;
       uniform float uVie;
       uniform float uEchelle;
+      uniform float uRevele;
       uniform float uDecalage;
       varying float vAlpha;
       void main() {
         vec4 vue = modelViewMatrix * vec4(position, 1.0);
         float age = uVie > 0.0 ? clamp((uTemps - aNaissance) / uVie, 0.0, 1.0) : 0.0;
         float balayage = smoothstep(0.25, 0.0, abs(length(position.xy) - mod(uTemps * 1.4, 7.0)));
-        vAlpha = (1.0 - age) * (0.55 + balayage * 1.6);
+        // L'onde éclaire sans dépasser le seuil du halo : sur le nuage dense de la table, elle faisait un flash.
+        vAlpha = (1.0 - age) * (0.55 + balayage * 0.5);
+        // Le déploiement : rien au-delà du front de l'onde (rayon uRevele autour du robot), le front éclairé.
+        float distanceRobot = length(position.xy);
+        vAlpha = distanceRobot > uRevele ? 0.0 : vAlpha + smoothstep(0.4, 0.0, uRevele - distanceRobot) * 0.9;
         gl_PointSize = clamp(uTaille * uEchelle / -vue.z, 1.5, 4.0);
         gl_Position = projectionMatrix * vue;
         vec2 ecran = gl_Position.xy / gl_Position.w;
@@ -81,6 +87,8 @@ export interface Nuages {
   lidar: THREE.Group;
   materiaux: THREE.ShaderMaterial[];
   mettreAJour(t: number): void;
+  /** Le rayon (m) jusqu'où les nuages sont révélés, pendant le déploiement. */
+  reveler(rayon: number): void;
 }
 
 /** Construit les deux nuages ; `tete` est le point de la tête du robot dans son repère. */
@@ -159,6 +167,9 @@ export function creerNuages(tete: THREE.Vector3, lancer: Lancer): Nuages {
     camera: camera.groupe,
     lidar: lidar.groupe,
     materiaux,
+    reveler(rayon: number) {
+      for (const m of materiaux) m.uniforms.uRevele.value = rayon;
+    },
     mettreAJour(t: number) {
       balayerLidar(t);
       if (t - derniereCam > 0.25) {
