@@ -13,8 +13,9 @@ export interface DescriptionCalque {
 export const CALQUES: DescriptionCalque[] = [
   { cle: 'robot', libelle: 'Robot', detail: 'G1-D', couleur: '#e9f0ff' },
   { cle: 'atelier', libelle: 'Atelier', detail: 'simulé', couleur: '#8793a8' },
-  { cle: 'camera', libelle: 'Caméra', detail: 'RGBD · 30 i/s', couleur: '#c4d2ea' },
-  { cle: 'lidar', libelle: 'Lidar', detail: '360° · 200 k pts/s', couleur: '#ff5a64' },
+  { cle: 'camera', libelle: 'Caméra', detail: 'RGBD · 30 i/s', couleur: '#ffffff' },
+  { cle: 'lidar', libelle: 'Lidar', detail: '360° · 200 k pts/s', couleur: '#ffffff' },
+  { cle: 'carte', libelle: 'Carte', detail: 'mémorisée · 5 cm', couleur: '#8fa6c8' },
   { cle: 'objets', libelle: 'Objets', detail: 'déclarés', couleur: 'conic-gradient(#3dd6ff 0 25%, #ffb02e 0 50%, #3dff8a 0 75%, #c77dff 0)' },
   { cle: 'sol', libelle: 'Grille', detail: '1 m', couleur: '#cfd6e4' },
 ];

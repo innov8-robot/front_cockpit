@@ -11,6 +11,7 @@ import { creerHologramme } from './hologramme';
 import { CAMERA_TETE, creerNuages, type Nuages } from './nuages';
 import { allumerRobot, animerRobot, chargerRobot } from './robot';
 import { creerSol } from './sol';
+import { mettreAJourSonar } from './sonar';
 
 /** Le fond de la scène, le gris très sombre qu'on voyait déjà (la mini-carte s'y accorde). */
 const FOND = '#1a1f23';
@@ -36,7 +37,7 @@ function niveauNeon(dt: number): number {
 }
 
 
-export type Calque = 'robot' | 'atelier' | 'camera' | 'lidar' | 'objets' | 'sol';
+export type Calque = 'robot' | 'atelier' | 'camera' | 'lidar' | 'carte' | 'objets' | 'sol';
 
 export interface Scene3D {
   afficher(calque: Calque, visible: boolean): void;
@@ -98,7 +99,9 @@ export function monterScene(hote: HTMLElement): Scene3D {
 
   let robot: URDFRobot | null = null;
   let nuages: Nuages | null = null;
-  const visibles: Record<Calque, boolean> = { robot: true, atelier: true, camera: true, lidar: true, objets: true, sol: true };
+  const visibles: Record<Calque, boolean> = {
+    robot: true, atelier: true, camera: true, lidar: true, carte: true, objets: true, sol: true,
+  };
   let detections: Detections | null = null;
   let objets: { nom: string; couleur: string }[] = [];
   let atelier: THREE.Object3D | null = null;
@@ -139,7 +142,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
     objets = env.objets.map(({ nom, couleur }) => ({ nom, couleur }));
     hologramme = creerHologramme(rendu, scene, teteLocale.clone().add(CAMERA_TETE.decalage));
     monde.add(hologramme.groupe);
-    monde.add(nuages.camera, nuages.lidar);
+    monde.add(nuages.carte, nuages.camera, nuages.lidar);
     appliquerVisibilite();
   });
 
@@ -150,6 +153,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
       nuages.camera.visible = visibles.camera;
       if (hologramme) hologramme.groupe.visible = visibles.camera && rayon > 0.4;
       nuages.lidar.visible = visibles.lidar;
+      nuages.carte.visible = visibles.carte;
     }
     detections?.afficher(visibles.objets && visibles.camera);
   }
@@ -220,11 +224,17 @@ export function monterScene(hote: HTMLElement): Scene3D {
     }
   }
 
+  const origineSonar = new THREE.Vector3();
   function boucle(): void {
     image = requestAnimationFrame(boucle);
     const t = horloge.getElapsedTime();
     (sol.material as THREE.ShaderMaterial).uniforms.uTemps.value = t;
     apparaitre(t);
+    // Le sonar part de la tête une fois la scène déployée, et monte en force sur une seconde.
+    if (nuages) {
+      origineSonar.copy(nuages.origineLidar);
+      mettreAJourSonar(t, monde.localToWorld(origineSonar), deploye === null ? 0 : Math.min(1, deploye));
+    }
     if (robot) animerRobot(robot, t);
     nuages?.mettreAJour(t);
     hologramme?.mettreAJour(t);

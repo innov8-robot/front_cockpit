@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CALQUE_DETECTIONS, ORDRE_MASQUE, ORDRE_SEGMENTATION } from './detections';
+import { sonariser } from './sonar';
 
 /**
  * Un atelier fictif autour du robot, dans son repère (x devant, z en haut, mètres). Les mêmes formes sont
@@ -193,6 +194,8 @@ const TONS: Record<Ton, THREE.LineBasicMaterial> = {
   objet: new THREE.LineBasicMaterial({ color: '#c3cde0', transparent: true, opacity: 0.45 }),
   machine: new THREE.LineBasicMaterial({ color: '#ff2d3a', transparent: true, opacity: 0.4 }),
 };
+// L'impulsion du sonar épouse les arêtes des meubles en passant.
+for (const materiau of Object.values(TONS)) sonariser(materiau);
 
 function dessiner(formes: Forme[], sol: number): THREE.Group {
   const groupe = new THREE.Group();

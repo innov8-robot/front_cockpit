@@ -76,7 +76,7 @@ export function Accueil() {
     const t = setTimeout(() => setHudPret(true), 3600);
     return () => clearTimeout(t);
   }, [demarre]);
-  const [calques, setCalques] = useState<Record<Calque, boolean>>({ robot: true, atelier: true, camera: true, lidar: true, objets: true, sol: true });
+  const [calques, setCalques] = useState<Record<Calque, boolean>>({ robot: true, atelier: true, camera: true, lidar: true, carte: true, objets: true, sol: true });
   const [maintenant, setMaintenant] = useState(heure);
   const robots = useCharge(() => api.robots());
   // L'état du robot change sous nos yeux (arrêt d'urgence, mission) : le titre le relit comme la barre.

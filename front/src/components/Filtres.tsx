@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Calque } from '../vue3d/scene';
 import type { DescriptionCalque } from './calques';
-import { IconeAtelier, IconeCamera, IconeCorps, IconeGrille, IconeLidar, IconeObjets } from './IconesRobot';
+import { IconeAtelier, IconeCamera, IconeCarte, IconeCorps, IconeGrille, IconeLidar, IconeObjets } from './IconesRobot';
 
 /** Ce que reçoit chaque proposition de filtres : les calques, ceux qui sont montrés, et la bascule. */
 export interface ProprietesFiltres {
@@ -11,7 +11,8 @@ export interface ProprietesFiltres {
 }
 
 const ICONES: Record<Calque, typeof IconeCorps> = {
-  robot: IconeCorps, atelier: IconeAtelier, camera: IconeCamera, lidar: IconeLidar, objets: IconeObjets, sol: IconeGrille,
+  robot: IconeCorps, atelier: IconeAtelier, camera: IconeCamera, lidar: IconeLidar, carte: IconeCarte, objets: IconeObjets,
+  sol: IconeGrille,
 };
 
 const compte = ({ calques, actifs }: ProprietesFiltres) => `${calques.filter((c) => actifs[c.cle]).length}/${calques.length}`;
