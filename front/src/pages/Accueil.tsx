@@ -35,6 +35,9 @@ export function Accueil() {
   const [plein, setPlein] = useState<null | 'carte' | 'camera' | 'sortie-camera'>(null);
   const [survolCamera, setSurvolCamera] = useState(false);
   const appui = useRef<{ x: number; y: number } | null>(null);
+  // Par l'œil du robot : la scène et ses objets segmentés, ou la dernière image réelle s'il y en a une.
+  const [apercu, setApercu] = useApercuCamera();
+  const [imageReelle, setImageReelle] = useState(false);
 
   function survoler(e: React.PointerEvent) {
     const s = scene.current;
@@ -159,7 +162,19 @@ export function Accueil() {
 
       {(plein === 'camera') && (
         <div className="vue-camera" aria-label="Vue de la caméra de tête">
-          <ApercuCamera />
+          {apercu && imageReelle && (
+            <>
+              <img className="vue-camera-image" src="camera/apercu.jpg" alt="Dernière image de la caméra de tête"
+                onError={() => setApercu(null)} />
+              <p className="vue-camera-source">IMAGE D'ARCHIVE · {apercu}</p>
+            </>
+          )}
+          {apercu && (
+            <button className="hud-plein-fermer vue-camera-bascule" aria-pressed={imageReelle}
+              onClick={() => setImageReelle(!imageReelle)}>
+              {imageReelle ? 'OBJETS SEGMENTÉS' : 'IMAGE RÉELLE'}
+            </button>
+          )}
           <div className="vue-camera-coins" aria-hidden="true" />
           <p className="vue-camera-titre">CAMÉRA TÊTE · REALSENSE D435i · 87° × 58° · 30 i/s</p>
           <p className="vue-camera-rec"><span /> EN DIRECT</p>
@@ -198,18 +213,11 @@ function Jauge({ libelle, valeur }: { libelle: string; valeur: number }) {
   );
 }
 
-/** La dernière image réelle de la caméra de tête (scripts/copier-camera.mjs), tant que le back ne sert pas le flux. */
-function ApercuCamera() {
+/** Le run de la dernière image réelle de la caméra de tête (scripts/copier-camera.mjs), ou null sans image. */
+function useApercuCamera(): [string | null, (run: string | null) => void] {
   const [run, setRun] = useState<string | null>(null);
-  const [vue, setVue] = useState(true);
   useEffect(() => {
-    fetch('camera/apercu.json').then((r) => r.json()).then((m: { run: string }) => setRun(m.run)).catch(() => setVue(false));
+    fetch('camera/apercu.json').then((r) => r.json()).then((m: { run: string }) => setRun(m.run)).catch(() => setRun(null));
   }, []);
-  if (!vue || !run) return null;
-  return (
-    <>
-      <img className="vue-camera-image" src="camera/apercu.jpg" alt="Dernière image de la caméra de tête" onError={() => setVue(false)} />
-      <p className="vue-camera-source">IMAGE D'ARCHIVE · {run}</p>
-    </>
-  );
+  return [run, setRun];
 }

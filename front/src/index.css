@@ -708,6 +708,8 @@ input[type='radio'] { width: auto; min-height: 0; }
 .vue-camera-rec { bottom: calc(46px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 8px; color: #ff5a64; }
 .vue-camera-rec span { width: 8px; height: 8px; border-radius: 50%; background: #ff2d3a; animation: boot-curseur 1s steps(1) infinite; }
 .vue-camera .hud-plein-fermer { pointer-events: auto; }
+.vue-camera .vue-camera-bascule { right: 220px; }
+.vue-camera-bascule[aria-pressed='true'] { border-color: #8fe3ff; color: #8fe3ff; }
 @keyframes vue-camera-entree { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
   .hud-carte { transition-duration: 0.01s; }
