@@ -81,8 +81,8 @@ export function Demarrage({ pret, onFini }: { pret: boolean; onFini(): void }) {
   const [statuts, setStatuts] = useState(0);
   const [sortie, setSortie] = useState(false);
   const reduit = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  // Un facteur sur tous les délais du journal : 0,4 = deux fois et demie plus vite que les délais écrits.
-  const vitesse = reduit ? 0.15 : 0.4;
+  // Un facteur sur tous les délais du journal : 0,2 = cinq fois plus vite que les délais écrits.
+  const vitesse = reduit ? 0.1 : 0.2;
   const finir = useRef(onFini);
   finir.current = onFini;
 

@@ -52,13 +52,14 @@ export function creerHologramme(rendu: THREE.WebGLRenderer, scene: THREE.Scene, 
     transparent: true,
     depthWrite: false,
     side: THREE.DoubleSide,
-    uniforms: { uImage: { value: cible.texture }, uTemps: { value: 0 } },
+    uniforms: { uImage: { value: cible.texture }, uTemps: { value: 0 }, uSurvol: { value: 0 } },
     vertexShader: /* glsl */ `
       varying vec2 vUv;
       void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
     fragmentShader: /* glsl */ `
       uniform sampler2D uImage;
       uniform float uTemps;
+      uniform float uSurvol;
       varying vec2 vUv;
       void main() {
         // Vu de l'extérieur, on regarde l'écran de dos : on retourne l'image pour qu'elle se lise à l'endroit.
@@ -71,7 +72,9 @@ export function creerHologramme(rendu: THREE.WebGLRenderer, scene: THREE.Scene, 
         float bord = smoothstep(0.0, 0.05, vUv.x) * smoothstep(1.0, 0.95, vUv.x)
                    * smoothstep(0.0, 0.07, vUv.y) * smoothstep(1.0, 0.93, vUv.y);
         float scintille = 0.92 + 0.08 * sin(uTemps * 31.0) * sin(uTemps * 7.0);
-        gl_FragColor = vec4(couleur * lignes + vec3(0.5, 0.9, 1.0) * bande, (0.62 + bande) * bord * scintille);
+        // Survolé, l'écran s'avive : on comprend qu'on peut cliquer dessus.
+        vec3 eclat = couleur * lignes * (1.0 + 0.7 * uSurvol) + vec3(0.5, 0.9, 1.0) * (bande + 0.12 * uSurvol);
+        gl_FragColor = vec4(eclat, (0.62 + bande + 0.25 * uSurvol) * bord * scintille);
       }`,
   });
   const panneau = new THREE.Mesh(ecran, materiau);
@@ -98,18 +101,35 @@ export function creerHologramme(rendu: THREE.WebGLRenderer, scene: THREE.Scene, 
   groupe.add(affiche);
 
   let image = 0;
+  let survol = 0;
+  let cibleSurvol = 0;
   return {
     groupe,
+    /** L'écran, pour savoir si le pointeur le survole. */
+    panneau,
+    /** La caméra de tête elle-même : la vue plein écran vole jusqu'à elle. */
+    oeil,
+    /** Cache l'écran et sa pyramide (quand on regarde par la caméra, on ne doit pas les voir). */
+    masquer(masque: boolean) {
+      affiche.visible = !masque;
+    },
+    survoler(actif: boolean) {
+      cibleSurvol = actif ? 1 : 0;
+    },
     mettreAJour(t: number) {
       materiau.uniforms.uTemps.value = t;
+      survol += (cibleSurvol - survol) * 0.18;
+      materiau.uniforms.uSurvol.value = survol;
+      traits.opacity = 0.55 + 0.45 * survol * (0.6 + 0.4 * Math.sin(t * 7));
       if (!groupe.visible || image++ % UNE_SUR) return;
       // L'hologramme ne se filme pas lui-même.
+      const visible = affiche.visible;
       affiche.visible = false;
       const avant = rendu.getRenderTarget();
       rendu.setRenderTarget(cible);
       rendu.render(scene, oeil);
       rendu.setRenderTarget(avant);
-      affiche.visible = true;
+      affiche.visible = visible;
     },
     detruire() {
       cible.dispose();
