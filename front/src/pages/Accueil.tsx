@@ -195,7 +195,7 @@ export function Accueil() {
         }}
         calques={CALQUES.map((c) => (c.cle === 'objets' && nbObjets ? { ...c, detail: `${nbObjets} ${c.detail}` } : c))} />
 
-      {robot && <BarreRobot robotId={robot.id} forme="haut" />}
+      {robot && <BarreRobot robotId={robot.id} forme="ile" />}
       {robot && <BarreMission robot={robot} />}
 
       {demarre && (

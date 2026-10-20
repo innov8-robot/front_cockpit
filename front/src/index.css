@@ -583,16 +583,16 @@ input[type='radio'] { width: auto; min-height: 0; }
 @keyframes intro-sortie { 40% { opacity: 1; filter: brightness(1.6); } 100% { opacity: 0; filter: brightness(0.5); } }
 @media (prefers-reduced-motion: reduce) { .intro-bloc { animation-duration: 0.01s; } .intro-cadre rect { animation-duration: 0.2s; } }
 
-/* La carte 2D du châssis, ancrée dans le coin bas gauche : opaque dans le coin, fondue en arc vers la scène. */
+/* La carte 2D du châssis, ancrée dans le coin haut droit : opaque dans le coin, fondue en arc vers la scène. */
 .hud-carte {
   /* Proportionnelle à l'écran : 420 px sur un grand écran, un quart de la largeur sur une tablette. */
   --cote: clamp(200px, min(24vw, 44vh), 420px);
-  left: 0; bottom: 0; width: var(--cote); height: var(--cote); pointer-events: none;
+  right: 0; top: 0; width: var(--cote); height: var(--cote); pointer-events: none;
 }
 /* La zone cliquable : un cercle invisible dans le coin, là où la carte se voit. Le dessin, lui, n'est pas
    découpé (une découpe tranchait net la fin du fondu). */
 .hud-carte-zone {
-  position: absolute; left: calc(var(--cote) * -0.75); bottom: calc(var(--cote) * -0.75);
+  position: absolute; right: calc(var(--cote) * -0.75); top: calc(var(--cote) * -0.75);
   width: calc(var(--cote) * 1.5); height: calc(var(--cote) * 1.5); border-radius: 50%;
   pointer-events: auto; cursor: zoom-in;
 }
@@ -605,28 +605,28 @@ input[type='radio'] { width: auto; min-height: 0; }
 @keyframes indice-pulse { 50% { opacity: 0.45; } }
 /* En plein écran : toute la fenêtre, l'arc si grand qu'il ne fond plus rien. */
 .hud-carte.plein { --cote: 170vmax; width: 100vw; height: 100dvh; z-index: 8; pointer-events: auto; }
-.hud-carte.plein .hud-carte-legende { left: 28px; bottom: 26px; font-size: 11px; }
+.hud-carte.plein .hud-carte-legende { right: auto; left: 28px; top: auto; bottom: 26px; text-align: left; font-size: 11px; }
 /* Le fond tient plus loin dans l'arc que la carte : la scène ne transparaît jamais derrière elle.
-   Les deux arcs s'achèvent sur les bords haut et droit (rayon = côté) : aucun bord du carré ne se voit. */
+   Les deux arcs s'achèvent sur les bords bas et gauche (rayon = côté) : aucun bord du carré ne se voit. */
 .hud-carte::before {
   /* La couleur du sol de la vue 3D telle qu'elle sort à l'écran (grille, brouillard et vignette compris). */
   content: ''; position: absolute; inset: 0; background: #1d2126;
-  -webkit-mask-image: radial-gradient(circle var(--cote) at 0% 100%, #000 80%, transparent 100%);
-  mask-image: radial-gradient(circle var(--cote) at 0% 100%, #000 80%, transparent 100%);
+  -webkit-mask-image: radial-gradient(circle var(--cote) at 100% 0%, #000 80%, transparent 100%);
+  mask-image: radial-gradient(circle var(--cote) at 100% 0%, #000 80%, transparent 100%);
 }
 .hud-carte canvas {
   position: relative; width: 100%; height: 100%; display: block;
-  -webkit-mask-image: radial-gradient(circle var(--cote) at 0% 100%, #000 72%, transparent 100%);
-  mask-image: radial-gradient(circle var(--cote) at 0% 100%, #000 72%, transparent 100%);
+  -webkit-mask-image: radial-gradient(circle var(--cote) at 100% 0%, #000 72%, transparent 100%);
+  mask-image: radial-gradient(circle var(--cote) at 100% 0%, #000 72%, transparent 100%);
 }
 .hud-carte-legende {
-  position: absolute; left: calc(20px + env(safe-area-inset-left)); bottom: calc(16px + env(safe-area-inset-bottom));
-  display: flex; flex-direction: column; gap: 3px;
+  position: absolute; right: calc(20px + env(safe-area-inset-right)); top: calc(16px + env(safe-area-inset-top));
+  display: flex; flex-direction: column; gap: 3px; text-align: right;
   font-family: ui-monospace, monospace; font-size: 9px; letter-spacing: 0.18em; color: #8a93a3;
 }
 @media (max-width: 699px) {
-  .hud-carte { --cote: 230px; bottom: calc(84px + env(safe-area-inset-bottom)); }
-  .hud-carte-legende { bottom: 10px; font-size: 7.5px; }
+  .hud-carte { --cote: 190px; }
+  .hud-carte-legende { top: 10px; font-size: 7.5px; }
 }
 
 /* Le réticule CAO, à la souris seulement (Reticule.tsx) : croix de visée, deux lignes, badge de télémétrie. */
@@ -1057,11 +1057,6 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 
 /* L'accueil épuré : la barre du robot en haut, les calques en haut à gauche, le rail des écrans à droite,
    la barre de mission en bas. Plus de titre, de menu ni de jauges. */
-.barre-haut {
-  left: 50%; top: calc(16px + env(safe-area-inset-top)); transform: translateX(-50%);
-  max-width: calc(100% - 32px); padding: 7px 7px 7px 6px; border-radius: 18px;
-  background: rgb(10 13 17 / 0.74); border: 1px solid var(--b-bord); box-shadow: 0 14px 44px rgb(0 0 0 / 0.55);
-}
 .hud-calques { top: calc(16px + env(safe-area-inset-top)); }
 
 .hud-rail {
@@ -1118,18 +1113,17 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .barre-mission-chrono { font-size: 18px; font-weight: 700; letter-spacing: 0.06em; }
 .barre-mission-detail { font-size: 10px; color: #8a93a3; letter-spacing: 0.08em; }
 .barre-mission-erreur { font-size: 10px; color: #ff5a64; letter-spacing: 0.06em; max-width: 220px; }
-.accueil .barre-mission, .accueil .hud-rail, .accueil .barre-haut { opacity: 0; transition: opacity 0.8s ease 0.15s; }
-.accueil-demarre .barre-mission, .accueil-demarre .hud-rail, .accueil-demarre .barre-haut { opacity: 1; transition-delay: 2.4s; }
-.hud-pret .barre-mission, .hud-pret .hud-rail, .hud-pret .barre-haut { transition-delay: 0s !important; }
+.accueil .barre-mission, .accueil .hud-rail { opacity: 0; transition: opacity 0.8s ease 0.15s; }
+.accueil-demarre .barre-mission, .accueil-demarre .hud-rail { opacity: 1; transition-delay: 2.4s; }
+.hud-pret .barre-mission, .hud-pret .hud-rail { transition-delay: 0s !important; }
 .accueil[class*='plein-'] .barre-mission, .accueil[class*='plein-'] .hud-rail { opacity: 0 !important; pointer-events: none; }
 /* Les écrans ouverts laissent la barre du robot en haut et la barre de mission en bas. */
 .avec-barre .overlay-cote, .avec-barre .overlay-grand { top: calc(84px + env(safe-area-inset-top)); bottom: calc(88px + env(safe-area-inset-bottom)); }
-.avec-barre .overlay-cote { right: 116px; }
+.avec-barre .overlay-cote { right: 24px; }
 
 @media (max-width: 899px) {
   .hud-calques { top: calc(78px + env(safe-area-inset-top)); left: 12px; }
-  .barre-haut { left: 12px; right: 12px; transform: none; max-width: none; }
-  .hud-rail { right: 8px; padding: 6px; }
+  .hud-rail { left: 8px; padding: 6px; }
   .hud-rail-lien { width: 56px; }
   .hud-rail-nom { font-size: 8px; }
   .barre-mission-detail { display: none; }
@@ -1138,12 +1132,17 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
   .barre-mission { left: 12px; right: 12px; transform: none; max-width: none; }
   .barre-mission-ouvrir { display: none; }
 }
-/* Sous 1500 px, la barre du robot (≈ 1000 px) ne laisse plus la place aux calques à côté d'elle : ils passent dessous. */
+/* Sous 1500 px, la barre de mission en haut ne laisse plus la place aux calques à côté d'elle : ils passent dessous. */
 @media (max-width: 1499px) { .hud-calques { top: calc(84px + env(safe-area-inset-top)); } }
-/* En vue caméra, la barre du robot descend en bas (l'E-STOP reste sous la main) et laisse le haut à la
-   caméra ; les mentions du bas de la vue remontent au-dessus d'elle. En carte pleine, elle reste en haut et
-   le bouton de réduction passe dessous. */
-.accueil.plein-camera .barre-haut, .accueil.plein-sortie-camera .barre-haut { top: auto; bottom: calc(18px + env(safe-area-inset-bottom)); }
+/* La barre du robot est en bas, toujours (l'E-STOP reste sous la main) : en vue caméra et en carte pleine,
+   les mentions du bas remontent au-dessus d'elle. */
 .avec-barre .vue-camera-rec, .avec-barre .vue-camera-source { bottom: calc(104px + env(safe-area-inset-bottom)); }
 .avec-barre .vue-camera-coins { bottom: 86px; }
-.avec-barre .hud-carte.plein .hud-plein-fermer { top: calc(92px + env(safe-area-inset-top)); }
+.avec-barre .hud-carte.plein .hud-carte-legende { bottom: calc(104px + env(safe-area-inset-bottom)); }
+
+/* La barre de mission passe en haut, la barre du robot en bas ; le rail se range sous la mini-carte du coin
+   haut droit. */
+.barre-mission { top: calc(16px + env(safe-area-inset-top)); bottom: auto; }
+/* Le rail des écrans est à gauche, centré en hauteur, sous les calques : le coin haut droit est à la carte. */
+.hud-rail { right: auto; left: 20px; top: 50%; transform: translateY(-50%); }
+.hud-rail-lien.active::before { left: auto; right: -8px; }

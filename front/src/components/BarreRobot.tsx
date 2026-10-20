@@ -32,7 +32,7 @@ const TON_ROBOT: Record<EtatRobot, string> = {
   disponible: 'ok', en_mission: 'ok', en_charge: 'info', hors_ligne: 'danger', arret_urgence: 'danger',
 };
 
-export type FormeBarre = 'bandeau' | 'ile' | 'haut';
+export type FormeBarre = 'bandeau' | 'ile';
 
 interface Groupe { libelle: string; Icone: typeof IconeMains; temperature: number | null; etat: EtatMoteur; chaud: Moteur | null }
 

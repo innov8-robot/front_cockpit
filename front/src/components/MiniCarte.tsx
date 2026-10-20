@@ -18,7 +18,7 @@ const SEUIL_OCCUPE = 127;
 /** Le carré montre 2,5 m de côté, quelle que soit sa taille : le zoom est serré sur le robot. */
 const METRES_PAR_COTE = 2.5;
 /** La place du robot dans le carré, en fraction du côté (depuis le coin haut gauche). */
-const DECALAGE = { x: 0.42, y: 0.58 };
+const DECALAGE = { x: 0.58, y: 0.42 };
 /** Sous cette distance (m) d'un nom déjà écrit, un poste n'a que son point. */
 const ECART_NOMS_M = 0.9;
 
