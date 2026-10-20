@@ -786,7 +786,7 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 /* La barre du robot (BarreRobot.tsx) : bandeau en bas de l'écran, ou île qui flotte. Toujours sombre. */
 .barre-robot {
   --b-texte: #e9eef7; --b-2: #8a93a3; --b-bord: rgb(255 255 255 / 0.09);
-  --b-ok: #3dff8a; --b-alerte: #ffb02e; --b-danger: #ff2d3a; --b-muet: #5b636e;
+  --b-ok: #3dff8a; --b-alerte: #ffb02e; --b-danger: #ff2d3a; --b-muet: #5b636e; --b-info: #5ab8ff;
   position: absolute; z-index: 5; display: flex; align-items: center; gap: 0; color: var(--b-texte);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace; backdrop-filter: blur(14px);
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -808,17 +808,20 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
   border-left: 1px solid var(--b-bord); color: inherit; text-decoration: none;
 }
 .barre-groupe:first-child { border-left: 0; }
-.barre-identite { gap: 9px; }
-.barre-nom { font: 700 12px/1 'Inter', system-ui, sans-serif; letter-spacing: 0.04em; white-space: nowrap; }
-.barre-sous { font-size: 10px; color: var(--b-2); white-space: nowrap; letter-spacing: 0.06em; }
+.barre-identite { gap: 10px; }
+.barre-identite-textes { display: flex; flex-direction: column; gap: 4px; }
+.barre-nom { font: 700 13px/1 'Inter', system-ui, sans-serif; letter-spacing: 0.03em; white-space: nowrap; }
+.barre-modele { font: 600 9px/1 ui-monospace, monospace; letter-spacing: 0.16em; text-transform: uppercase; color: var(--b-2); white-space: nowrap; }
 .barre-point { width: 8px; height: 8px; border-radius: 50%; flex: none; background: currentColor; box-shadow: 0 0 10px currentColor; }
-.barre-etiquette { font-size: 9.5px; letter-spacing: 0.16em; color: var(--b-2); }
-.barre-valeur { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.barre-valeur { font-size: 13px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.barre-robot .icone-robot { display: block; flex: none; color: var(--b-2); }
+.icone-mors { transition: transform 0.6s ease; }
 .barre-muet { font-size: 11px; color: var(--b-2); padding: 10px 14px; }
 .barre-robot .ton-ok { color: var(--b-ok); }
 .barre-robot .ton-alerte { color: var(--b-alerte); }
 .barre-robot .ton-danger { color: var(--b-danger); }
 .barre-robot .ton-muet { color: var(--b-muet); }
+.barre-robot .ton-info { color: var(--b-info); }
 .barre-robot .fond-ok { background: var(--b-ok); }
 .barre-robot .fond-alerte { background: var(--b-alerte); }
 .barre-robot .fond-danger { background: var(--b-danger); }
@@ -826,8 +829,8 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .barre-batterie::after { content: ''; position: absolute; right: -4px; top: 3px; width: 2px; height: 4px; background: var(--b-2); border-radius: 0 1px 1px 0; }
 .barre-batterie span { display: block; height: 100%; border-radius: 1px; }
 .barre-temperatures { gap: 14px; cursor: pointer; border-radius: 0; }
-.barre-temperatures:hover .barre-etiquette { color: var(--b-texte); }
-.barre-temperature { display: flex; align-items: baseline; gap: 6px; }
+.barre-temperatures:hover .icone-robot { color: var(--b-texte); }
+.barre-temperature { display: flex; align-items: center; gap: 5px; }
 .barre-segment { display: inline-flex; padding: 2px; border: 1px solid var(--b-bord); border-radius: 9px; background: rgb(255 255 255 / 0.03); }
 .barre-segment button {
   height: 28px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; color: var(--b-2);
@@ -846,8 +849,9 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .barre-home { margin-left: 10px; }
 .barre-robot .arme { border-color: var(--b-alerte) !important; color: var(--b-alerte) !important; animation: barre-arme 0.7s ease-in-out infinite; }
 @keyframes barre-arme { 50% { box-shadow: 0 0 0 3px rgb(255 176 46 / 0.22); } }
-.barre-mors { display: inline-flex; gap: calc(1px + var(--ouverture) * 6px); transition: gap 0.6s ease; }
-.barre-mors i { width: 3px; height: 13px; border-radius: 1px; background: currentColor; }
+.barre-pince { gap: 6px; padding: 0 10px 0 8px; }
+.barre-pince .icone-robot { color: var(--b-texte); }
+.barre-lettre { line-height: 1; }
 .barre-espace { flex: 1 1 18px; min-width: 18px; }
 .barre-erreur { flex: none; max-width: 280px; margin-right: 12px; font-size: 11px; color: var(--b-alerte); line-height: 1.3; }
 .barre-estop-bouton {
@@ -865,7 +869,6 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 @media (max-width: 700px) {
   .barre-ile { left: 12px; right: 12px; transform: none; max-width: none; }
   .barre-defile { flex: 1 1 auto; mask-image: linear-gradient(90deg, #000 85%, transparent); }
-  .barre-sous { display: none; }
   .barre-espace { flex: 0 0 8px; min-width: 8px; }
   .barre-estop-bouton { min-width: 96px; padding: 0 12px; }
   .barre-estop-bouton.engage { min-width: 112px; font-size: 11px; }
@@ -873,12 +876,15 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 
 /* La page d'essai de la barre (#/essai/barre). */
 .essai-barre { position: fixed; inset: 0; background: #030405; color: #e9eef7; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; }
-.essai-barre-scene {
-  position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  background: radial-gradient(ellipse at 50% 70%, rgb(80 120 170 / 0.18), transparent 60%),
-    linear-gradient(rgb(255 255 255 / 0.04) 1px, transparent 1px) 0 0 / 48px 48px,
-    linear-gradient(90deg, rgb(255 255 255 / 0.04) 1px, transparent 1px) 0 0 / 48px 48px;
+/* Le fond du HUD : une lueur bleue sur une grille de 48 px. Réutilisable (éditeur de mission, primitives…). */
+.fond-hud {
+  background-color: #030405;
+  background-image: radial-gradient(ellipse at 50% 70%, rgb(80 120 170 / 0.18), transparent 60%),
+    linear-gradient(rgb(255 255 255 / 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.04) 1px, transparent 1px);
+  background-size: auto, 48px 48px, 48px 48px;
 }
+.essai-barre-scene { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
 .essai-barre-tete { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-between; align-items: flex-end; padding: 28px 32px 0; }
 .essai-barre-tete h1 { margin: 4px 0 0; font-size: 1.6rem; letter-spacing: 0.02em; }
 .essai-barre-sur { margin: 0; font: 600 10px/1 ui-monospace, monospace; letter-spacing: 0.2em; color: #8a93a3; }

@@ -27,6 +27,8 @@ src/api/libelles.ts   libellés et tons d'affichage
 src/pages/Accueil     LA page : la vue 3D et son HUD
 src/components/Overlay  les autres écrans, ouverts par-dessus selon l'adresse (#/missions, #/flotte/r1…)
 src/components/graphe/  l'éditeur de mission en nœuds (React Flow) : palette, nœuds à deux sorties
+src/components/BarreRobot  la barre du robot : état (connexion, batterie, températures) et ordres (bras, pinces,
+                      Home, E-STOP) ; IconesRobot, ses icônes. Page d'essai : #/essai/barre (pages/EssaiBarre)
 src/pages/            Flotte, RobotDetail, Missions, MissionEditeur, Primitives, NouvellePrimitive
 ```
 

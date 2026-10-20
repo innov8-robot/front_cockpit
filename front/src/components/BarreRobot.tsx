@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { ETATS_ROBOT } from '../api/libelles';
-import type { Cote, EtatCorps, EtatMoteur, ModeBras, Moteur, Robot } from '../api/types';
+import type { Cote, EtatCorps, EtatMoteur, EtatRobot, ModeBras, Moteur, Robot } from '../api/types';
+import { IconeBras, IconeCorps, IconeMains, IconePince } from './IconesRobot';
 
 /** La barre se relit à cette période : les températures et l'état du robot sont vivants. */
 const RAFRAICHI_MS = 1000;
@@ -12,10 +13,10 @@ const CONFIRMATION_MS = 3000;
 const ERREUR_MS = 4000;
 
 /** Les groupes de moteurs dont la barre montre la température, chacun au pire de ses moteurs. */
-const GROUPES: { cle: string; libelle: string; contient: (nom: string) => boolean }[] = [
-  { cle: 'mains', libelle: 'MAINS', contient: (n) => /poignet|pince/.test(n) },
-  { cle: 'bras', libelle: 'BRAS', contient: (n) => /épaule|coude/.test(n) },
-  { cle: 'corps', libelle: 'CORPS', contient: (n) => /torse/.test(n) },
+const GROUPES: { libelle: string; Icone: typeof IconeMains; contient: (nom: string) => boolean }[] = [
+  { libelle: 'Mains', Icone: IconeMains, contient: (n) => /poignet|pince/.test(n) },
+  { libelle: 'Bras', Icone: IconeBras, contient: (n) => /épaule|coude/.test(n) },
+  { libelle: 'Corps', Icone: IconeCorps, contient: (n) => /torse/.test(n) },
 ];
 
 /** Le pire verdict d'abord : c'est lui qui colore le groupe. */
@@ -23,18 +24,22 @@ const GRAVITE: EtatMoteur[] = ['inconnu', 'ok', 'chaud', 'trop_chaud', 'defaut']
 const TON: Record<EtatMoteur, string> = {
   ok: 'ok', chaud: 'alerte', trop_chaud: 'danger', defaut: 'danger', inconnu: 'muet',
 };
+/** La couleur de la pastille de connexion : l'état du robot se lit dans sa couleur et dans son info-bulle. */
+const TON_ROBOT: Record<EtatRobot, string> = {
+  disponible: 'ok', en_mission: 'ok', en_charge: 'info', hors_ligne: 'danger', arret_urgence: 'danger',
+};
 
 export type FormeBarre = 'bandeau' | 'ile';
 
-interface Groupe { libelle: string; temperature: number | null; etat: EtatMoteur; chaud: Moteur | null }
+interface Groupe { libelle: string; Icone: typeof IconeMains; temperature: number | null; etat: EtatMoteur; chaud: Moteur | null }
 
 /** La température de chaque groupe : celle de son moteur le plus chaud, et le pire verdict du groupe. */
 function groupes(corps: EtatCorps | null): Groupe[] {
-  return GROUPES.map(({ libelle, contient }) => {
+  return GROUPES.map(({ libelle, Icone, contient }) => {
     const ms = (corps?.moteurs ?? []).filter((m) => contient(m.nom));
     const chaud = ms.reduce<Moteur | null>((a, m) => (m.temperature != null && (a?.temperature == null || m.temperature > a.temperature) ? m : a), null);
     const etat = ms.reduce<EtatMoteur>((a, m) => (GRAVITE.indexOf(m.etat) > GRAVITE.indexOf(a) ? m.etat : a), 'inconnu');
-    return { libelle, temperature: chaud?.temperature ?? null, etat, chaud };
+    return { libelle, Icone, temperature: chaud?.temperature ?? null, etat, chaud };
   });
 }
 
@@ -104,30 +109,31 @@ export function BarreRobot({ robotId, forme }: { robotId: string; forme: FormeBa
     <div className={`barre-robot barre-${forme} ${estop ? 'barre-estop' : ''}`} role="toolbar" aria-label={`Barre du robot ${robot.nom}`}>
       {/* Sur un écran étroit, tout défile sauf l'arrêt d'urgence, qui ne sort jamais de l'écran. */}
       <div className="barre-defile">
-      <section className="barre-groupe barre-identite" title={`Connexion : ${etat.libelle}`}>
-        <span className={`barre-point ton-${horsLigne ? 'danger' : estop ? 'danger' : 'ok'}`} />
-        <span className="barre-nom">{robot.nom}</span>
-        <span className="barre-sous">{robot.geste ? GESTES[robot.geste] : etat.libelle}</span>
+      <section className="barre-groupe barre-identite" title={`${etat.libelle}${robot.geste ? ` · ${GESTES[robot.geste]}` : ''}`}>
+        <span className={`barre-point ton-${TON_ROBOT[robot.etat]}`} aria-label={etat.libelle} />
+        <span className="barre-identite-textes">
+          <span className="barre-nom">{robot.nom}</span>
+          <span className="barre-modele">{robot.modele}</span>
+        </span>
       </section>
 
-      <section className="barre-groupe" title={`Batterie ${robot.batterie} %`}>
-        <span className="barre-etiquette">BAT</span>
+      <section className="barre-groupe" title={`Batterie ${robot.batterie} %`} aria-label="Batterie">
         <span className="barre-batterie"><span className={`fond-${tonBatterie}`} style={{ width: `${robot.batterie}%` }} /></span>
         <span className={`barre-valeur ton-${tonBatterie}`}>{robot.batterie}%</span>
       </section>
 
-      <Link to={`/flotte/${robot.id}/corps`} className="barre-groupe barre-temperatures" title="État du corps : le détail par moteur">
-        {groupes(corps).map((g) => (
-          <span key={g.libelle} className="barre-temperature"
-            title={g.chaud ? `${g.libelle.toLowerCase()} : le plus chaud est « ${g.chaud.nom} » (${g.chaud.temperature}°${g.chaud.rouge != null ? `, rouge à ${g.chaud.rouge}°` : ''})` : undefined}>
-            <span className="barre-etiquette">{g.libelle}</span>
-            <span className={`barre-valeur ton-${TON[g.etat]}`}>{g.temperature == null ? '—' : `${g.temperature}°`}</span>
+      <Link to={`/flotte/${robot.id}/corps`} className="barre-groupe barre-temperatures" aria-label="Températures : le détail du corps">
+        {groupes(corps).map(({ libelle, Icone, temperature, etat: e, chaud }) => (
+          <span key={libelle} className="barre-temperature"
+            title={chaud ? `${libelle} : le plus chaud est « ${chaud.nom} », ${chaud.temperature}°${chaud.rouge != null ? ` (rouge à ${chaud.rouge}°)` : ''}` : `${libelle} : —`}>
+            <Icone />
+            <span className={`barre-valeur ton-${TON[e]}`}>{temperature == null ? '—' : `${temperature}°`}</span>
           </span>
         ))}
       </Link>
 
-      <section className="barre-groupe" aria-label="Bras">
-        <span className="barre-etiquette">BRAS</span>
+      <section className="barre-groupe" aria-label="Bras : rigides ou mous" title="Bras : rigides, ou mous sous compensation de la gravité">
+        <IconeBras />
         <span className="barre-segment" role="radiogroup">
           {(['rigide', 'mou'] as const).map((m) => (
             <button key={m} role="radio" aria-checked={robot.modeBras === m} disabled={bloque}
@@ -140,15 +146,14 @@ export function BarreRobot({ robotId, forme }: { robotId: string; forme: FormeBa
       </section>
 
       <section className="barre-groupe" aria-label="Pinces">
-        <span className="barre-etiquette">PINCES</span>
         {(['gauche', 'droite'] as const).map((c) => {
           const ouverte = robot.pinces[c] > 0.5;
           const enCours = robot.geste === `pince_${c}`;
           return (
             <button key={c} className={`barre-bouton barre-pince ${arme === `pince-${c}` ? 'arme' : ''}`} disabled={bloque}
               onClick={() => pince(c)} title={`Pince ${c} ${ouverte ? 'ouverte' : 'fermée'} : clic pour ${ouverte ? 'fermer' : 'ouvrir'}`}>
-              <span className="barre-mors" style={{ ['--ouverture' as string]: robot.pinces[c] }} aria-hidden="true"><i /><i /></span>
-              {arme === `pince-${c}` ? (ouverte ? 'FERMER ?' : 'OUVRIR ?') : enCours ? '…' : c === 'gauche' ? 'G' : 'D'}
+              <IconePince ouverture={robot.pinces[c]} />
+              <span className="barre-lettre">{arme === `pince-${c}` ? (ouverte ? 'FERMER ?' : 'OUVRIR ?') : enCours ? '…' : c === 'gauche' ? 'G' : 'D'}</span>
             </button>
           );
         })}
@@ -179,7 +184,7 @@ export function BarreRobot({ robotId, forme }: { robotId: string; forme: FormeBa
 }
 
 const GESTES: Record<NonNullable<Robot['geste']>, string> = {
-  home: 'Vers la posture de travail…',
-  pince_gauche: 'Pince gauche…',
-  pince_droite: 'Pince droite…',
+  home: 'vers la posture de travail…',
+  pince_gauche: 'pince gauche…',
+  pince_droite: 'pince droite…',
 };

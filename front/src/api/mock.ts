@@ -1,12 +1,12 @@
 import type { Api } from './client';
 import type { Cote, EtatCorps, GesteRobot, Mission, Primitive, Robot, Run } from './types';
 
-const CLE = 'mpc.front.simulation.v2';
+const CLE = 'mpc.front.simulation.v3';
 const LATENCE_MS = 120;
 /** La durée simulée d'un geste : le retour en posture de travail, l'ouverture ou la fermeture d'une pince. */
 const DUREE_HOME_MS = 2600;
 const DUREE_PINCE_MS = 700;
-/** Ce qu'un robot neuf de la graine porte, et ce qu'on donne à un robot d'un ancien magasin. */
+/** Les commandes de la barre dans l'état d'un robot neuf de la graine. */
 const COMMANDES = { modeBras: 'rigide' as const, pinces: { gauche: 1, droite: 1 }, geste: null };
 
 interface Magasin {
@@ -22,7 +22,7 @@ function graine(): Magasin {
   return {
     robots: [
       {
-        id: 'r1', nom: 'G1-D · 01', modele: 'Unitree G1-D', site: 'Atelier A', etat: 'en_mission',
+        id: 'r1', nom: 'Mégatron', modele: 'Unitree G1-D', site: 'Atelier A', etat: 'en_mission',
         batterie: 72, posteCourant: 'table', missionCourante: 'm1', derniereConnexion: ilYA(0), ...structuredClone(COMMANDES),
       },
       {
@@ -120,8 +120,8 @@ function charger(): Magasin {
   } catch {
     // Stockage indisponible : on repart de la graine.
   }
-  // Un magasin d'avant les commandes de la barre : ses robots les reçoivent, et aucun geste n'est en cours.
-  m.robots = m.robots.map((r) => ({ ...structuredClone(COMMANDES), ...r, geste: null }));
+  // Un geste interrompu par le rechargement de la page ne se terminera jamais : aucun n'est en cours au départ.
+  for (const r of m.robots) r.geste = null;
   return m;
 }
 

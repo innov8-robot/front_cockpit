@@ -55,7 +55,7 @@ export function EssaiBarre() {
         {HIERARCHIE.map(([nom, pourquoi]) => <li key={nom}><strong>{nom}</strong> — {pourquoi}</li>)}
       </ol>
 
-      <div className="essai-barre-scene" aria-hidden="true" />
+      <div className="essai-barre-scene fond-hud" aria-hidden="true" />
       <BarreRobot key={robotId} robotId={robotId} forme={forme} />
     </div>
   );
