@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api/client';
-import { ETATS_ROBOT, ISSUES_RUN, depuis } from '../api/libelles';
+import { ETATS_ROBOT, ISSUES_RUN, depuis, nbPrimitives } from '../api/libelles';
 import { Badge, Batterie, Chargement, EnTete, Erreur, Icone, Vide } from '../components/ui';
 import { useCharge } from '../components/useCharge';
 
@@ -66,7 +66,7 @@ export function RobotDetail() {
           <div className="ligne-formulaire">
             <select value={missionChoisie} onChange={(e) => setMissionChoisie(e.target.value)} aria-label="Mission">
               <option value="">Choisir une mission…</option>
-              {missions.donnee?.filter((m) => m.etapes.length > 0).map((m) => (
+              {missions.donnee?.filter((m) => nbPrimitives(m) > 0).map((m) => (
                 <option key={m.id} value={m.id}>{m.nom}</option>
               ))}
             </select>

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
-import { ETATS_MISSION, depuis } from '../api/libelles';
+import { ETATS_MISSION, depuis, nbPrimitives } from '../api/libelles';
 import { Badge, Chargement, EnTete, Erreur, Icone, Vide } from '../components/ui';
 import { useCharge } from '../components/useCharge';
 
@@ -25,7 +25,7 @@ export function Missions() {
                 <div>
                   <strong>{m.nom}</strong>
                   <div className="discret">
-                    {m.etapes.length} étape{m.etapes.length > 1 ? 's' : ''} · ×{m.repetitions} · {nomRobot(m.robotId)} · modifiée {depuis(m.modifieeLe)}
+                    {nbPrimitives(m)} primitive{nbPrimitives(m) > 1 ? 's' : ''} · ×{m.repetitions} · {nomRobot(m.robotId)} · modifiée {depuis(m.modifieeLe)}
                   </div>
                 </div>
                 <Badge ton={ETATS_MISSION[m.etat].ton}>{ETATS_MISSION[m.etat].libelle}</Badge>

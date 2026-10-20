@@ -6,14 +6,23 @@ import type { Lancer } from './environnement';
  * x devant, z en haut). Le back les remplacera par les vrais nuages ; la forme des tampons ne change pas.
  */
 
-function materiauPoints(couleur: string, taille: number, vie: number): THREE.ShaderMaterial {
+/** Un canal (rouge, vert ou bleu) d'un nuage, décalé vers l'extérieur de l'image : l'aberration chromatique. */
+function materiauCanal(couleur: string, taille: number, vie: number, canal: THREE.Vector3, decalage: number) {
   return new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    // Le maximum par canal : les trois passes se recomposent en blanc sans que les points denses s'empilent.
+    blending: THREE.CustomBlending,
+    blendEquation: THREE.MaxEquation,
+    blendSrc: THREE.OneFactor,
+    blendDst: THREE.OneFactor,
     uniforms: {
-      uCouleur: { value: new THREE.Color(couleur) },
+      uCouleur: { value: new THREE.Color(couleur).multiply(new THREE.Color(canal.x, canal.y, canal.z)) },
       uTaille: { value: taille },
       uTemps: { value: 0 },
       uVie: { value: vie },
       uEchelle: { value: 1 },
+      uDecalage: { value: decalage },
     },
     vertexShader: /* glsl */ `
       attribute float aNaissance;
@@ -21,32 +30,53 @@ function materiauPoints(couleur: string, taille: number, vie: number): THREE.Sha
       uniform float uTemps;
       uniform float uVie;
       uniform float uEchelle;
+      uniform float uDecalage;
       varying float vAlpha;
-      varying float vHauteur;
       void main() {
         vec4 vue = modelViewMatrix * vec4(position, 1.0);
         float age = uVie > 0.0 ? clamp((uTemps - aNaissance) / uVie, 0.0, 1.0) : 0.0;
         float balayage = smoothstep(0.25, 0.0, abs(length(position.xy) - mod(uTemps * 1.4, 7.0)));
         vAlpha = (1.0 - age) * (0.55 + balayage * 1.6);
-        vHauteur = position.z;
         gl_PointSize = clamp(uTaille * uEchelle / -vue.z, 1.5, 4.0);
         gl_Position = projectionMatrix * vue;
+        vec2 ecran = gl_Position.xy / gl_Position.w;
+        float r = length(ecran);
+        vec2 dir = r > 1e-3 ? ecran / r : vec2(1.0, 0.0);
+        gl_Position.xy += dir * uDecalage * (0.3 + r * 1.4) * gl_Position.w;
       }`,
     fragmentShader: /* glsl */ `
       uniform vec3 uCouleur;
       varying float vAlpha;
       void main() {
         float d = length(gl_PointCoord - 0.5);
-        if (d > 0.5) discard;
-        if (vAlpha < 0.04) discard;
-        gl_FragColor = vec4(uCouleur * (0.2 + 0.6 * vAlpha), 1.0);
+        if (d > 0.5 || vAlpha < 0.04) discard;
+        gl_FragColor = vec4(uCouleur * (0.3 + 0.7 * vAlpha), 1.0);
       }`,
   });
 }
 
+const CANAUX: [THREE.Vector3, number][] = [
+  [new THREE.Vector3(1, 0, 0), 0.0045],
+  [new THREE.Vector3(0, 1, 0), 0],
+  [new THREE.Vector3(0, 0, 1), -0.0045],
+];
+
+/** Le nuage dessiné trois fois, un canal par passe : là où les trois se recouvrent, le point est blanc. */
+function nuageAberrant(geometrie: THREE.BufferGeometry, couleur: string, taille: number, vie: number) {
+  const groupe = new THREE.Group();
+  const materiaux = CANAUX.map(([canal, decalage]) => materiauCanal(couleur, taille, vie, canal, decalage));
+  for (const m of materiaux) {
+    const p = new THREE.Points(geometrie, m);
+    p.frustumCulled = false;
+    groupe.add(p);
+  }
+  return { groupe, materiaux };
+}
+
 export interface Nuages {
-  camera: THREE.Points;
-  lidar: THREE.Points;
+  camera: THREE.Group;
+  lidar: THREE.Group;
+  materiaux: THREE.ShaderMaterial[];
   mettreAJour(t: number): void;
 }
 
@@ -59,7 +89,7 @@ export function creerNuages(tete: THREE.Vector3, lancer: Lancer): Nuages {
   const geoCam = new THREE.BufferGeometry();
   geoCam.setAttribute('position', new THREE.BufferAttribute(posCam, 3));
   geoCam.setAttribute('aNaissance', new THREE.BufferAttribute(new Float32Array(L * H), 1));
-  const camera = new THREE.Points(geoCam, materiauPoints('#a9bcdc', 7, 0));
+  const camera = nuageAberrant(geoCam, '#c4d2ea', 7, 0);
   const origineCam = tete.clone().add(new THREE.Vector3(0.07, 0, -0.02));
   const tangage = THREE.MathUtils.degToRad(48);
   const fovH = THREE.MathUtils.degToRad(87) / 2;
@@ -94,7 +124,7 @@ export function creerNuages(tete: THREE.Vector3, lancer: Lancer): Nuages {
   const geoLid = new THREE.BufferGeometry();
   geoLid.setAttribute('position', new THREE.BufferAttribute(posLid, 3));
   geoLid.setAttribute('aNaissance', new THREE.BufferAttribute(naissance, 1));
-  const lidar = new THREE.Points(geoLid, materiauPoints('#ff2d3a', 7, 2.4));
+  const lidar = nuageAberrant(geoLid, '#ff5a64', 7, 2.4);
   const origineLid = tete.clone().add(new THREE.Vector3(0.02, 0, 0.06));
   const elevMin = THREE.MathUtils.degToRad(-47);
   const elevMax = THREE.MathUtils.degToRad(5);
@@ -121,16 +151,18 @@ export function creerNuages(tete: THREE.Vector3, lancer: Lancer): Nuages {
   rafraichirCamera();
   let derniereCam = 0;
 
+  const materiaux = [...camera.materiaux, ...lidar.materiaux];
   return {
-    camera,
-    lidar,
+    camera: camera.groupe,
+    lidar: lidar.groupe,
+    materiaux,
     mettreAJour(t: number) {
       balayerLidar(t);
       if (t - derniereCam > 0.25) {
         rafraichirCamera();
         derniereCam = t;
       }
-      for (const p of [camera, lidar]) (p.material as THREE.ShaderMaterial).uniforms.uTemps.value = t;
+      for (const m of materiaux) m.uniforms.uTemps.value = t;
     },
   };
 }

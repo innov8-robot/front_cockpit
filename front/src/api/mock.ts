@@ -1,7 +1,7 @@
 import type { Api } from './client';
 import type { Mission, Primitive, Robot, Run } from './types';
 
-const CLE = 'mpc.front.simulation.v1';
+const CLE = 'mpc.front.simulation.v2';
 const LATENCE_MS = 120;
 
 interface Magasin {
@@ -68,15 +68,32 @@ function graine(): Magasin {
     missions: [
       {
         id: 'm1', nom: 'Vider la table dans le bac', description: 'Prend les pièces une à une et les dépose au bac B.',
-        etapes: [
-          { id: 'e1', primitiveId: 'p4' }, { id: 'e2', primitiveId: 'p1' },
-          { id: 'e3', primitiveId: 'p2' }, { id: 'e4', primitiveId: 'p5' },
+        noeuds: [
+          { id: 'depart', primitiveId: null, x: 0, y: 120 },
+          { id: 'n1', primitiveId: 'p4', x: 250, y: 100 },
+          { id: 'n2', primitiveId: 'p1', x: 560, y: 100 },
+          { id: 'n3', primitiveId: 'p2', x: 880, y: 30 },
+          { id: 'n4', primitiveId: 'p5', x: 880, y: 220 },
+        ],
+        liens: [
+          { id: 'l1', de: 'depart', sortie: 'ok', vers: 'n1' },
+          { id: 'l2', de: 'n1', sortie: 'ok', vers: 'n2' },
+          { id: 'l3', de: 'n2', sortie: 'ok', vers: 'n3' },
+          { id: 'l4', de: 'n2', sortie: 'echec', vers: 'n4' },
         ],
         robotId: 'r1', repetitions: 6, etat: 'en_cours', modifieeLe: ilYA(90),
       },
       {
         id: 'm2', nom: 'Déplacer le bac', description: 'Porte le bac de la table au poste d’expédition.',
-        etapes: [{ id: 'e5', primitiveId: 'p3' }, { id: 'e6', primitiveId: 'p4' }],
+        noeuds: [
+          { id: 'depart', primitiveId: null, x: 0, y: 80 },
+          { id: 'n5', primitiveId: 'p3', x: 250, y: 60 },
+          { id: 'n6', primitiveId: 'p4', x: 560, y: 60 },
+        ],
+        liens: [
+          { id: 'l5', de: 'depart', sortie: 'ok', vers: 'n5' },
+          { id: 'l6', de: 'n5', sortie: 'ok', vers: 'n6' },
+        ],
         robotId: null, repetitions: 1, etat: 'brouillon', modifieeLe: ilYA(60 * 20),
       },
     ],

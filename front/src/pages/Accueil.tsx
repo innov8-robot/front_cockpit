@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { api } from '../api/client';
+import { api, enSimulation } from '../api/client';
 import { ETATS_ROBOT } from '../api/libelles';
+import { reinitialiserSimulation } from '../api/mock';
+import { Demarrage } from '../components/Demarrage';
+import { IntroLogo } from '../components/IntroLogo';
+import { Overlay } from '../components/Overlay';
 import { useCharge } from '../components/useCharge';
 import { monterScene, type Calque, type Scene3D } from '../vue3d/scene';
 
@@ -21,6 +25,8 @@ export function Accueil() {
   const hote = useRef<HTMLDivElement>(null);
   const scene = useRef<Scene3D | null>(null);
   const [pret, setPret] = useState(false);
+  const [etape, setEtape] = useState<'bios' | 'logo' | 'pret'>('bios');
+  const demarre = etape === 'pret';
   const [calques, setCalques] = useState<Record<Calque, boolean>>({ robot: true, atelier: true, camera: true, lidar: true, sol: true });
   const [maintenant, setMaintenant] = useState(heure);
   const robots = useCharge(() => api.robots());
@@ -46,7 +52,7 @@ export function Accueil() {
   }
 
   return (
-    <div className="accueil">
+    <div className={`accueil ${demarre ? 'accueil-demarre' : ''}`}>
       <div className="accueil-scene" ref={hote} />
       <div className="accueil-vignette" aria-hidden="true" />
 
@@ -58,6 +64,10 @@ export function Accueil() {
           <NavLink to="/missions">Missions</NavLink>
           <NavLink to="/primitives">Primitives</NavLink>
         </nav>
+        {enSimulation && (
+          <button className="hud-simulation" title="Réinitialiser les données simulées"
+            onClick={() => { reinitialiserSimulation(); location.reload(); }}>SIMULATION</button>
+        )}
         <div className="hud-heure nombre">{maintenant}</div>
       </header>
 
@@ -86,7 +96,6 @@ export function Accueil() {
         </aside>
       )}
 
-      {!pret && <div className="hud-chargement">Chargement du modèle…</div>}
 
       <footer className="hud-bas">
         {CALQUES.map((c) => (
@@ -97,6 +106,10 @@ export function Accueil() {
           </button>
         ))}
       </footer>
+
+      <Overlay />
+      {etape === 'bios' && <Demarrage pret={pret} onFini={() => setEtape('logo')} />}
+      {etape === 'logo' && <IntroLogo onFini={() => setEtape('pret')} />}
     </div>
   );
 }

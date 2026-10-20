@@ -35,16 +35,30 @@ export interface Primitive {
 
 export type EtatMission = 'brouillon' | 'prete' | 'en_cours' | 'terminee' | 'echouee';
 
-export interface EtapeMission {
+/** Un nœud du graphe de mission ; `primitiveId` est null pour le départ. */
+export interface NoeudMission {
   id: string;
-  primitiveId: string;
+  primitiveId: string | null;
+  x: number;
+  y: number;
+}
+
+/** La sortie d'un nœud : ce qu'on fait quand la primitive a réussi, ou quand elle a échoué. */
+export type Sortie = 'ok' | 'echec';
+
+export interface LienMission {
+  id: string;
+  de: string;
+  sortie: Sortie;
+  vers: string;
 }
 
 export interface Mission {
   id: string;
   nom: string;
   description: string;
-  etapes: EtapeMission[];
+  noeuds: NoeudMission[];
+  liens: LienMission[];
   robotId: string | null;
   repetitions: number;
   etat: EtatMission;

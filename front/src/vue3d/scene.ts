@@ -3,9 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { RGBShiftShader } from 'three/examples/jsm/shaders/RGBShiftShader.js';
 import type { URDFRobot } from 'urdf-loader';
 import { creerEnvironnement } from './environnement';
 import { creerNuages, type Nuages } from './nuages';
@@ -20,7 +18,7 @@ export interface Scene3D {
   pret: Promise<void>;
 }
 
-/** Monte la vue 3D dans `hote` : sol, robot en verre, nuages des capteurs, halo et aberration chromatique. */
+/** Monte la vue 3D dans `hote` : sol, robot en verre, nuages des capteurs, halo ; l'aberration chromatique est dans les points. */
 export function monterScene(hote: HTMLElement): Scene3D {
   const rendu = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
   rendu.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -55,9 +53,6 @@ export function monterScene(hote: HTMLElement): Scene3D {
   composeur.addPass(new RenderPass(scene, camera));
   const halo = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.55, 0.15, 0.7);
   composeur.addPass(halo);
-  const aberration = new ShaderPass(RGBShiftShader);
-  aberration.uniforms.amount.value = 0.0016;
-  composeur.addPass(aberration);
   composeur.addPass(new OutputPass());
 
   let robot: URDFRobot | null = null;
@@ -81,10 +76,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
     atelier = env.objet;
     monde.add(atelier);
     nuages = creerNuages(teteLocale, env.lancer);
-    for (const p of [nuages.camera, nuages.lidar]) {
-      p.frustumCulled = false;
-      monde.add(p);
-    }
+    monde.add(nuages.camera, nuages.lidar);
     appliquerVisibilite();
   });
 
@@ -106,9 +98,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
     camera.aspect = l / h;
     camera.fov = l < 700 ? 52 : 38;
     camera.updateProjectionMatrix();
-    for (const p of nuages ? [nuages.camera, nuages.lidar] : []) {
-      (p.material as THREE.ShaderMaterial).uniforms.uEchelle.value = (h * rendu.getPixelRatio()) / 900;
-    }
+    for (const m of nuages?.materiaux ?? []) m.uniforms.uEchelle.value = (h * rendu.getPixelRatio()) / 900;
   }
   const observateur = new ResizeObserver(redimensionner);
   observateur.observe(hote);

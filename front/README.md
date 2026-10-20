@@ -24,7 +24,9 @@ src/api/types.ts      le modèle de données (Robot, Primitive, Mission, Run) : 
 src/api/client.ts     le contrat Api ; les écrans ne parlent qu'à lui
 src/api/mock.ts       l'implémentation simulée (données en mémoire, gardées dans le navigateur)
 src/api/libelles.ts   libellés et tons d'affichage
-src/components/       coquille (barre latérale / onglets en bas), éléments d'interface
+src/pages/Accueil     LA page : la vue 3D et son HUD
+src/components/Overlay  les autres écrans, ouverts par-dessus selon l'adresse (#/missions, #/flotte/r1…)
+src/components/graphe/  l'éditeur de mission en nœuds (React Flow) : palette, nœuds à deux sorties
 src/pages/            Flotte, RobotDetail, Missions, MissionEditeur, Primitives, NouvellePrimitive
 ```
 

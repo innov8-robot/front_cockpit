@@ -46,3 +46,8 @@ export function depuis(iso: string): string {
   if (s < 86400) return `il y a ${Math.round(s / 3600)} h`;
   return `il y a ${Math.round(s / 86400)} j`;
 }
+
+/** Le nombre de primitives d'une mission (le départ n'en est pas une). */
+export function nbPrimitives(m: { noeuds: { primitiveId: string | null }[] }): number {
+  return m.noeuds.filter((n) => n.primitiveId).length;
+}
