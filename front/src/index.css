@@ -1138,3 +1138,5 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
   .barre-mission { left: 12px; right: 12px; transform: none; max-width: none; }
   .barre-mission-ouvrir { display: none; }
 }
+/* Sous 1500 px, la barre du robot (≈ 1000 px) ne laisse plus la place aux calques à côté d'elle : ils passent dessous. */
+@media (max-width: 1499px) { .hud-calques { top: calc(84px + env(safe-area-inset-top)); } }
