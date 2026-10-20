@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Flotte robots</string>
+    <string name="title_activity_main">Flotte robots</string>
+    <string name="package_name">fr.innov8.flotte</string>
+    <string name="custom_url_scheme">fr.innov8.flotte</string>
+</resources>

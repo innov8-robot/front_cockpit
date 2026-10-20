@@ -1,0 +1,37 @@
+{
+  "name": "flotte-front",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "oxlint",
+    "preview": "vite preview",
+    "android": "npm run build && cap sync android",
+    "apk": "npm run android && cd android && ./gradlew assembleDebug",
+    "robot": "node scripts/copier-robot.mjs",
+    "predev": "npm run robot",
+    "prebuild": "npm run robot"
+  },
+  "dependencies": {
+    "@capacitor/core": "^8.5.3",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router-dom": "^7.18.4",
+    "three": "^0.186.1",
+    "urdf-loader": "^0.13.1"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/cli": "^8.5.3",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/three": "^0.186.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "oxlint": "^1.88.0",
+    "typescript": "~6.0.3",
+    "vite": "^8.3.4"
+  }
+}
