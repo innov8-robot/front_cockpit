@@ -6,7 +6,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import type { URDFRobot } from 'urdf-loader';
 import { CALQUE_DETECTIONS, creerDetections, PREMIER_CADRE_S, type Detections } from './detections';
-import { creerEnvironnement } from './environnement';
+import { creerEnvironnement, type Segmentation } from './environnement';
 import { creerHologramme } from './hologramme';
 import { CAMERA_TETE, creerNuages, type Nuages } from './nuages';
 import { allumerRobot, animerRobot, chargerRobot } from './robot';
@@ -107,6 +107,10 @@ export function monterScene(hote: HTMLElement): Scene3D {
   let rayon = 0;
   /** Le temps (s) depuis la fin de l'onde de démarrage, ou null tant qu'elle se déploie. */
   let deploye: number | null = null;
+  /** La couleur des objets déclarés, de 0 à 1, et la plongée dans la caméra de tête, de 0 (orbite) à 1 (dedans). */
+  let teinte = 0;
+  let plongee = 0;
+  let segmentation: Segmentation | null = null;
 
   const pret = chargerRobot().then((r) => {
     robot = r;
@@ -129,6 +133,8 @@ export function monterScene(hote: HTMLElement): Scene3D {
     monde.add(atelier);
     nuages = creerNuages(teteLocale, env.lancer, env.objets);
     monde.add(env.masque);
+    segmentation = env.segmentation;
+    monde.add(segmentation.groupe);
     detections = creerDetections(scene, hote, env.objets);
     objets = env.objets.map(({ nom, couleur }) => ({ nom, couleur }));
     hologramme = creerHologramme(rendu, scene, teteLocale.clone().add(CAMERA_TETE.decalage));
@@ -174,8 +180,10 @@ export function monterScene(hote: HTMLElement): Scene3D {
     if (hologramme) hologramme.groupe.visible = visibles.camera && rayon > 0.4;
     deploye = avance >= 1 ? dt - ALLUMAGE_S - DEPLOIEMENT_S : null;
     // Les objets prennent leur couleur quand leurs cadres s'accrochent, pas pendant l'onde.
-    const teinte = deploye === null ? 0 : Math.min(1, Math.max(0, (deploye - PREMIER_CADRE_S) / TEINTE_S));
+    teinte = deploye === null ? 0 : Math.min(1, Math.max(0, (deploye - PREMIER_CADRE_S) / TEINTE_S));
     nuages?.colorerObjets(visibles.objets ? teinte : 0);
+    // Par l'œil du robot, les objets apparaissent segmentés : la silhouette monte avec le plongeon.
+    segmentation?.regler(visibles.objets ? teinte * plongee : 0);
   }
 
   const rayonSouris = new THREE.Raycaster();
@@ -204,6 +212,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
     camera.updateProjectionMatrix();
     // En approchant de l'écran, on le traverse : il disparaît juste avant qu'on soit dedans.
     if (vol.entre) hologramme?.masquer(e > 0.82);
+    plongee = vol.entre ? e : 1 - e;
     if (k >= 1) {
       const fin = vol.fin;
       vol = null;
@@ -220,9 +229,12 @@ export function monterScene(hote: HTMLElement): Scene3D {
     nuages?.mettreAJour(t);
     hologramme?.mettreAJour(t);
     voler(t);
+    if (!vol) plongee = dansCamera ? 1 : 0;
     if (!vol && !dansCamera) controles.update();
-    composeur.render();
+    // Les cadres se posent avant le rendu : sinon ils suivent la vue avec une image de retard.
+    camera.updateMatrixWorld();
     if (nuages) detections?.mettreAJour(t, camera, monde, deploye, nuages.pointsParObjet);
+    composeur.render();
   }
   boucle();
 

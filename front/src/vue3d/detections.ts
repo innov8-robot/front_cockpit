@@ -20,6 +20,8 @@ const AVANCE_M = 0.03;
 export const CALQUE_DETECTIONS = 1;
 /** Les cadres sont tracés après tout le reste, et après les volumes qui les masquent. */
 export const ORDRE_MASQUE = 998;
+/** La segmentation des objets, juste après les volumes qui la masquent et avant les cadres. */
+export const ORDRE_SEGMENTATION = 999;
 const ORDRE_CADRE = 1000;
 /** L'éclat des étiquettes : sous le seuil du halo, sinon le texte se noie dans la lumière. */
 const ECLAT_ETIQUETTE = 0.6;
@@ -225,7 +227,9 @@ export function creerDetections(scene: THREE.Scene, hote: HTMLElement, objets: O
         poser(cadre.fond.geometry, [r], plan, camera);
         poser(cadre.bord.geometry, contour(r, TRAIT_PX), plan, camera);
         poser(cadre.fantome.geometry, contour([r[0] - resserre, r[1] - resserre, r[2] + resserre, r[3] + resserre], TRAIT_PX), plan, camera);
-        poser(cadre.etiquette.geometry, [[r[0], r[1] - ETIQUETTE_PX, r[0] + cadre.largeurEtiquette, r[1]]], plan, camera);
+        // Sans place au-dessus du cadre (le haut de l'écran), l'étiquette passe dedans.
+        const haut = r[1] - ETIQUETTE_PX >= 0 ? r[1] - ETIQUETTE_PX : r[1];
+        poser(cadre.etiquette.geometry, [[r[0], haut, r[0] + cadre.largeurEtiquette, haut + ETIQUETTE_PX]], plan, camera);
         const opacite = niveauClignote(dt);
         cadre.bord.material.opacity = opacite;
         cadre.fond.material.opacity = 0.07 * opacite;

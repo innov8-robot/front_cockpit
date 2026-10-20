@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CALQUE_DETECTIONS, ORDRE_MASQUE } from './detections';
+import { CALQUE_DETECTIONS, ORDRE_MASQUE, ORDRE_SEGMENTATION } from './detections';
 
 /**
  * Un atelier fictif autour du robot, dans son repère (x devant, z en haut, mètres). Les mêmes formes sont
@@ -228,12 +228,8 @@ function masquer(formes: Forme[]): THREE.Group {
   const groupe = new THREE.Group();
   const materiau = new THREE.MeshBasicMaterial({ colorWrite: false, transparent: true, side: THREE.DoubleSide });
   for (const f of formes) {
-    const geometrie = f.type === 'boite'
-      ? new THREE.BoxGeometry(...f.max.clone().sub(f.min).toArray())
-      : new THREE.CylinderGeometry(f.r, f.r, f.z1 - f.z0, 24).rotateX(Math.PI / 2);
-    const volume = new THREE.Mesh(geometrie, materiau);
-    if (f.type === 'boite') volume.position.addVectors(f.min, f.max).multiplyScalar(0.5);
-    else volume.position.set(f.x, f.y, (f.z0 + f.z1) / 2);
+    const volume = new THREE.Mesh(volumePlein(f), materiau);
+    poserVolume(volume, f);
     volume.renderOrder = ORDRE_MASQUE;
     volume.layers.set(CALQUE_DETECTIONS);
     groupe.add(volume);
@@ -241,13 +237,67 @@ function masquer(formes: Forme[]): THREE.Group {
   return groupe;
 }
 
-/** L'atelier : ses traits, ses volumes de masquage, le lancer de rayon des capteurs simulés et les objets déclarés. */
+function volumePlein(f: Forme): THREE.BufferGeometry {
+  return f.type === 'boite'
+    ? new THREE.BoxGeometry(...f.max.clone().sub(f.min).toArray())
+    : new THREE.CylinderGeometry(f.r, f.r, f.z1 - f.z0, 24).rotateX(Math.PI / 2);
+}
+
+function poserVolume(o: THREE.Object3D, f: Forme): void {
+  if (f.type === 'boite') o.position.addVectors(f.min, f.max).multiplyScalar(0.5);
+  else o.position.set(f.x, f.y, (f.z0 + f.z1) / 2);
+}
+
+/** La segmentation des objets déclarés : leur silhouette remplie de la couleur de leur classe, et son contour. */
+export interface Segmentation {
+  groupe: THREE.Group;
+  /** De 0 (éteinte) à 1 (pleine). */
+  regler(niveau: number): void;
+}
+
+/**
+ * Les masques de segmentation, façon YOLO-seg : les volumes des objets déclarés, colorés et translucides. Ils sont
+ * tracés à la même profondeur que les volumes de masquage, juste après eux : ce qui est devant un objet le coupe.
+ */
+function segmenter(formes: Forme[], objets: ObjetDeclare[]): Segmentation {
+  const groupe = new THREE.Group();
+  const remplis = objets.map((o) => new THREE.MeshBasicMaterial({
+    color: o.couleur, transparent: true, opacity: 0, depthWrite: false, fog: false, toneMapped: false,
+  }));
+  const contours = objets.map((o) => new THREE.LineBasicMaterial({
+    color: o.couleur, transparent: true, opacity: 0, depthWrite: false, fog: false, toneMapped: false,
+  }));
+  for (const f of formes) {
+    if (f.objet === undefined) continue;
+    const geometrie = volumePlein(f);
+    const rempli = new THREE.Mesh(geometrie, remplis[f.objet]);
+    const contour = new THREE.LineSegments(new THREE.EdgesGeometry(geometrie, 20), contours[f.objet]);
+    for (const m of [rempli, contour]) {
+      poserVolume(m, f);
+      m.renderOrder = ORDRE_SEGMENTATION;
+      m.layers.set(CALQUE_DETECTIONS);
+      groupe.add(m);
+    }
+  }
+  groupe.visible = false;
+  return {
+    groupe,
+    regler(niveau) {
+      groupe.visible = niveau > 0.001;
+      for (const m of remplis) m.opacity = 0.42 * niveau;
+      for (const m of contours) m.opacity = 0.95 * niveau;
+    },
+  };
+}
+
+/** L'atelier : ses traits, ses volumes de masquage, la segmentation, le lancer de rayon et les objets déclarés. */
 export function creerEnvironnement(sol: number): {
-  objet: THREE.Group; masque: THREE.Group; lancer: Lancer; objets: ObjetDeclare[];
+  objet: THREE.Group; masque: THREE.Group; segmentation: Segmentation; lancer: Lancer; objets: ObjetDeclare[];
 } {
   const { formes, classes } = construire(sol);
+  const objets = objetsDeclares(formes, classes);
   return {
-    objet: dessiner(formes, sol), masque: masquer(formes), lancer: lancerContre(formes, sol),
-    objets: objetsDeclares(formes, classes),
+    objet: dessiner(formes, sol), masque: masquer(formes), segmentation: segmenter(formes, objets),
+    lancer: lancerContre(formes, sol), objets,
   };
 }
