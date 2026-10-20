@@ -5,6 +5,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import type { URDFRobot } from 'urdf-loader';
+import { CALQUE_DETECTIONS, creerDetections, PREMIER_CADRE_S, type Detections } from './detections';
 import { creerEnvironnement } from './environnement';
 import { creerHologramme } from './hologramme';
 import { CAMERA_TETE, creerNuages, type Nuages } from './nuages';
@@ -18,6 +19,8 @@ const FOND = '#1a1f23';
 const ALLUMAGE_S = 1.4;
 const DEPLOIEMENT_S = 2.6;
 const RAYON_FINAL = 16;
+/** La montée de la couleur des objets déclarés dans les nuages (s), avec leurs cadres. */
+const TEINTE_S = 0.6;
 /** L'allumage en néon : [instant (s), niveau], interpolé en marches. */
 const NEON: [number, number][] = [
   [0, 0], [0.12, 0.9], [0.2, 0.1], [0.34, 1], [0.42, 0.2], [0.55, 0.7], [0.62, 0.05], [0.8, 1], [0.9, 0.5], [1.0, 1],
@@ -30,7 +33,7 @@ function niveauNeon(dt: number): number {
 }
 
 
-export type Calque = 'robot' | 'atelier' | 'camera' | 'lidar' | 'sol';
+export type Calque = 'robot' | 'atelier' | 'camera' | 'lidar' | 'objets' | 'sol';
 
 export interface Scene3D {
   afficher(calque: Calque, visible: boolean): void;
@@ -38,6 +41,8 @@ export interface Scene3D {
   demarrer(): void;
   detruire(): void;
   pret: Promise<void>;
+  /** Les objets déclarés de l'atelier : leur nom et leur couleur, une fois la scène prête. */
+  objets(): { nom: string; couleur: string }[];
 }
 
 /** Monte la vue 3D dans `hote` : sol, robot en verre, nuages des capteurs, halo ; l'aberration chromatique est dans les points. */
@@ -53,6 +58,8 @@ export function monterScene(hote: HTMLElement): Scene3D {
   scene.fog = new THREE.FogExp2(FOND, 0.07);
   const camera = new THREE.PerspectiveCamera(38, 1, 0.05, 200);
   camera.position.set(3.7, 2.0, 1.6);
+  // Les cadres de détection et leurs volumes de masquage : vus par cette caméra, pas par celle de l'hologramme.
+  camera.layers.enable(CALQUE_DETECTIONS);
 
   const controles = new OrbitControls(camera, rendu.domElement);
   controles.target.set(0.35, 0.75, 0);
@@ -81,11 +88,15 @@ export function monterScene(hote: HTMLElement): Scene3D {
 
   let robot: URDFRobot | null = null;
   let nuages: Nuages | null = null;
-  const visibles: Record<Calque, boolean> = { robot: true, atelier: true, camera: true, lidar: true, sol: true };
+  const visibles: Record<Calque, boolean> = { robot: true, atelier: true, camera: true, lidar: true, objets: true, sol: true };
+  let detections: Detections | null = null;
+  let objets: { nom: string; couleur: string }[] = [];
   let atelier: THREE.Object3D | null = null;
   let hologramme: ReturnType<typeof creerHologramme> | null = null;
   let debutApparition: number | null = null;
   let rayon = 0;
+  /** Le temps (s) depuis la fin de l'onde de démarrage, ou null tant qu'elle se déploie. */
+  let deploye: number | null = null;
 
   const pret = chargerRobot().then((r) => {
     robot = r;
@@ -106,7 +117,10 @@ export function monterScene(hote: HTMLElement): Scene3D {
       meuble.userData.distance = meuble.position.lengthSq() > 0 ? Math.hypot(meuble.position.x, meuble.position.y) : RAYON_FINAL * 0.8;
     }
     monde.add(atelier);
-    nuages = creerNuages(teteLocale, env.lancer);
+    nuages = creerNuages(teteLocale, env.lancer, env.objets);
+    monde.add(env.masque);
+    detections = creerDetections(scene, hote, env.objets);
+    objets = env.objets.map(({ nom, couleur }) => ({ nom, couleur }));
     hologramme = creerHologramme(rendu, scene, teteLocale.clone().add(CAMERA_TETE.decalage));
     monde.add(hologramme.groupe);
     monde.add(nuages.camera, nuages.lidar);
@@ -121,6 +135,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
       if (hologramme) hologramme.groupe.visible = visibles.camera && rayon > 0.4;
       nuages.lidar.visible = visibles.lidar;
     }
+    detections?.afficher(visibles.objets && visibles.camera);
   }
 
   function redimensionner(): void {
@@ -147,6 +162,10 @@ export function monterScene(hote: HTMLElement): Scene3D {
     nuages?.reveler(rayon);
     if (atelier) for (const meuble of atelier.children) meuble.visible = meuble.userData.distance <= rayon;
     if (hologramme) hologramme.groupe.visible = visibles.camera && rayon > 0.4;
+    deploye = avance >= 1 ? dt - ALLUMAGE_S - DEPLOIEMENT_S : null;
+    // Les objets prennent leur couleur quand leurs cadres s'accrochent, pas pendant l'onde.
+    const teinte = deploye === null ? 0 : Math.min(1, Math.max(0, (deploye - PREMIER_CADRE_S) / TEINTE_S));
+    nuages?.colorerObjets(visibles.objets ? teinte : 0);
   }
 
   const horloge = new THREE.Clock();
@@ -161,11 +180,13 @@ export function monterScene(hote: HTMLElement): Scene3D {
     hologramme?.mettreAJour(t);
     controles.update();
     composeur.render();
+    if (nuages) detections?.mettreAJour(t, camera, monde, deploye, nuages.pointsParObjet);
   }
   boucle();
 
   return {
     pret,
+    objets: () => objets,
     demarrer() {
       if (debutApparition === null) debutApparition = horloge.getElapsedTime();
     },
@@ -178,6 +199,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
       observateur.disconnect();
       controles.dispose();
       hologramme?.detruire();
+      detections?.detruire();
       composeur.dispose();
       rendu.dispose();
       rendu.domElement.remove();

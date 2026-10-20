@@ -15,6 +15,7 @@ const CALQUES: { cle: Calque; libelle: string; detail: string }[] = [
   { cle: 'atelier', libelle: 'Atelier', detail: 'simulé' },
   { cle: 'camera', libelle: 'Caméra', detail: 'RGBD · 30 i/s' },
   { cle: 'lidar', libelle: 'Lidar', detail: '360° · 200 k pts/s' },
+  { cle: 'objets', libelle: 'Objets', detail: 'déclarés' },
   { cle: 'sol', libelle: 'Grille', detail: '1 m' },
 ];
 
@@ -26,13 +27,14 @@ export function Accueil() {
   const hote = useRef<HTMLDivElement>(null);
   const scene = useRef<Scene3D | null>(null);
   const [pret, setPret] = useState(false);
+  const [nbObjets, setNbObjets] = useState(0);
   const [etape, setEtape] = useState<'bios' | 'logo' | 'pret'>('bios');
   const demarre = etape === 'pret';
 
   useEffect(() => {
     if (demarre) scene.current?.demarrer();
   }, [demarre]);
-  const [calques, setCalques] = useState<Record<Calque, boolean>>({ robot: true, atelier: true, camera: true, lidar: true, sol: true });
+  const [calques, setCalques] = useState<Record<Calque, boolean>>({ robot: true, atelier: true, camera: true, lidar: true, objets: true, sol: true });
   const [maintenant, setMaintenant] = useState(heure);
   const robots = useCharge(() => api.robots());
   const robot = robots.donnee?.find((r) => r.etat === 'en_mission') ?? robots.donnee?.[0];
@@ -41,7 +43,10 @@ export function Accueil() {
     if (!hote.current) return;
     const s = monterScene(hote.current);
     scene.current = s;
-    s.pret.then(() => setPret(true));
+    s.pret.then(() => {
+      setPret(true);
+      setNbObjets(s.objets().length);
+    });
     return () => s.detruire();
   }, []);
 
@@ -109,7 +114,7 @@ export function Accueil() {
           <button key={c.cle} className={`hud-calque ${calques[c.cle] ? 'actif' : ''}`}
             aria-pressed={calques[c.cle]} onClick={() => basculer(c.cle)}>
             <span className="hud-calque-nom">{c.libelle}</span>
-            <span className="hud-calque-detail">{c.detail}</span>
+            <span className="hud-calque-detail">{c.cle === 'objets' && nbObjets ? `${nbObjets} ${c.detail}` : c.detail}</span>
           </button>
         ))}
       </footer>

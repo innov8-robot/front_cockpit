@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { CALQUE_DETECTIONS, ORDRE_MASQUE } from './detections';
 
 /**
  * Un atelier fictif autour du robot, dans son repère (x devant, z en haut, mètres). Les mêmes formes sont
@@ -6,34 +7,64 @@ import * as THREE from 'three';
  * sont la même chose.
  */
 
-type Forme =
+type Forme = (
   | { type: 'boite'; min: THREE.Vector3; max: THREE.Vector3; ton: Ton }
-  | { type: 'cylindre'; x: number; y: number; r: number; z0: number; z1: number; ton: Ton };
+  | { type: 'cylindre'; x: number; y: number; r: number; z0: number; z1: number; ton: Ton }
+) & { objet?: number };
 
 type Ton = 'meuble' | 'objet' | 'machine';
 
-export type Lancer = (o: THREE.Vector3, d: THREE.Vector3) => number;
+/** Ce qu'un rayon a touché : l'indice de l'objet déclaré, -1 pour le reste de l'atelier. */
+export interface Touche { objet: number }
+
+/** Rend la distance du premier obstacle sur le rayon ; `touche`, s'il est donné, reçoit l'objet touché. */
+export type Lancer = (o: THREE.Vector3, d: THREE.Vector3, touche?: Touche) => number;
+
+/** Un objet déclaré : sa classe, sa couleur (celle de sa classe), et sa boîte englobante dans le repère du robot. */
+export interface ObjetDeclare {
+  classe: string;
+  nom: string;
+  couleur: string;
+  min: THREE.Vector3;
+  max: THREE.Vector3;
+}
+
+/** La couleur de chaque classe déclarée, comme un détecteur colore ses classes. */
+export const CLASSES: Record<string, string> = {
+  mug: '#3dd6ff',
+  carton: '#ffb02e',
+  'pièce': '#3dff8a',
+  bac: '#c77dff',
+};
 
 const SALLE = { x0: -4.5, x1: 6.5, y0: -5.5, y1: 5.5, h: 4 };
 
-function construire(sol: number): Forme[] {
+function construire(sol: number): { formes: Forme[]; classes: string[] } {
   const f: Forme[] = [];
+  const classes: string[] = [];
+  // Les formes ajoutées pendant `declarer` appartiennent à l'objet déclaré.
+  let courant: number | undefined;
+  const declarer = (classe: string, ajouter: () => void) => {
+    courant = classes.push(classe) - 1;
+    ajouter();
+    courant = undefined;
+  };
   const boite = (x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, ton: Ton = 'meuble') =>
-    f.push({ type: 'boite', min: new THREE.Vector3(x0, y0, sol + z0), max: new THREE.Vector3(x1, y1, sol + z1), ton });
+    f.push({ type: 'boite', min: new THREE.Vector3(x0, y0, sol + z0), max: new THREE.Vector3(x1, y1, sol + z1), ton, objet: courant });
   const cylindre = (x: number, y: number, r: number, z0: number, z1: number, ton: Ton = 'objet') =>
-    f.push({ type: 'cylindre', x, y, r, z0: sol + z0, z1: sol + z1, ton });
+    f.push({ type: 'cylindre', x, y, r, z0: sol + z0, z1: sol + z1, ton, objet: courant });
   const pieds = (x0: number, y0: number, x1: number, y1: number, h: number, e = 0.04) => {
     for (const [x, y] of [[x0, y0], [x1 - e, y0], [x0, y1 - e], [x1 - e, y1 - e]]) boite(x, y, 0, x + e, y + e, h);
   };
 
-  // La table de travail, ses pièces et le bac.
+  // La table de travail et ce qui est posé dessus, déclaré : le mug, le carton, deux pièces et le bac.
   const t = 0.75;
   boite(0.38, -0.6, t - 0.03, 1.08, 0.6, t);
   pieds(0.38, -0.6, 1.08, 0.6, t - 0.03);
-  boite(0.46, -0.21, t, 0.58, -0.11, t + 0.06, 'objet');
-  boite(0.6, 0.02, t, 0.7, 0.1, t + 0.09, 'objet');
-  boite(0.52, -0.42, t, 0.6, -0.32, t + 0.05, 'objet');
-  cylindre(0.42, -0.06, 0.055, t, t + 0.23);
+  declarer('pièce', () => boite(0.46, -0.21, t, 0.58, -0.11, t + 0.06, 'objet'));
+  declarer('carton', () => boite(0.6, 0.02, t, 0.7, 0.1, t + 0.09, 'objet'));
+  declarer('pièce', () => boite(0.52, -0.42, t, 0.6, -0.32, t + 0.05, 'objet'));
+  declarer('mug', () => cylindre(0.42, -0.06, 0.055, t, t + 0.23));
   const bac = (x0: number, y0: number, x1: number, y1: number, z: number, h: number) => {
     boite(x0, y0, z, x1, y0 + 0.02, z + h, 'objet');
     boite(x0, y1 - 0.02, z, x1, y1, z + h, 'objet');
@@ -41,7 +72,7 @@ function construire(sol: number): Forme[] {
     boite(x1 - 0.02, y0, z, x1, y1, z + h, 'objet');
     boite(x0, y0, z, x1, y1, z + 0.01, 'objet');
   };
-  bac(0.72, 0.18, 1.02, 0.42, t, 0.13);
+  declarer('bac', () => bac(0.72, 0.18, 1.02, 0.42, t, 0.13));
 
   // Le convoyeur, à gauche, avec ses cartons.
   boite(-0.6, 1.3, 0.72, 3.4, 1.8, 0.8);
@@ -75,15 +106,35 @@ function construire(sol: number): Forme[] {
 
   // Les piliers du bâtiment.
   for (const [x, y] of [[5, -4.5], [5, 4.5], [-3.5, -4.5], [-3.5, 4.5], [5, 0]]) cylindre(x, y, 0.22, 0, SALLE.h, 'meuble');
-  return f;
+  return { formes: f, classes };
+}
+
+/** Les objets déclarés, numérotés dans leur classe (« pièce 1 », « pièce 2 »), et leur boîte englobante. */
+function objetsDeclares(formes: Forme[], classes: string[]): ObjetDeclare[] {
+  const parClasse: Record<string, number> = {};
+  return classes.map((classe, i) => {
+    const boite = new THREE.Box3();
+    for (const f of formes) {
+      if (f.objet !== i) continue;
+      if (f.type === 'boite') boite.expandByPoint(f.min).expandByPoint(f.max);
+      else boite.expandByPoint(new THREE.Vector3(f.x - f.r, f.y - f.r, f.z0)).expandByPoint(new THREE.Vector3(f.x + f.r, f.y + f.r, f.z1));
+    }
+    const rang = (parClasse[classe] = (parClasse[classe] ?? 0) + 1);
+    const nombre = classes.filter((c) => c === classe).length;
+    return { classe, nom: nombre > 1 ? `${classe} ${rang}` : classe, couleur: CLASSES[classe], min: boite.min, max: boite.max };
+  });
 }
 
 function lancerContre(formes: Forme[], sol: number): Lancer {
-  return (o, d) => {
+  return (o, d, touche) => {
     let meilleur = Infinity;
+    let objet = -1;
     for (const f of formes) {
       const t = f.type === 'boite' ? contreBoite(o, d, f.min, f.max) : contreCylindre(o, d, f);
-      if (t > 0.02 && t < meilleur) meilleur = t;
+      if (t > 0.02 && t < meilleur) {
+        meilleur = t;
+        objet = f.objet ?? -1;
+      }
     }
     const murs: [number, number, number][] = [
       [SALLE.x0, SALLE.x1, 0], [SALLE.y0, SALLE.y1, 1], [sol, sol + SALLE.h, 2],
@@ -92,8 +143,12 @@ function lancerContre(formes: Forme[], sol: number): Lancer {
       const dk = d.getComponent(k);
       const ok = o.getComponent(k);
       const t = dk > 0 ? (haut - ok) / dk : (bas - ok) / dk;
-      if (t > 0 && t < meilleur) meilleur = t;
+      if (t > 0 && t < meilleur) {
+        meilleur = t;
+        objet = -1;
+      }
     }
+    if (touche) touche.objet = objet;
     return meilleur;
   };
 }
@@ -165,8 +220,34 @@ function dessiner(formes: Forme[], sol: number): THREE.Group {
   return groupe;
 }
 
-/** L'atelier : ses traits à dessiner, et le lancer de rayon des capteurs simulés. */
-export function creerEnvironnement(sol: number): { objet: THREE.Group; lancer: Lancer } {
-  const formes = construire(sol);
-  return { objet: dessiner(formes, sol), lancer: lancerContre(formes, sol) };
+/**
+ * Les volumes pleins de l'atelier, invisibles : ils n'écrivent que la profondeur, après les nuages et les traits,
+ * pour que les cadres de détection soient masqués par ce qui est devant eux sans rien cacher d'autre.
+ */
+function masquer(formes: Forme[]): THREE.Group {
+  const groupe = new THREE.Group();
+  const materiau = new THREE.MeshBasicMaterial({ colorWrite: false, transparent: true, side: THREE.DoubleSide });
+  for (const f of formes) {
+    const geometrie = f.type === 'boite'
+      ? new THREE.BoxGeometry(...f.max.clone().sub(f.min).toArray())
+      : new THREE.CylinderGeometry(f.r, f.r, f.z1 - f.z0, 24).rotateX(Math.PI / 2);
+    const volume = new THREE.Mesh(geometrie, materiau);
+    if (f.type === 'boite') volume.position.addVectors(f.min, f.max).multiplyScalar(0.5);
+    else volume.position.set(f.x, f.y, (f.z0 + f.z1) / 2);
+    volume.renderOrder = ORDRE_MASQUE;
+    volume.layers.set(CALQUE_DETECTIONS);
+    groupe.add(volume);
+  }
+  return groupe;
+}
+
+/** L'atelier : ses traits, ses volumes de masquage, le lancer de rayon des capteurs simulés et les objets déclarés. */
+export function creerEnvironnement(sol: number): {
+  objet: THREE.Group; masque: THREE.Group; lancer: Lancer; objets: ObjetDeclare[];
+} {
+  const { formes, classes } = construire(sol);
+  return {
+    objet: dessiner(formes, sol), masque: masquer(formes), lancer: lancerContre(formes, sol),
+    objets: objetsDeclares(formes, classes),
+  };
 }

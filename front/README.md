@@ -48,6 +48,13 @@ L'enregistrement d'une primitive est simulé (2,5 s) : au réel, il pilotera la 
 - `nuages.ts` : les nuages de la caméra RGBD (D435i, 87°×58°) et du lidar de tête (MID360, +5° à −47°),
   SIMULÉS en lançant des rayons dans une cellule fictive. Le back les remplacera par les vrais nuages.
 - `sol.ts` : la grille, l'anneau sous le robot et l'onde de balayage.
+- `environnement.ts` déclare aussi les **objets** posés sur la table (mug, carton, deux pièces, bac) : chaque rayon
+  des capteurs simulés dit quel objet il touche, et `nuages.ts` colore ces points de la couleur de leur classe
+  (`CLASSES`). `detections.ts` pose dessus les **cadres de détection** façon YOLO (nom et confiance) autour de
+  chaque objet que la caméra de tête voit. Ils sont dessinés dans la scène, sur un plan face à la caméra juste
+  devant l'objet, et masqués par ce qui est devant (le robot, et les volumes invisibles de l'atelier, qui n'écrivent
+  que la profondeur). La confiance est simulée ; le back servira les objets déclarés et les détections du robot.
+  Calque « Objets » de la barre du bas.
 - `scene.ts` : caméra orbitale, halo (bloom) et aberration chromatique.
 
 **Le fond de la scène est `scene.background`, jamais `setClearColor`.** three.js convertit la couleur
