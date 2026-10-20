@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { api, enSimulation } from '../api/client';
 import { ETATS_ROBOT } from '../api/libelles';
 import { reinitialiserSimulation } from '../api/mock';
+import { BarreRobot } from '../components/BarreRobot';
 import { Demarrage } from '../components/Demarrage';
 import { IntroLogo } from '../components/IntroLogo';
 import { MiniCarte } from '../components/MiniCarte';
@@ -109,13 +110,12 @@ export function Accueil() {
   }
 
   return (
-    <div className={`accueil ${demarre ? 'accueil-demarre' : ''} ${hudPret ? 'hud-pret' : ''} ${plein ? `plein-${plein}` : ''}`}>
+    <div className={`accueil ${demarre ? 'accueil-demarre' : ''} ${hudPret ? 'hud-pret' : ''} ${plein ? `plein-${plein}` : ''} ${robot ? 'avec-barre' : ''}`}>
       <div className={`accueil-scene ${survolCamera ? 'survol-camera' : ''}`} ref={hote} onPointerMove={survoler}
         onPointerDown={(e) => { appui.current = { x: e.clientX, y: e.clientY }; }} onPointerUp={relacher} />
       <div className="accueil-vignette" aria-hidden="true" />
 
       <header className="hud-haut">
-        <div className="hud-marque">ROBOTIQUE</div>
         <nav className="hud-nav">
           <NavLink to="/" end>Robot</NavLink>
           <NavLink to="/flotte">Flotte</NavLink>
@@ -182,15 +182,16 @@ export function Accueil() {
         </div>
       )}
 
-      <footer className="hud-bas">
+      <nav className="hud-calques" aria-label="Calques de la vue 3D">
         {CALQUES.map((c) => (
-          <button key={c.cle} className={`hud-calque ${calques[c.cle] ? 'actif' : ''}`}
-            aria-pressed={calques[c.cle]} onClick={() => basculer(c.cle)}>
+          <button key={c.cle} className={`hud-calque ${calques[c.cle] ? 'actif' : ''}`} aria-pressed={calques[c.cle]}
+            onClick={() => basculer(c.cle)} title={`${c.libelle} · ${c.cle === 'objets' && nbObjets ? `${nbObjets} ${c.detail}` : c.detail}`}>
             <span className="hud-calque-nom">{c.libelle}</span>
-            <span className="hud-calque-detail">{c.cle === 'objets' && nbObjets ? `${nbObjets} ${c.detail}` : c.detail}</span>
           </button>
         ))}
-      </footer>
+      </nav>
+
+      {robot && <BarreRobot robotId={robot.id} forme="ile" />}
 
       {demarre && (
         <Reticule projeterSol={(x, y) => scene.current?.projeterSol(x, y) ?? null}

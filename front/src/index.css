@@ -247,21 +247,22 @@ input[type='radio'] { width: auto; min-height: 0; }
   position: absolute; inset: 0; pointer-events: none;
   background: radial-gradient(ellipse at 50% 55%, transparent 45%, rgb(0 0 0 / 0.75) 100%);
 }
-.hud-haut, .hud-titre, .hud-jauges, .hud-bas, .hud-carte { position: absolute; z-index: 1; }
+.hud-haut, .hud-titre, .hud-jauges, .hud-calques, .hud-carte { position: absolute; z-index: 1; }
 .hud-haut {
   top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 24px;
   padding: calc(18px + env(safe-area-inset-top)) 32px 0;
 }
-.hud-marque { font-weight: 800; letter-spacing: 0.12em; font-size: 0.8rem; }
 .hud-nav { display: flex; gap: 28px; margin-left: auto; font-size: 0.85rem; }
 .hud-nav a { color: var(--hud-2); letter-spacing: 0.04em; padding: 6px 0; }
 .hud-nav a:hover { color: var(--hud); }
 .hud-nav a.active { color: var(--hud); text-decoration: underline; text-underline-offset: 6px; }
 .hud-heure { font-size: 0.85rem; color: var(--hud-2); }
 
-.hud-titre { left: 32px; top: 22%; max-width: 520px; pointer-events: none; }
+.hud-titre { left: 32px; top: calc(16px + env(safe-area-inset-top)); max-width: 520px; pointer-events: none; }
+.hud-titre .hud-sur { margin: 0; }
+.hud-titre .hud-etat { margin: 0; }
 .hud-titre h1 {
-  font-size: clamp(2.4rem, 6vw, 4.4rem); font-weight: 800; letter-spacing: -0.01em; line-height: 1; margin: 6px 0 14px;
+  font-size: clamp(2rem, 4.4vw, 3.4rem); font-weight: 800; letter-spacing: -0.01em; line-height: 1; margin: 6px 0 10px;
   text-transform: uppercase; text-shadow: 0 0 24px rgb(233 238 247 / 0.25);
 }
 .hud-sur { color: var(--hud-2); font-size: 0.8rem; letter-spacing: 0.18em; text-transform: uppercase; }
@@ -288,14 +289,15 @@ input[type='radio'] { width: auto; min-height: 0; }
   text-transform: uppercase;
 }
 
-.hud-bas {
-  left: 50%; transform: translateX(-50%); bottom: calc(22px + env(safe-area-inset-bottom));
-  display: flex; gap: 6px; padding: 6px; border: 1px solid rgb(255 255 255 / 0.09); border-radius: 14px;
+/* Les calques de la vue 3D : une colonne compacte à gauche, entre le titre et la carte. */
+.hud-calques {
+  left: 24px; top: calc(176px + env(safe-area-inset-top));
+  display: flex; flex-direction: column; gap: 2px; padding: 5px; border: 1px solid rgb(255 255 255 / 0.09); border-radius: 12px;
   background: rgb(10 12 15 / 0.55); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
 }
 .hud-calque {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 112px; padding: 9px 14px;
-  border: 1px solid transparent; border-radius: 10px; background: transparent; color: var(--hud-2); font: inherit; cursor: pointer;
+  display: flex; align-items: center; min-width: 0; padding: 6px 12px 6px 10px;
+  border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--hud-2); font: inherit; cursor: pointer;
 }
 .hud-calque:hover { color: var(--hud); }
 .hud-calque.actif { color: var(--hud); border-color: rgb(255 255 255 / 0.14); background: rgb(255 255 255 / 0.04); }
@@ -303,8 +305,7 @@ input[type='radio'] { width: auto; min-height: 0; }
   content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--hud-accent);
   margin-right: 7px; vertical-align: middle; box-shadow: 0 0 8px var(--hud-accent);
 }
-.hud-calque-nom { font-size: 0.85rem; font-weight: 600; white-space: nowrap; }
-.hud-calque-detail { font-size: 0.7rem; color: var(--hud-2); font-variant-numeric: tabular-nums; }
+.hud-calque-nom { font-size: 0.78rem; font-weight: 600; white-space: nowrap; }
 
 @media (max-width: 699px) {
   .hud-haut { padding: calc(14px + env(safe-area-inset-top)) 16px 0; gap: 12px; flex-wrap: wrap; }
@@ -313,9 +314,8 @@ input[type='radio'] { width: auto; min-height: 0; }
   .hud-titre { left: 16px; top: calc(96px + env(safe-area-inset-top)); }
   .hud-jauges { right: 16px; top: auto; bottom: calc(110px + env(safe-area-inset-bottom)); }
   .hud-console { display: none; }
-  .hud-bas { left: 16px; right: 16px; transform: none; overflow-x: auto; }
-  .hud-calque { min-width: 0; flex: 1; padding: 8px 10px; }
-  .hud-calque-detail { display: none; }
+  .hud-calques { left: 12px; top: calc(186px + env(safe-area-inset-top)); }
+  .hud-calque { padding: 5px 9px 5px 8px; }
 }
 
 /* Éditeur de mission : un canevas de nœuds, toujours sombre, qui prend toute la place. */
@@ -540,8 +540,8 @@ input[type='radio'] { width: auto; min-height: 0; }
   36%, 100% { opacity: 0; filter: none; }
 }
 /* Le HUD entre après le démarrage. */
-.accueil .hud-haut, .accueil .hud-titre, .accueil .hud-jauges, .accueil .hud-bas, .accueil .hud-carte { opacity: 0; transition: opacity 0.8s ease 0.15s; }
-.accueil-demarre .hud-haut, .accueil-demarre .hud-titre, .accueil-demarre .hud-jauges, .accueil-demarre .hud-bas, .accueil-demarre .hud-carte { opacity: 1; transition-delay: 2.4s; }
+.accueil .hud-haut, .accueil .hud-titre, .accueil .hud-jauges, .accueil .hud-calques, .accueil .hud-carte { opacity: 0; transition: opacity 0.8s ease 0.15s; }
+.accueil-demarre .hud-haut, .accueil-demarre .hud-titre, .accueil-demarre .hud-jauges, .accueil-demarre .hud-calques, .accueil-demarre .hud-carte { opacity: 1; transition-delay: 2.4s; }
 /* Le HUD attend que le robot se soit allumé et que l'onde ait déployé la scène (scene.ts, ALLUMAGE_S + DEPLOIEMENT_S). */
 @media (prefers-reduced-motion: reduce) { .boot, .boot-curseur { animation: none; } .boot-sortie > *, .boot-sortie::after { animation: boot-neon 0.6s steps(2) forwards; } }
 @media (max-width: 699px) {
@@ -641,7 +641,7 @@ input[type='radio'] { width: auto; min-height: 0; }
 }
 @media (max-width: 1099px) { .hud-carte { --cote: 320px; } }
 @media (max-width: 699px) {
-  .hud-carte { --cote: 230px; bottom: calc(70px + env(safe-area-inset-bottom)); }
+  .hud-carte { --cote: 230px; bottom: calc(84px + env(safe-area-inset-bottom)); }
   .hud-carte-legende { bottom: 10px; font-size: 7.5px; }
 }
 
@@ -670,7 +670,7 @@ input[type='radio'] { width: auto; min-height: 0; }
 
 /* Plein écran (carte ou caméra) : le reste du HUD s'efface. */
 .accueil[class*='plein-'] .hud-haut, .accueil[class*='plein-'] .hud-titre, .accueil[class*='plein-'] .hud-jauges,
-.accueil[class*='plein-'] .hud-bas { opacity: 0 !important; pointer-events: none; transition-delay: 0s !important; }
+.accueil[class*='plein-'] .hud-calques { opacity: 0 !important; pointer-events: none; transition-delay: 0s !important; }
 .accueil.plein-camera .hud-carte, .accueil.plein-sortie-camera .hud-carte { opacity: 0 !important; pointer-events: none; }
 .hud-plein-fermer {
   position: absolute; top: calc(22px + env(safe-area-inset-top)); right: 24px; z-index: 2; padding: 9px 14px;
@@ -723,7 +723,7 @@ input[type='radio'] { width: auto; min-height: 0; }
 .accueil-demarre .hud-carte { transition-delay: 0s, 0s, 0s, 2.4s; }
 .accueil[class*='plein-'] .hud-carte { transition-delay: 0s; }
 /* Après la première apparition, le HUD revient sans attendre (au retour d'un plein écran). */
-.hud-pret .hud-haut, .hud-pret .hud-titre, .hud-pret .hud-jauges, .hud-pret .hud-bas { transition-delay: 0s !important; }
+.hud-pret .hud-haut, .hud-pret .hud-titre, .hud-pret .hud-jauges, .hud-pret .hud-calques { transition-delay: 0s !important; }
 .hud-pret .hud-carte { transition-delay: 0s !important; }
 .hud-carte-zone { border: none; background: none; padding: 0; }
 .hud-carte-zone:focus-visible { outline: 2px solid #ff2d3a; outline-offset: -30vmin; }
@@ -903,3 +903,11 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
   .essai-barre-tete, .essai-barre-ordre { padding-left: 16px; padding-right: 16px; margin-left: 0; margin-right: 0; }
   .essai-barre-ordre { padding-left: 32px; }
 }
+
+/* La barre du robot sur l'accueil : elle apparaît avec le HUD, et reste au-dessus de tout (plein écran, écrans
+   ouverts) pour que l'E-STOP soit toujours à portée ; les écrans ouverts s'arrêtent au-dessus d'elle. */
+.accueil .barre-robot { z-index: 9; opacity: 0; transition: opacity 0.8s ease 0.15s, border-color 0.2s, box-shadow 0.2s; }
+.accueil-demarre .barre-robot { opacity: 1; transition-delay: 2.4s, 0s, 0s; }
+.hud-pret .barre-robot { transition-delay: 0s; }
+.accueil:not(.accueil-demarre) .barre-robot { pointer-events: none; }
+.avec-barre .overlay-cote, .avec-barre .overlay-grand { bottom: calc(92px + env(safe-area-inset-bottom)); }
