@@ -1140,3 +1140,10 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 }
 /* Sous 1500 px, la barre du robot (≈ 1000 px) ne laisse plus la place aux calques à côté d'elle : ils passent dessous. */
 @media (max-width: 1499px) { .hud-calques { top: calc(84px + env(safe-area-inset-top)); } }
+/* En vue caméra, la barre du robot descend en bas (l'E-STOP reste sous la main) et laisse le haut à la
+   caméra ; les mentions du bas de la vue remontent au-dessus d'elle. En carte pleine, elle reste en haut et
+   le bouton de réduction passe dessous. */
+.accueil.plein-camera .barre-haut, .accueil.plein-sortie-camera .barre-haut { top: auto; bottom: calc(18px + env(safe-area-inset-bottom)); }
+.avec-barre .vue-camera-rec, .avec-barre .vue-camera-source { bottom: calc(104px + env(safe-area-inset-bottom)); }
+.avec-barre .vue-camera-coins { bottom: 86px; }
+.avec-barre .hud-carte.plein .hud-plein-fermer { top: calc(92px + env(safe-area-inset-top)); }
