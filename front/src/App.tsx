@@ -1,6 +1,7 @@
 import { HashRouter, Route, Routes } from 'react-router-dom';
 import { Accueil } from './pages/Accueil';
 import { EssaiBarre } from './pages/EssaiBarre';
+import { EssaiCalques } from './pages/EssaiCalques';
 
 /**
  * Une seule page : la vue 3D du robot. Les autres écrans s'ouvrent par-dessus, selon l'adresse.
@@ -11,6 +12,7 @@ export default function App() {
     <HashRouter>
       <Routes>
         <Route path="/essai/barre" element={<EssaiBarre />} />
+        <Route path="/essai/calques" element={<EssaiCalques />} />
         <Route path="*" element={<Accueil />} />
       </Routes>
     </HashRouter>

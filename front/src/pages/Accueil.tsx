@@ -4,6 +4,7 @@ import { api, enSimulation } from '../api/client';
 import { ETATS_ROBOT } from '../api/libelles';
 import { reinitialiserSimulation } from '../api/mock';
 import { BarreRobot } from '../components/BarreRobot';
+import { CALQUES } from '../components/calques';
 import { Demarrage } from '../components/Demarrage';
 import { IntroLogo } from '../components/IntroLogo';
 import { MiniCarte } from '../components/MiniCarte';
@@ -12,14 +13,6 @@ import { Overlay } from '../components/Overlay';
 import { useCharge } from '../components/useCharge';
 import { monterScene, type Calque, type Scene3D } from '../vue3d/scene';
 
-const CALQUES: { cle: Calque; libelle: string; detail: string }[] = [
-  { cle: 'robot', libelle: 'Robot', detail: 'G1-D' },
-  { cle: 'atelier', libelle: 'Atelier', detail: 'simulé' },
-  { cle: 'camera', libelle: 'Caméra', detail: 'RGBD · 30 i/s' },
-  { cle: 'lidar', libelle: 'Lidar', detail: '360° · 200 k pts/s' },
-  { cle: 'objets', libelle: 'Objets', detail: 'déclarés' },
-  { cle: 'sol', libelle: 'Grille', detail: '1 m' },
-];
 
 function heure(): string {
   return new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });

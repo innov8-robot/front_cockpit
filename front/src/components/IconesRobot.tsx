@@ -57,3 +57,55 @@ export function IconePince({ ouverture, taille }: { ouverture: number; taille?: 
     </Trait>
   );
 }
+
+/** L'atelier : un meuble en fil de fer. */
+export function IconeAtelier({ taille }: { taille?: number }) {
+  return (
+    <Trait taille={taille}>
+      <path d="M4 8l8-4 8 4v8l-8 4-8-4z" />
+      <path d="M4 8l8 4 8-4M12 12v8" />
+    </Trait>
+  );
+}
+
+/** La caméra de tête : le boîtier et ses deux objectifs. */
+export function IconeCamera({ taille }: { taille?: number }) {
+  return (
+    <Trait taille={taille}>
+      <rect x="3" y="8" width="18" height="9" rx="2.5" />
+      <circle cx="8.5" cy="12.5" r="2" />
+      <circle cx="15.5" cy="12.5" r="2" />
+    </Trait>
+  );
+}
+
+/** Le lidar : ses ondes autour du capteur. */
+export function IconeLidar({ taille }: { taille?: number }) {
+  return (
+    <Trait taille={taille}>
+      <circle cx="12" cy="12" r="2" />
+      <path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 7.8a6 6 0 0 1 0 8.4" />
+      <path d="M5 5a10 10 0 0 0 0 14M19 5a10 10 0 0 1 0 14" />
+    </Trait>
+  );
+}
+
+/** Les objets déclarés : un cadre de détection, ses coins marqués. */
+export function IconeObjets({ taille }: { taille?: number }) {
+  return (
+    <Trait taille={taille}>
+      <path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4" />
+      <rect x="8.5" y="8.5" width="7" height="7" rx="1" />
+    </Trait>
+  );
+}
+
+/** La grille du sol. */
+export function IconeGrille({ taille }: { taille?: number }) {
+  return (
+    <Trait taille={taille}>
+      <path d="M3 9l9-4 9 4-9 4z" />
+      <path d="M3 14l9 4 9-4M7.5 7l9 4M16.5 7l-9 4" />
+    </Trait>
+  );
+}

@@ -933,3 +933,103 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 }
 @media (prefers-reduced-motion: reduce) { .estop-bords { animation: none; } .estop-bords.estop-retour { display: none; } }
 
+/* Les propositions de filtres des calques (Filtres.tsx), essayées sur #/essai/calques. */
+.filtres {
+  --f-texte: #e9eef7; --f-2: #8a93a3; --f-bord: rgb(255 255 255 / 0.09);
+  display: flex; flex-direction: column; gap: 2px; padding: 5px; color: var(--f-texte); width: max-content;
+  border: 1px solid var(--f-bord); border-radius: 12px; background: rgb(10 12 15 / 0.62);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font-family: 'Inter', system-ui, sans-serif;
+}
+.filtres button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+.filtres .icone-robot { display: block; flex: none; }
+.filtres-tete {
+  display: flex; justify-content: space-between; gap: 16px; margin: 2px 6px 4px;
+  font: 600 9px/1 ui-monospace, monospace; letter-spacing: 0.18em; color: var(--f-2);
+}
+
+/* A · le rail */
+.filtres-rail { padding: 4px; gap: 2px; }
+.filtres-rail button {
+  position: relative; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 8px;
+  color: var(--f-2); opacity: 0.45; transition: opacity 0.15s, background 0.15s;
+}
+.filtres-rail button:hover { opacity: 1; background: rgb(255 255 255 / 0.06); }
+.filtres-rail button.actif { opacity: 1; color: var(--f-texte); }
+.filtres-rail button.actif::before {
+  content: ''; position: absolute; left: -4px; top: 9px; bottom: 9px; width: 2px; border-radius: 1px;
+  background: #ff2d3a; box-shadow: 0 0 8px #ff2d3a;
+}
+.filtres-bulle {
+  position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%); pointer-events: none;
+  display: flex; flex-direction: column; gap: 3px; padding: 7px 10px; white-space: nowrap; opacity: 0; transition: opacity 0.12s;
+  border: 1px solid var(--f-bord); border-radius: 8px; background: rgb(10 12 15 / 0.92);
+  font: 500 10.5px/1 ui-monospace, monospace; color: var(--f-2); text-align: left;
+}
+.filtres-bulle strong { font: 600 12px/1 'Inter', system-ui, sans-serif; color: var(--f-texte); }
+.filtres-rail button:hover .filtres-bulle, .filtres-rail button:focus-visible .filtres-bulle { opacity: 1; }
+
+/* B · les interrupteurs */
+.filtres-interrupteurs { width: 210px; }
+.filtres-interrupteurs button {
+  display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 8px; text-align: left; color: var(--f-2);
+}
+.filtres-interrupteurs button:hover { background: rgb(255 255 255 / 0.05); }
+.filtres-interrupteurs button.actif { color: var(--f-texte); }
+.filtres-textes { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.filtres-textes span { font-size: 0.8rem; font-weight: 600; line-height: 1; }
+.filtres-textes small { font: 500 9.5px/1 ui-monospace, monospace; color: var(--f-2); letter-spacing: 0.04em; }
+.filtres-interrupteur {
+  position: relative; width: 26px; height: 14px; flex: none; border-radius: 7px; background: rgb(255 255 255 / 0.12); transition: background 0.2s;
+}
+.filtres-interrupteur i {
+  position: absolute; left: 2px; top: 2px; width: 10px; height: 10px; border-radius: 50%; background: #8a93a3; transition: transform 0.2s, background 0.2s;
+}
+.filtres-interrupteurs .actif .filtres-interrupteur { background: rgb(255 45 58 / 0.45); }
+.filtres-interrupteurs .actif .filtres-interrupteur i { transform: translateX(12px); background: #fff; box-shadow: 0 0 8px #ff2d3a; }
+
+/* C · la légende */
+.filtres-legende { width: 220px; }
+.filtres-legende button {
+  display: grid; grid-template-columns: 12px auto 1fr; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 8px;
+  text-align: left; color: var(--f-2); opacity: 0.55; transition: opacity 0.15s;
+}
+.filtres-legende button:hover { background: rgb(255 255 255 / 0.05); opacity: 0.85; }
+.filtres-legende button.actif { color: var(--f-texte); opacity: 1; }
+.filtres-pastille { width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 0 8px rgb(255 255 255 / 0.15); }
+.filtres-legende button:not(.actif) .filtres-pastille { background: transparent !important; box-shadow: inset 0 0 0 1.5px #5b636e; }
+.filtres-nom { font-size: 0.8rem; font-weight: 600; }
+.filtres-legende small { justify-self: end; font: 500 9.5px/1 ui-monospace, monospace; color: var(--f-2); white-space: nowrap; }
+
+/* D · le repliable */
+.filtres-dock { padding: 4px; }
+.filtres-dock-tete {
+  display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: 8px;
+  font: 600 10.5px/1 ui-monospace, monospace !important; letter-spacing: 0.16em;
+}
+.filtres-dock-tete:hover { background: rgb(255 255 255 / 0.05); }
+.filtres-compte { color: #ff5a64; }
+.filtres-chevron { color: var(--f-2); transition: transform 0.2s; }
+.filtres-dock.ouvert .filtres-chevron { transform: rotate(180deg); }
+.filtres-dock-liste { display: flex; flex-direction: column; gap: 1px; margin-top: 3px; padding-top: 4px; border-top: 1px solid var(--f-bord); }
+.filtres-dock-liste button { display: flex; align-items: center; gap: 9px; padding: 6px 10px; border-radius: 7px; color: var(--f-2); font-size: 0.8rem; }
+.filtres-dock-liste button:hover { background: rgb(255 255 255 / 0.05); }
+.filtres-dock-liste button.actif { color: var(--f-texte); }
+.filtres-coche { margin-left: auto; color: #ff2d3a; font-size: 9px; }
+.filtres-dock-liste button:not(.actif) .filtres-coche { color: #5b636e; }
+
+/* La page d'essai des filtres. */
+.essai-calques { overflow-y: auto; }
+.essai-calques-note { margin: 0; max-width: 360px; color: #8a93a3; font-size: 0.85rem; }
+.essai-calques-grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; padding: 24px 32px 32px; }
+.essai-calques-case { display: flex; flex-direction: column; gap: 6px; }
+.essai-calques-titre { margin: 0; display: flex; align-items: center; gap: 10px; font-weight: 700; }
+.essai-calques-titre span {
+  display: grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; background: #ff2d3a; color: #fff;
+  font: 800 11px/1 ui-monospace, monospace;
+}
+.essai-calques-idee { margin: 0 0 6px; color: #8a93a3; font-size: 0.82rem; min-height: 2.4em; }
+.essai-calques-scene {
+  position: relative; height: 330px; padding: 16px; border: 1px dashed rgb(255 255 255 / 0.1); border-radius: 12px;
+  background: radial-gradient(ellipse at 70% 60%, rgb(80 120 170 / 0.16), transparent 70%);
+}
+@media (max-width: 700px) { .essai-calques-grille { padding: 16px; } }
