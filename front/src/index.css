@@ -248,11 +248,11 @@ input[type='radio'] { width: auto; min-height: 0; }
   background: radial-gradient(ellipse at 50% 55%, transparent 45%, rgb(0 0 0 / 0.75) 100%);
 }
 .hud-haut, .hud-titre, .hud-jauges, .hud-bas, .hud-carte { position: absolute; z-index: 1; }
+.hud-marque { font-weight: 800; letter-spacing: 0.12em; font-size: 0.8rem; }
 .hud-haut {
   top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 24px;
   padding: calc(18px + env(safe-area-inset-top)) 32px 0;
 }
-.hud-marque { font-weight: 800; letter-spacing: 0.12em; font-size: 0.8rem; }
 .hud-nav { display: flex; gap: 28px; margin-left: auto; font-size: 0.85rem; }
 .hud-nav a { color: var(--hud-2); letter-spacing: 0.04em; padding: 6px 0; }
 .hud-nav a:hover { color: var(--hud); }
@@ -601,7 +601,8 @@ input[type='radio'] { width: auto; min-height: 0; }
 
 /* La carte 2D du châssis, ancrée dans le coin bas gauche : opaque dans le coin, fondue en arc vers la scène. */
 .hud-carte {
-  --cote: 420px;
+  /* Proportionnelle à l'écran : 420 px sur un grand écran, un quart de la largeur sur une tablette. */
+  --cote: clamp(200px, min(24vw, 44vh), 420px);
   left: 0; bottom: 0; width: var(--cote); height: var(--cote); pointer-events: none;
 }
 /* La zone cliquable : un cercle invisible dans le coin, là où la carte se voit. Le dessin, lui, n'est pas
@@ -639,7 +640,6 @@ input[type='radio'] { width: auto; min-height: 0; }
   display: flex; flex-direction: column; gap: 3px;
   font-family: ui-monospace, monospace; font-size: 9px; letter-spacing: 0.18em; color: #8a93a3;
 }
-@media (max-width: 1099px) { .hud-carte { --cote: 320px; } }
 @media (max-width: 699px) {
   .hud-carte { --cote: 230px; bottom: calc(70px + env(safe-area-inset-bottom)); }
   .hud-carte-legende { bottom: 10px; font-size: 7.5px; }
@@ -780,3 +780,50 @@ input[type='radio'] { width: auto; min-height: 0; }
 a.hud-jauges { color: inherit; cursor: pointer; }
 a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .hud-corps { color: #8a93a3; }
+
+/* Le sélecteur image réelle / vue 3D de l'œil du robot, en haut au centre de la vue caméra. */
+.vue-camera-image { transition: opacity 0.35s ease; }
+.vue-camera-image.cachee { opacity: 0; }
+.vue-camera-modes {
+  position: absolute; left: 50%; top: calc(22px + env(safe-area-inset-top)); transform: translateX(-50%);
+  display: flex; align-items: center; gap: 2px; padding: 3px; pointer-events: auto;
+  border: 1px solid rgb(143 227 255 / 0.3); border-radius: 9px; background: rgb(8 10 13 / 0.6); backdrop-filter: blur(8px);
+  animation: plein-entree 0.5s ease 0.45s both;
+}
+.vue-camera-modes button {
+  border: none; border-radius: 6px; background: transparent; color: #8fe3ff; padding: 7px 14px; cursor: pointer;
+  font: 600 11px/1 ui-monospace, monospace; letter-spacing: 0.16em; opacity: 0.65;
+}
+.vue-camera-modes button:hover { opacity: 1; }
+.vue-camera-modes button.actif { background: rgb(143 227 255 / 0.16); opacity: 1; box-shadow: inset 0 0 0 1px rgb(143 227 255 / 0.4); }
+.vue-camera-touche {
+  margin: 0 6px 0 4px; padding: 2px 5px; border: 1px solid rgb(143 227 255 / 0.3); border-radius: 3px;
+  font: 9px/1 ui-monospace, monospace; color: #8fe3ff; opacity: 0.6;
+}
+@media (hover: none) { .vue-camera-touche { display: none; } }
+
+/* Les pastilles, en bas au centre : le point dit la santé, pas la visibilité. */
+.hud-calque.actif .hud-calque-nom::before { content: none; }
+.hud-verdict {
+  display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 7px; vertical-align: middle;
+  background: #6b7480;
+}
+.verdict-ok { background: #3dff8a; box-shadow: 0 0 8px rgb(61 255 138 / 0.8); }
+.verdict-pb { background: #ff2d3a; box-shadow: 0 0 9px #ff2d3a; animation: corps-alarme 0.8s steps(2) infinite; }
+.hud-calque.masque { opacity: 0.45; }
+.hud-calque.masque .hud-calque-nom { text-decoration: line-through; text-decoration-color: rgb(255 255 255 / 0.4); }
+.hud-calque.fixe { cursor: pointer; text-decoration: none; }
+
+/* L'overlay qui épouse son contenu (la planche du corps), centré dans la scène. */
+.overlay-ajuste {
+  left: 50%; top: calc(50% + 20px); transform: translate(-50%, -50%);
+  max-width: calc(100vw - 48px); max-height: calc(100dvh - 88px);
+}
+.overlay-ajuste .overlay-corps { padding: 18px 26px 22px; }
+.overlay-ajuste .page-corps { height: auto; }
+.overlay-ajuste .corps-planche:not(.compacte) { flex: none; min-height: 0; overflow: hidden; }
+.overlay-ajuste:has(.compacte) { width: min(760px, calc(100vw - 48px)); }
+@media (max-width: 699px) {
+  .overlay-ajuste { inset: 0; transform: none; width: auto; max-width: none; max-height: none; border-radius: 0; border: none; }
+  .overlay-ajuste .overlay-corps { padding: 56px 16px calc(24px + env(safe-area-inset-bottom)); }
+}

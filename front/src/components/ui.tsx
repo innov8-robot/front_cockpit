@@ -48,7 +48,6 @@ export function Batterie({ niveau }: { niveau: number }) {
 
 const CHEMINS: Record<string, string> = {
   robot: 'M9 3h6v5H9zM7 10h10v7H7zM9 17v4M15 17v4M5 12v3M19 12v3',
-  flotte: 'M4 17h16M6 17V9a6 6 0 0 1 12 0v8M9 21h6M12 3v2',
   primitives: 'M4 6h7v7H4zM13 6h7v4h-7zM13 12h7v6h-7zM4 15h7v3H4z',
   missions: 'M5 5h14M5 12h14M5 19h9M17 17l2 2 3-4',
   plus: 'M12 5v14M5 12h14',

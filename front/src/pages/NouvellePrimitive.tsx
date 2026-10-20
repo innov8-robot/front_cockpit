@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { api } from '../api/client';
+import { api, robotUnique } from '../api/client';
 import { ANCRAGES, TYPES_PRIMITIVE } from '../api/libelles';
 import type { Ancrage, NouvellePrimitive as Brouillon, TypePrimitive } from '../api/types';
 import { EnTete, Erreur, Icone } from '../components/ui';
@@ -23,14 +23,15 @@ const vide = (): Brouillon => ({
 
 export function NouvellePrimitive() {
   const naviguer = useNavigate();
-  const robots = useCharge(() => api.robots());
+  const robot = useCharge(robotUnique);
   const [etape, setEtape] = useState(0);
   const [b, setB] = useState<Brouillon>(vide);
   const [enregistrement, setEnregistrement] = useState<'attente' | 'en_cours' | 'fait'>('attente');
   const [erreur, setErreur] = useState<string | null>(null);
 
   const maj = (champs: Partial<Brouillon>) => setB((x) => ({ ...x, ...champs }));
-  const disponibles = robots.donnee?.filter((r) => r.etat === 'disponible') ?? [];
+  const disponible = robot.donnee?.etat === 'disponible';
+  useEffect(() => { if (robot.donnee) setB((x) => ({ ...x, robotId: robot.donnee!.id })); }, [robot.donnee]);
 
   useEffect(() => {
     if (enregistrement !== 'en_cours') return;
@@ -44,7 +45,7 @@ export function NouvellePrimitive() {
     (b.type !== 'depose' || !!b.ancrage) &&
     (b.type !== 'deplacer' || !!b.poste?.trim());
 
-  const peutContinuer = [true, reglagesValides, !!b.robotId && (enregistrement === 'fait' || b.type === 'rentrer'), true][etape];
+  const peutContinuer = [true, reglagesValides, disponible && (enregistrement === 'fait' || b.type === 'rentrer'), true][etape];
 
   async function creer() {
     try {
@@ -118,13 +119,7 @@ export function NouvellePrimitive() {
 
         {etape === 2 && (
           <div className="formulaire">
-            <label>Robot
-              <select value={b.robotId} onChange={(e) => { maj({ robotId: e.target.value }); setEnregistrement('attente'); }}>
-                <option value="">Choisir un robot disponible…</option>
-                {disponibles.map((r) => <option key={r.id} value={r.id}>{r.nom} · {r.site}</option>)}
-              </select>
-            </label>
-            {disponibles.length === 0 && robots.donnee && <p className="discret">Aucun robot disponible pour l’instant.</p>}
+            {robot.donnee && !disponible && <p className="discret">{robot.donnee.nom} n’est pas disponible pour l’instant.</p>}
             <div className="consigne">
               <strong>Au robot</strong>
               <p>{CONSIGNES[b.type]}</p>
@@ -132,7 +127,7 @@ export function NouvellePrimitive() {
             {b.type !== 'rentrer' && (
               <div className="enregistrement">
                 {enregistrement === 'attente' && (
-                  <button className="bouton bouton-primaire" disabled={!b.robotId} onClick={() => setEnregistrement('en_cours')}>
+                  <button className="bouton bouton-primaire" disabled={!disponible} onClick={() => setEnregistrement('en_cours')}>
                     <Icone nom="enregistrer" taille={16} />Démarrer l’enregistrement
                   </button>
                 )}
@@ -155,7 +150,7 @@ export function NouvellePrimitive() {
             {b.ancrage && <div><dt>Dépose</dt><dd>{ANCRAGES[b.ancrage]}</dd></div>}
             {b.poste && <div><dt>Poste</dt><dd>{b.poste}</dd></div>}
             <div><dt>Vitesse</dt><dd className="nombre">×{b.vitesse.toFixed(2)}</dd></div>
-            <div><dt>Enregistrée sur</dt><dd>{robots.donnee?.find((r) => r.id === b.robotId)?.nom}</dd></div>
+            <div><dt>Enregistrée sur</dt><dd>{robot.donnee?.nom}</dd></div>
           </dl>
         )}
       </section>

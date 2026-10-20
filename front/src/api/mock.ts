@@ -1,7 +1,7 @@
 import type { Api } from './client';
-import type { EtatCorps, Mission, Primitive, Robot, Run } from './types';
+import type { EtatCapteurs, EtatCorps, Mission, Primitive, Robot, Run } from './types';
 
-const CLE = 'mpc.front.simulation.v2';
+const CLE = 'mpc.front.simulation.v3';
 const LATENCE_MS = 120;
 
 interface Magasin {
@@ -17,20 +17,8 @@ function graine(): Magasin {
   return {
     robots: [
       {
-        id: 'r1', nom: 'G1-D · 01', modele: 'Unitree G1-D', site: 'Atelier A', etat: 'en_mission',
-        batterie: 72, posteCourant: 'table', missionCourante: 'm1', derniereConnexion: ilYA(0),
-      },
-      {
-        id: 'r2', nom: 'G1-D · 02', modele: 'Unitree G1-D', site: 'Atelier A', etat: 'disponible',
-        batterie: 94, posteCourant: 'base', missionCourante: null, derniereConnexion: ilYA(1),
-      },
-      {
-        id: 'r3', nom: 'G1-D · 03', modele: 'Unitree G1-D', site: 'Atelier B', etat: 'en_charge',
-        batterie: 31, posteCourant: 'dock', missionCourante: null, derniereConnexion: ilYA(4),
-      },
-      {
-        id: 'r4', nom: 'G1-D · 04', modele: 'Unitree G1-D', site: 'Atelier B', etat: 'hors_ligne',
-        batterie: 0, posteCourant: null, missionCourante: null, derniereConnexion: ilYA(60 * 26),
+        id: 'r1', nom: 'G1-D · 01', modele: 'Unitree G1-D', site: 'Atelier A', etat: 'disponible',
+        batterie: 72, posteCourant: 'table', missionCourante: null, derniereConnexion: ilYA(0),
       },
     ],
     primitives: [
@@ -81,7 +69,7 @@ function graine(): Magasin {
           { id: 'l3', de: 'n2', sortie: 'ok', vers: 'n3' },
           { id: 'l4', de: 'n2', sortie: 'echec', vers: 'n4' },
         ],
-        robotId: 'r1', repetitions: 6, etat: 'en_cours', modifieeLe: ilYA(90),
+        robotId: 'r1', repetitions: 6, etat: 'prete', modifieeLe: ilYA(90),
       },
       {
         id: 'm2', nom: 'Déplacer le bac', description: 'Porte le bac de la table au poste d’expédition.',
@@ -94,15 +82,15 @@ function graine(): Magasin {
           { id: 'l5', de: 'depart', sortie: 'ok', vers: 'n5' },
           { id: 'l6', de: 'n5', sortie: 'ok', vers: 'n6' },
         ],
-        robotId: null, repetitions: 1, etat: 'brouillon', modifieeLe: ilYA(60 * 20),
+        robotId: 'r1', repetitions: 1, etat: 'brouillon', modifieeLe: ilYA(60 * 20),
       },
     ],
     runs: [
       { id: 'u1', missionId: 'm1', robotId: 'r1', debut: ilYA(14), dureeS: 38, issue: 'reussi', cause: null },
       { id: 'u2', missionId: 'm1', robotId: 'r1', debut: ilYA(16), dureeS: 51, issue: 'echoue', cause: 'Aucune prise atteignable' },
       { id: 'u3', missionId: 'm1', robotId: 'r1', debut: ilYA(19), dureeS: 36, issue: 'reussi', cause: null },
-      { id: 'u4', missionId: 'm1', robotId: 'r2', debut: ilYA(60 * 5), dureeS: 41, issue: 'reussi', cause: null },
-      { id: 'u5', missionId: 'm2', robotId: 'r3', debut: ilYA(60 * 30), dureeS: 12, issue: 'interrompu', cause: 'Arrêt d’urgence' },
+      { id: 'u4', missionId: 'm1', robotId: 'r1', debut: ilYA(60 * 5), dureeS: 41, issue: 'reussi', cause: null },
+      { id: 'u5', missionId: 'm2', robotId: 'r1', debut: ilYA(60 * 30), dureeS: 12, issue: 'interrompu', cause: 'Arrêt d’urgence' },
     ],
   };
 }
@@ -174,6 +162,11 @@ export const apiSimulee: Api = {
   robots: () => plusTard(magasin.robots),
   robot: (id) => plusTard(magasin.robots.find((r) => r.id === id)),
   etatCorps: (robotId) => etatCorpsSimule(robotId),
+  etatCapteurs: (robotId) => {
+    const r = magasin.robots.find((x) => x.id === robotId);
+    const v = !r || r.etat === 'hors_ligne' ? 'inconnu' as const : 'ok' as const;
+    return plusTard<EtatCapteurs>({ camera: v, lidar: v });
+  },
   arretUrgence: (robotId) => {
     const r = magasin.robots.find((x) => x.id === robotId);
     if (!r) return Promise.reject(new Error('Robot inconnu'));

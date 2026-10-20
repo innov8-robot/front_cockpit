@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { api } from '../api/client';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { api, robotUnique } from '../api/client';
 import { depuis } from '../api/libelles';
 import type { EtatCorps, EtatMoteur, Moteur } from '../api/types';
 import { Chargement, Icone } from '../components/ui';
@@ -11,8 +11,16 @@ interface Ancre { nom: string; x: number; y: number }
 
 const TORSE = 'torse lacet';
 const RAFRAICHI_MS = 1000;
-/** En dessous de cette largeur, la planche se replie : la figure, puis les tableaux l'un sous l'autre. */
-const LARGEUR_PLANCHE = 1080;
+/** La largeur d'un tableau (index.css, .corps-tableau) et ce que l'attitude IMU déborde du sien (px). */
+const LARGEUR_TABLEAU = 440;
+const DEBORD_IMU = 70;
+/** La hauteur prise par l'en-tête et les marges de l'overlay, et la plus grande figure (px). */
+const MARGE_VERTICALE = 200;
+const HAUTEUR_FIGURE_MAX = 640;
+/** Les marges de l'overlay de chaque côté : sous ce reste, la planche se replie en colonne. */
+const MARGE_HORIZONTALE = 100;
+/** Le dessin s'arrête aux roues, à 95 % de l'image : le reste est blanc. */
+const FIGURE_UTILE = 0.95;
 /** Le rapport largeur / hauteur de assets/robot_lines.png. */
 const RAPPORT_FIGURE = 983 / 1100;
 const ECART_FIGURE = 18;
@@ -49,20 +57,16 @@ function Entete() {
 
 /** La vue « corps » d'un robot : le dessin au centre, une rangée par moteur à la hauteur de son point. */
 export function CorpsRobot() {
-  const { id = '' } = useParams();
-  const robot = useCharge(() => api.robot(id), [id]);
+  const robot = useCharge(robotUnique);
+  const id = robot.donnee?.id;
   const [ancres, setAncres] = useState<Ancre[] | null>(null);
   const [etat, setEtat] = useState<EtatCorps | null>(null);
-  const [mesure, setMesure] = useState({ largeur: 0, hauteur: 0 });
-  // La planche se mesure dès qu'elle existe, quel que soit l'ordre d'arrivée de la fiche et des ancres.
-  const observateur = useRef<ResizeObserver | null>(null);
-  const planche = useCallback((el: HTMLDivElement | null) => {
-    observateur.current?.disconnect();
-    observateur.current = null;
-    if (!el) return;
-    const o = new ResizeObserver(() => setMesure({ largeur: el.clientWidth, hauteur: el.clientHeight }));
-    o.observe(el);
-    observateur.current = o;
+  // La planche se taille sur la fenêtre, et l'overlay sur la planche : il épouse exactement son contenu.
+  const [fenetre, setFenetre] = useState({ l: innerWidth, h: innerHeight });
+  useEffect(() => {
+    const suivre = () => setFenetre({ l: innerWidth, h: innerHeight });
+    addEventListener('resize', suivre);
+    return () => removeEventListener('resize', suivre);
   }, []);
 
   useEffect(() => {
@@ -70,6 +74,7 @@ export function CorpsRobot() {
   }, []);
 
   useEffect(() => {
+    if (!id) return;
     let vivant = true;
     const lire = () => api.etatCorps(id).then((e) => vivant && setEtat(e)).catch(() => undefined);
     lire();
@@ -82,29 +87,30 @@ export function CorpsRobot() {
   const gauche = ancres.filter((a) => a.x < 50).sort((a, b) => a.y - b.y);
   const droite = ancres.filter((a) => a.x >= 50 && a.nom !== TORSE).sort((a, b) => a.y - b.y);
   const torse = ancres.find((a) => a.nom === TORSE);
-  const compacte = mesure.largeur > 0 && mesure.largeur < LARGEUR_PLANCHE;
-
-  // La figure tient dans la hauteur ; les tableaux se collent à elle de chaque côté.
-  const hFigure = Math.max(420, Math.min(mesure.hauteur - 8, 700));
+  // La figure tient dans la hauteur de la fenêtre ; les tableaux se collent à elle de chaque côté.
+  const hFigure = Math.max(420, Math.min(fenetre.h - MARGE_VERTICALE, HAUTEUR_FIGURE_MAX));
   const lFigure = hFigure * RAPPORT_FIGURE;
-  const x0 = (mesure.largeur - lFigure) / 2;
+  const x0 = LARGEUR_TABLEAU + ECART_FIGURE;
+  const largeur = 2 * (LARGEUR_TABLEAU + ECART_FIGURE) + lFigure + DEBORD_IMU;
+  const compacte = fenetre.l < largeur + MARGE_HORIZONTALE;
   const point = (a: Ancre) => ({ x: x0 + (a.x / 100) * lFigure, y: (a.y / 100) * hFigure });
   const yTorse = torse ? point(droite.at(-1) ?? torse).y + 70 : 0;
+  const hauteur = Math.max(hFigure * FIGURE_UTILE, yTorse + 34 + 2 * HAUTEUR_RANGEE + 12);
 
   return (
     <div className="page-corps">
       <div className="corps-barre">
-        <Link to={`/flotte/${id}`} className="retour"><Icone nom="retour" taille={16} />{robot.donnee?.nom ?? 'Robot'}</Link>
+        <Link to="/robot" className="retour"><Icone nom="retour" taille={16} />{robot.donnee?.nom ?? 'Robot'}</Link>
         <h1>ÉTAT DU CORPS</h1>
         <span className="espace" />
         <span className="discret nombre">{etat ? `relevé ${depuis(etat.date)}` : 'en attente du robot…'}</span>
       </div>
 
-      <div ref={planche} className={`corps-planche ${compacte ? 'compacte' : ''}`}>
-        {!compacte && mesure.largeur > 0 && (
+      <div className={`corps-planche ${compacte ? 'compacte' : ''}`} style={compacte ? undefined : { width: largeur, height: hauteur }}>
+        {!compacte && (
           <>
             <img className="corps-figure" src="robot/robot_lines.png" alt="" style={{ left: x0, width: lFigure, height: hFigure }} />
-            <svg className="corps-traits" width={mesure.largeur} height={hFigure + 160} aria-hidden="true">
+            <svg className="corps-traits" width={largeur} height={hauteur} aria-hidden="true">
               {gauche.map((a) => {
                 const p = point(a);
                 return <line key={a.nom} x1={x0 - ECART_FIGURE} y1={p.y} x2={p.x} y2={p.y} />;
@@ -124,7 +130,7 @@ export function CorpsRobot() {
               })}
             </svg>
 
-            <section className="corps-tableau" style={{ right: mesure.largeur - x0 + ECART_FIGURE }}>
+            <section className="corps-tableau" style={{ left: 0 }}>
               <h2>BRAS DROIT</h2>
               <Entete />
               {gauche.map((a) => (

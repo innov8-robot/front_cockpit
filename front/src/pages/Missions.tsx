@@ -6,8 +6,6 @@ import { useCharge } from '../components/useCharge';
 
 export function Missions() {
   const missions = useCharge(() => api.missions());
-  const robots = useCharge(() => api.robots());
-  const nomRobot = (id: string | null) => robots.donnee?.find((r) => r.id === id)?.nom ?? 'Non assignée';
 
   return (
     <>
@@ -25,7 +23,7 @@ export function Missions() {
                 <div>
                   <strong>{m.nom}</strong>
                   <div className="discret">
-                    {nbPrimitives(m)} primitive{nbPrimitives(m) > 1 ? 's' : ''} · ×{m.repetitions} · {nomRobot(m.robotId)} · modifiée {depuis(m.modifieeLe)}
+                    {nbPrimitives(m)} primitive{nbPrimitives(m) > 1 ? 's' : ''} · ×{m.repetitions} · modifiée {depuis(m.modifieeLe)}
                   </div>
                 </div>
                 <Badge ton={ETATS_MISSION[m.etat].ton}>{ETATS_MISSION[m.etat].libelle}</Badge>

@@ -105,3 +105,12 @@ export interface EtatCorps {
   imu: { roulis: number; tangage: number; lacet: number; temperature: number } | null;
   date: string;
 }
+
+/** Le verdict d'un élément du HUD : tout va bien, un problème, ou on ne sait pas (pas de nouvelles). */
+export type Verdict = 'ok' | 'pb' | 'inconnu';
+
+/** L'état des capteurs de tête, jugé par le back. */
+export interface EtatCapteurs {
+  camera: Verdict;
+  lidar: Verdict;
+}

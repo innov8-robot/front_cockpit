@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { api, enSimulation } from '../api/client';
+import { api, enSimulation, robotUnique } from '../api/client';
+import type { EtatCapteurs, EtatCorps, Robot, Verdict } from '../api/types';
 import { ETATS_ROBOT } from '../api/libelles';
 import { reinitialiserSimulation } from '../api/mock';
 import { Demarrage } from '../components/Demarrage';
@@ -11,14 +12,26 @@ import { Overlay } from '../components/Overlay';
 import { useCharge } from '../components/useCharge';
 import { monterScene, type Calque, type Scene3D } from '../vue3d/scene';
 
-const CALQUES: { cle: Calque; libelle: string; detail: string }[] = [
-  { cle: 'robot', libelle: 'Robot', detail: 'G1-D' },
-  { cle: 'atelier', libelle: 'Atelier', detail: 'simulé' },
-  { cle: 'camera', libelle: 'Caméra', detail: 'RGBD · 30 i/s' },
-  { cle: 'lidar', libelle: 'Lidar', detail: '360° · 200 k pts/s' },
-  { cle: 'objets', libelle: 'Objets', detail: 'déclarés' },
-  { cle: 'sol', libelle: 'Grille', detail: '1 m' },
+/** Les pastilles du HUD : chacune dit si son élément va bien ; celles qu'on peut masquer basculent au clic. */
+type Pastille = 'robot' | 'atelier' | 'camera' | 'lidar' | 'objets';
+const PASTILLES: { cle: Pastille; libelle: string; detail: string; masquable: boolean }[] = [
+  { cle: 'robot', libelle: 'Robot', detail: 'G1-D', masquable: false },
+  { cle: 'atelier', libelle: 'Atelier', detail: 'simulé', masquable: true },
+  { cle: 'camera', libelle: 'Caméra', detail: 'RGBD · 30 i/s', masquable: true },
+  { cle: 'lidar', libelle: 'Lidar', detail: '360° · 200 k pts/s', masquable: true },
+  { cle: 'objets', libelle: 'Objets', detail: 'déclarés', masquable: true },
 ];
+const SANTE_MS = 2000;
+const TITRES_VERDICT: Record<Verdict, string> = { ok: 'tout va bien', pb: 'problème', inconnu: 'pas de nouvelles' };
+
+/** Le verdict du robot : arrêt d'urgence ou moteur trop chaud / en défaut = problème ; hors ligne = inconnu. */
+function verdictRobot(r: Robot | undefined, corps: EtatCorps | null): { verdict: Verdict; raison: string } {
+  if (!r || r.etat === 'hors_ligne') return { verdict: 'inconnu', raison: 'robot hors ligne' };
+  if (r.etat === 'arret_urgence') return { verdict: 'pb', raison: 'arrêt d’urgence' };
+  const malades = corps?.moteurs.filter((m) => m.etat === 'trop_chaud' || m.etat === 'defaut') ?? [];
+  if (malades.length) return { verdict: 'pb', raison: malades.map((m) => `${m.nom} ${m.etat === 'defaut' ? 'en défaut' : `${m.temperature}°`}`).join(' · ') };
+  return { verdict: corps ? 'ok' : 'inconnu', raison: corps ? 'moteurs dans leurs seuils' : 'en attente de l’état des moteurs' };
+}
 
 function heure(): string {
   return new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
@@ -80,8 +93,21 @@ export function Accueil() {
   }, [demarre]);
   const [calques, setCalques] = useState<Record<Calque, boolean>>({ robot: true, atelier: true, camera: true, lidar: true, objets: true, sol: true });
   const [maintenant, setMaintenant] = useState(heure);
-  const robots = useCharge(() => api.robots());
-  const robot = robots.donnee?.find((r) => r.etat === 'en_mission') ?? robots.donnee?.[0];
+  const robot = useCharge(robotUnique).donnee;
+  const [sante, setSante] = useState<{ robot?: Robot; corps: EtatCorps | null; capteurs: EtatCapteurs | null }>({ corps: null, capteurs: null });
+  useEffect(() => {
+    let vivant = true;
+    const lire = async () => {
+      const r = await robotUnique().catch(() => undefined);
+      const [corps, capteurs] = r
+        ? await Promise.all([api.etatCorps(r.id).catch(() => null), api.etatCapteurs(r.id).catch(() => null)])
+        : [null, null];
+      if (vivant) setSante({ robot: r, corps, capteurs });
+    };
+    lire();
+    const t = setInterval(lire, SANTE_MS);
+    return () => { vivant = false; clearInterval(t); };
+  }, []);
 
   useEffect(() => {
     if (!hote.current) return;
@@ -114,8 +140,8 @@ export function Accueil() {
       <header className="hud-haut">
         <div className="hud-marque">ROBOTIQUE</div>
         <nav className="hud-nav">
-          <NavLink to="/" end>Robot</NavLink>
-          <NavLink to="/flotte">Flotte</NavLink>
+          <NavLink to="/" end>Vue</NavLink>
+          <NavLink to="/robot">Robot</NavLink>
           <NavLink to="/missions">Missions</NavLink>
           <NavLink to="/primitives">Primitives</NavLink>
         </nav>
@@ -139,7 +165,7 @@ export function Accueil() {
       </section>
 
       {robot && (
-        <NavLink to={`/flotte/${robot.id}/corps`} className="hud-jauges" aria-label="État du corps">
+        <NavLink to="/robot/corps" className="hud-jauges" aria-label="État du corps">
           <Jauge libelle="BAT" valeur={robot.batterie} />
           <Jauge libelle="SIG" valeur={robot.etat === 'hors_ligne' ? 0 : 86} />
           <div className="hud-console nombre">
@@ -168,13 +194,26 @@ export function Accueil() {
       )}
 
       <footer className="hud-bas">
-        {CALQUES.map((c) => (
-          <button key={c.cle} className={`hud-calque ${calques[c.cle] ? 'actif' : ''}`}
-            aria-pressed={calques[c.cle]} onClick={() => basculer(c.cle)}>
-            <span className="hud-calque-nom">{c.libelle}</span>
-            <span className="hud-calque-detail">{c.cle === 'objets' && nbObjets ? `${nbObjets} ${c.detail}` : c.detail}</span>
-          </button>
-        ))}
+        {PASTILLES.map((c) => {
+          const { verdict, raison } = c.cle === 'robot' ? verdictRobot(sante.robot, sante.corps)
+            : c.cle === 'camera' || c.cle === 'lidar' ? { verdict: sante.capteurs?.[c.cle] ?? 'inconnu', raison: '' }
+            : c.cle === 'objets' ? { verdict: nbObjets ? 'ok' as const : 'inconnu' as const, raison: nbObjets ? '' : 'aucun objet déclaré' }
+            : { verdict: pret ? 'ok' as const : 'inconnu' as const, raison: '' };
+          const visible = !c.masquable || calques[c.cle];
+          const titre = `${c.libelle} : ${TITRES_VERDICT[verdict]}${raison ? ` (${raison})` : ''}${c.masquable ? ` · clic pour ${visible ? 'masquer' : 'afficher'}` : ''}`;
+          const contenu = (
+            <>
+              <span className="hud-calque-nom"><span className={`hud-verdict verdict-${verdict}`} />{c.libelle}</span>
+              <span className="hud-calque-detail">{c.cle === 'objets' && nbObjets ? `${nbObjets} ${c.detail}` : c.detail}</span>
+            </>
+          );
+          return c.masquable ? (
+            <button key={c.cle} className={`hud-calque ${visible ? 'actif' : 'masque'}`} aria-pressed={visible} title={titre}
+              onClick={() => basculer(c.cle as Calque)}>{contenu}</button>
+          ) : (
+            <NavLink key={c.cle} to="/robot/corps" className="hud-calque actif fixe" title={titre}>{contenu}</NavLink>
+          );
+        })}
       </footer>
 
       {demarre && (
@@ -199,17 +238,40 @@ function Jauge({ libelle, valeur }: { libelle: string; valeur: number }) {
 }
 
 /** La dernière image réelle de la caméra de tête (scripts/copier-camera.mjs), tant que le back ne sert pas le flux. */
+type ModeCamera = 'image' | 'fpv';
+
+/**
+ * La dernière image réelle de la caméra de tête (scripts/copier-camera.mjs), tant que le back ne sert pas le
+ * flux ; un sélecteur bascule vers la vue 3D vue de l'œil du robot (la scène, déjà rendue derrière l'image).
+ */
 function ApercuCamera() {
   const [run, setRun] = useState<string | null>(null);
   const [vue, setVue] = useState(true);
+  const [mode, setMode] = useState<ModeCamera>('image');
   useEffect(() => {
     fetch('camera/apercu.json').then((r) => r.json()).then((m: { run: string }) => setRun(m.run)).catch(() => setVue(false));
+  }, []);
+  useEffect(() => {
+    const touche = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === 'v' && !(e.target as HTMLElement).closest('input, textarea, select')) {
+        setMode((m) => (m === 'image' ? 'fpv' : 'image'));
+      }
+    };
+    addEventListener('keydown', touche);
+    return () => removeEventListener('keydown', touche);
   }, []);
   if (!vue || !run) return null;
   return (
     <>
-      <img className="vue-camera-image" src="camera/apercu.jpg" alt="Dernière image de la caméra de tête" onError={() => setVue(false)} />
-      <p className="vue-camera-source">IMAGE D'ARCHIVE · {run}</p>
+      <img className={`vue-camera-image ${mode === 'fpv' ? 'cachee' : ''}`} src="camera/apercu.jpg"
+        alt="Dernière image de la caméra de tête" onError={() => setVue(false)} />
+      <div className="vue-camera-modes" role="group" aria-label="Ce que montre la caméra">
+        {([['image', 'IMAGE'], ['fpv', 'VUE 3D']] as [ModeCamera, string][]).map(([m, l]) => (
+          <button key={m} className={mode === m ? 'actif' : ''} aria-pressed={mode === m} onClick={() => setMode(m)}>{l}</button>
+        ))}
+        <span className="vue-camera-touche" aria-hidden="true">V</span>
+      </div>
+      <p className="vue-camera-source">{mode === 'image' ? `IMAGE D'ARCHIVE · ${run}` : 'VUE 3D · ŒIL DU ROBOT · NUAGES SIMULÉS'}</p>
     </>
   );
 }
