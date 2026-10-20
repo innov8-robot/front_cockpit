@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 
 /** La vitesse de l'impulsion (m/s), sa portée (m) et le silence entre deux impulsions (s). */
-const VITESSE = 4.2;
-const PORTEE = 10;
-const SILENCE_S = 0.7;
+const VITESSE = 3.6;
+const PORTEE = 9;
+const SILENCE_S = 0.6;
+/** La distance (m) sur laquelle l'impulsion perd les deux tiers de son éclat : elle s'évanouit en s'éloignant. */
+const EVANESCENCE_M = 2.6;
 /** La couleur de l'impulsion. */
 export const BLEU_SONAR = new THREE.Color('#3d9bff');
 
@@ -29,9 +31,9 @@ export const GLSL_SONAR = /* glsl */ `
   uniform vec3 uSonarCouleur;
   float sonar(vec3 p) {
     float x = uSonarRayon - distance(p, uSonarOrigine);
-    float front = smoothstep(0.09, 0.0, abs(x));
-    float traine = x > 0.0 ? exp(-x / 0.45) * 0.5 : 0.0;
-    float attenue = exp(-uSonarRayon * 0.2) * smoothstep(${PORTEE.toFixed(1)}, ${(PORTEE * 0.6).toFixed(1)}, uSonarRayon);
+    float front = smoothstep(0.1, 0.0, abs(x));
+    float traine = x > 0.0 ? exp(-x / 0.3) * 0.55 : 0.0;
+    float attenue = exp(-uSonarRayon / ${EVANESCENCE_M.toFixed(2)}) * (1.0 - smoothstep(${(PORTEE * 0.55).toFixed(1)}, ${PORTEE.toFixed(1)}, uSonarRayon));
     return (front + traine) * attenue * uSonarForce;
   }
 `;
@@ -46,6 +48,33 @@ export function mettreAJourSonar(t: number, origine: THREE.Vector3, force: numbe
 
 /** L'éclat de l'anneau sous le robot à l'émission : fort au départ de l'impulsion, nul quand elle s'est éloignée. */
 export const GLSL_EMISSION = /* glsl */ `exp(-uSonarRayon * 2.5) * uSonarForce`;
+
+/**
+ * La peau du sonar : posée sur les surfaces des meubles et des objets, elle ne s'allume que dans la bande de
+ * l'impulsion, qui s'enroule ainsi sur leurs formes. Tracée juste après les volumes de masquage, à leur profondeur :
+ * ce qui est devant la cache, comme pour un vrai balayage laser.
+ */
+export const MATERIAU_PEAU = new THREE.ShaderMaterial({
+  transparent: true,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
+  uniforms: SONAR,
+  vertexShader: /* glsl */ `
+    varying vec3 vMonde;
+    void main() {
+      vec4 monde = modelMatrix * vec4(position, 1.0);
+      vMonde = monde.xyz;
+      gl_Position = projectionMatrix * viewMatrix * monde;
+    }`,
+  fragmentShader: /* glsl */ `
+    varying vec3 vMonde;
+    ${GLSL_SONAR}
+    void main() {
+      float s = sonar(vMonde);
+      if (s < 0.01) discard;
+      gl_FragColor = vec4(mix(uSonarCouleur, vec3(1.0), smoothstep(0.7, 1.2, s) * 0.5) * s * 1.3, 1.0);
+    }`,
+});
 
 /** Fait passer l'impulsion sur les arêtes d'un matériau de traits : elles s'allument en bleu au passage du front. */
 export function sonariser(materiau: THREE.LineBasicMaterial): void {

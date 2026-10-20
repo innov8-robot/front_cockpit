@@ -12,18 +12,24 @@ export const CAMERA_TETE = { decalage: new THREE.Vector3(0.07, 0, -0.02), tangag
 
 /** Le nombre d'objets déclarés que les nuages savent colorer. */
 const MAX_OBJETS = 8;
-/** Ce que voient les capteurs maintenant : des points blancs, nets. */
-const VIVANT = { couleur: '#ffffff', taille: 7, tailleMax: 4, opacite: 0.55 };
-/** La carte mémorisée : un point par cube de `VOXEL_M` déjà vu, plus gros et presque transparent. */
-const CARTE = { couleur: '#8fa6c8', taille: 15, tailleMax: 8, opacite: 0.16 };
+/**
+ * Ce que voient les capteurs maintenant : des points blancs, dans les quelques mètres autour du robot. Un blanc
+ * retenu : les nuages se fondent au maximum par canal, et l'impulsion du sonar doit pouvoir le dépasser.
+ */
+const VIVANT = { couleur: '#ffffff', taille: 7, tailleMax: 4, opacite: 0.42, portee: 4 };
+/** L'éclat du front de l'impulsion sur les points, au-delà du blanc : il l'emporte et nourrit le halo. */
+const ECLAT_SONAR = 1.8;
+/** La carte mémorisée : un point par cube de `VOXEL_M` déjà vu, plus gros et presque transparent, partout. */
+const CARTE = { couleur: '#6f86ad', taille: 15, tailleMax: 8, opacite: 0.2, portee: 1000 };
 const VOXEL_M = 0.05;
 const CAPACITE_CARTE = 150_000;
 
-interface Rendu { couleur: string; taille: number; tailleMax: number; opacite: number }
+/** `portee` : au-delà de cette distance au robot (m), le nuage s'efface. */
+interface Rendu { couleur: string; taille: number; tailleMax: number; opacite: number; portee: number }
 
 /** Un canal (rouge, vert ou bleu) d'un nuage, décalé vers l'extérieur de l'image : l'aberration chromatique. */
 function materiauCanal(rendu: Rendu, vie: number, canal: THREE.Vector3, decalage: number, teintes: THREE.Color[]) {
-  const { couleur, taille, tailleMax, opacite } = rendu;
+  const { couleur, taille, tailleMax, opacite, portee } = rendu;
   return new THREE.ShaderMaterial({
     transparent: true,
     depthWrite: false,
@@ -66,7 +72,8 @@ function materiauCanal(rendu: Rendu, vie: number, canal: THREE.Vector3, decalage
       void main() {
         vec4 vue = modelViewMatrix * vec4(position, 1.0);
         float age = uVie > 0.0 ? clamp((uTemps - aNaissance) / uVie, 0.0, 1.0) : 0.0;
-        vAlpha = (1.0 - age) * uOpacite;
+        // Le vivant n'est blanc que près du robot : au-delà de sa portée, seule la carte mémorisée reste.
+        vAlpha = (1.0 - age) * uOpacite * (1.0 - smoothstep(${(portee * 0.6).toFixed(2)}, ${portee.toFixed(2)}, length(position.xy)));
         // Le déploiement : rien au-delà du front de l'onde (rayon uRevele autour du robot), le front éclairé.
         float distanceRobot = length(position.xy);
         vAlpha = distanceRobot > uRevele ? 0.0 : vAlpha + smoothstep(0.4, 0.0, uRevele - distanceRobot) * 0.9;
@@ -78,9 +85,9 @@ function materiauCanal(rendu: Rendu, vie: number, canal: THREE.Vector3, decalage
         for (int i = 0; i < ${MAX_OBJETS}; i++) if (objet && i == k) vCouleur = mix(uCouleur, uTeintes[i] * uCanal, teinte);
         vAlpha = min(1.0, vAlpha + 0.35 * teinte);
         // L'impulsion du sonar : le point qu'elle traverse s'allume en bleu, plus gros, le temps qu'elle passe.
-        float s = min(1.0, sonar((modelMatrix * vec4(position, 1.0)).xyz));
-        vCouleur = mix(vCouleur, uSonarCouleur * uCanal, s);
-        vAlpha = min(1.0, vAlpha + s * (1.0 - age));
+        float s = min(1.0, sonar((modelMatrix * vec4(position, 1.0)).xyz) * 1.3);
+        vCouleur = mix(vCouleur, uSonarCouleur * uCanal * ${ECLAT_SONAR.toFixed(2)}, s);
+        vAlpha = max(vAlpha, s * (1.0 - age));
         gl_PointSize = clamp(uTaille * uEchelle / -vue.z, 1.5, ${tailleMax.toFixed(1)}) * (1.0 + 0.4 * teinte + 0.5 * s);
         gl_Position = projectionMatrix * vue;
         vec2 ecran = gl_Position.xy / gl_Position.w;

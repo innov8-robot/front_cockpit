@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CALQUE_DETECTIONS, ORDRE_MASQUE, ORDRE_SEGMENTATION } from './detections';
-import { sonariser } from './sonar';
+import { MATERIAU_PEAU, sonariser } from './sonar';
 
 /**
  * Un atelier fictif autour du robot, dans son repère (x devant, z en haut, mètres). Les mêmes formes sont
@@ -240,6 +240,19 @@ function masquer(formes: Forme[]): THREE.Group {
   return groupe;
 }
 
+/** La peau du sonar sur chaque meuble et chaque objet (sonar.MATERIAU_PEAU). */
+function peauSonar(formes: Forme[]): THREE.Group {
+  const groupe = new THREE.Group();
+  for (const f of formes) {
+    const peau = new THREE.Mesh(volumePlein(f), MATERIAU_PEAU);
+    poserVolume(peau, f);
+    peau.renderOrder = ORDRE_SEGMENTATION;
+    peau.layers.set(CALQUE_DETECTIONS);
+    groupe.add(peau);
+  }
+  return groupe;
+}
+
 function volumePlein(f: Forme): THREE.BufferGeometry {
   return f.type === 'boite'
     ? new THREE.BoxGeometry(...f.max.clone().sub(f.min).toArray())
@@ -295,12 +308,13 @@ function segmenter(formes: Forme[], objets: ObjetDeclare[]): Segmentation {
 
 /** L'atelier : ses traits, ses volumes de masquage, la segmentation, le lancer de rayon et les objets déclarés. */
 export function creerEnvironnement(sol: number): {
-  objet: THREE.Group; masque: THREE.Group; segmentation: Segmentation; lancer: Lancer; objets: ObjetDeclare[];
+  objet: THREE.Group; masque: THREE.Group; peau: THREE.Group; segmentation: Segmentation; lancer: Lancer;
+  objets: ObjetDeclare[];
 } {
   const { formes, classes } = construire(sol);
   const objets = objetsDeclares(formes, classes);
   return {
-    objet: dessiner(formes, sol), masque: masquer(formes), segmentation: segmenter(formes, objets),
+    objet: dessiner(formes, sol), masque: masquer(formes), peau: peauSonar(formes), segmentation: segmenter(formes, objets),
     lancer: lancerContre(formes, sol), objets,
   };
 }

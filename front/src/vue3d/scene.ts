@@ -114,6 +114,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
   let teinte = 0;
   let plongee = 0;
   let segmentation: Segmentation | null = null;
+  let peau: THREE.Object3D | null = null;
 
   const pret = chargerRobot().then((r) => {
     robot = r;
@@ -136,6 +137,8 @@ export function monterScene(hote: HTMLElement): Scene3D {
     monde.add(atelier);
     nuages = creerNuages(teteLocale, env.lancer, env.objets);
     monde.add(env.masque);
+    peau = env.peau;
+    monde.add(peau);
     segmentation = env.segmentation;
     monde.add(segmentation.groupe);
     detections = creerDetections(scene, hote, env.objets);
@@ -149,6 +152,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
   function appliquerVisibilite(): void {
     sol.visible = visibles.sol;
     if (atelier) atelier.visible = visibles.atelier;
+    if (peau) peau.visible = visibles.atelier;
     if (nuages) {
       nuages.camera.visible = visibles.camera;
       if (hologramme) hologramme.groupe.visible = visibles.camera && rayon > 0.4;
