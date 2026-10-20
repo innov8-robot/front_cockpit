@@ -6,7 +6,8 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import type { URDFRobot } from 'urdf-loader';
 import { creerEnvironnement } from './environnement';
-import { creerNuages, type Nuages } from './nuages';
+import { creerHologramme } from './hologramme';
+import { CAMERA_TETE, creerNuages, type Nuages } from './nuages';
 import { animerRobot, chargerRobot } from './robot';
 import { creerSol } from './sol';
 
@@ -59,6 +60,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
   let nuages: Nuages | null = null;
   const visibles: Record<Calque, boolean> = { robot: true, atelier: true, camera: true, lidar: true, sol: true };
   let atelier: THREE.Object3D | null = null;
+  let hologramme: ReturnType<typeof creerHologramme> | null = null;
 
   const pret = chargerRobot().then((r) => {
     robot = r;
@@ -76,6 +78,8 @@ export function monterScene(hote: HTMLElement): Scene3D {
     atelier = env.objet;
     monde.add(atelier);
     nuages = creerNuages(teteLocale, env.lancer);
+    hologramme = creerHologramme(rendu, scene, teteLocale.clone().add(CAMERA_TETE.decalage));
+    monde.add(hologramme.groupe);
     monde.add(nuages.camera, nuages.lidar);
     appliquerVisibilite();
   });
@@ -86,6 +90,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
     if (atelier) atelier.visible = visibles.atelier;
     if (nuages) {
       nuages.camera.visible = visibles.camera;
+      if (hologramme) hologramme.groupe.visible = visibles.camera;
       nuages.lidar.visible = visibles.lidar;
     }
   }
@@ -112,6 +117,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
     (sol.material as THREE.ShaderMaterial).uniforms.uTemps.value = t;
     if (robot) animerRobot(robot, t);
     nuages?.mettreAJour(t);
+    hologramme?.mettreAJour(t);
     controles.update();
     composeur.render();
   }
@@ -127,6 +133,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
       cancelAnimationFrame(image);
       observateur.disconnect();
       controles.dispose();
+      hologramme?.detruire();
       composeur.dispose();
       rendu.dispose();
       rendu.domElement.remove();

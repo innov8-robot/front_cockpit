@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import type { Lancer } from './environnement';
 
+/** La caméra de tête (RealSense D435i) : son décalage depuis le centre de la tête, son tangage et son champ. */
+export const CAMERA_TETE = { decalage: new THREE.Vector3(0.07, 0, -0.02), tangageDeg: 48, champHDeg: 87, champVDeg: 58 };
+
 /**
  * Nuages simulés : on lance les rayons des deux capteurs de tête dans l'atelier fictif (repère du robot,
  * x devant, z en haut). Le back les remplacera par les vrais nuages ; la forme des tampons ne change pas.
@@ -90,10 +93,10 @@ export function creerNuages(tete: THREE.Vector3, lancer: Lancer): Nuages {
   geoCam.setAttribute('position', new THREE.BufferAttribute(posCam, 3));
   geoCam.setAttribute('aNaissance', new THREE.BufferAttribute(new Float32Array(L * H), 1));
   const camera = nuageAberrant(geoCam, '#c4d2ea', 7, 0);
-  const origineCam = tete.clone().add(new THREE.Vector3(0.07, 0, -0.02));
-  const tangage = THREE.MathUtils.degToRad(48);
-  const fovH = THREE.MathUtils.degToRad(87) / 2;
-  const fovV = THREE.MathUtils.degToRad(58) / 2;
+  const origineCam = tete.clone().add(CAMERA_TETE.decalage);
+  const tangage = THREE.MathUtils.degToRad(CAMERA_TETE.tangageDeg);
+  const fovH = THREE.MathUtils.degToRad(CAMERA_TETE.champHDeg) / 2;
+  const fovV = THREE.MathUtils.degToRad(CAMERA_TETE.champVDeg) / 2;
   const d = new THREE.Vector3();
 
   function rafraichirCamera(): void {

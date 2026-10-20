@@ -5,6 +5,7 @@ import { ETATS_ROBOT } from '../api/libelles';
 import { reinitialiserSimulation } from '../api/mock';
 import { Demarrage } from '../components/Demarrage';
 import { IntroLogo } from '../components/IntroLogo';
+import { MiniCarte } from '../components/MiniCarte';
 import { Overlay } from '../components/Overlay';
 import { useCharge } from '../components/useCharge';
 import { monterScene, type Calque, type Scene3D } from '../vue3d/scene';
@@ -96,6 +97,8 @@ export function Accueil() {
         </aside>
       )}
 
+
+      <MiniCarte poste={robot?.posteCourant ?? null} />
 
       <footer className="hud-bas">
         {CALQUES.map((c) => (

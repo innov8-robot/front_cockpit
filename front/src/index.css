@@ -245,7 +245,7 @@ input[type='radio'] { width: auto; min-height: 0; }
   position: absolute; inset: 0; pointer-events: none;
   background: radial-gradient(ellipse at 50% 55%, transparent 45%, rgb(0 0 0 / 0.75) 100%);
 }
-.hud-haut, .hud-titre, .hud-jauges, .hud-bas, .hud-chargement { position: absolute; z-index: 1; }
+.hud-haut, .hud-titre, .hud-jauges, .hud-bas, .hud-carte { position: absolute; z-index: 1; }
 .hud-haut {
   top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 24px;
   padding: calc(18px + env(safe-area-inset-top)) 32px 0;
@@ -538,8 +538,8 @@ input[type='radio'] { width: auto; min-height: 0; }
   36%, 100% { opacity: 0; filter: none; }
 }
 /* Le HUD entre après le démarrage. */
-.accueil .hud-haut, .accueil .hud-titre, .accueil .hud-jauges, .accueil .hud-bas { opacity: 0; transition: opacity 0.8s ease 0.15s; }
-.accueil-demarre .hud-haut, .accueil-demarre .hud-titre, .accueil-demarre .hud-jauges, .accueil-demarre .hud-bas { opacity: 1; }
+.accueil .hud-haut, .accueil .hud-titre, .accueil .hud-jauges, .accueil .hud-bas, .accueil .hud-carte { opacity: 0; transition: opacity 0.8s ease 0.15s; }
+.accueil-demarre .hud-haut, .accueil-demarre .hud-titre, .accueil-demarre .hud-jauges, .accueil-demarre .hud-bas, .accueil-demarre .hud-carte { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .boot, .boot-curseur { animation: none; } .boot-sortie > *, .boot-sortie::after { animation: boot-neon 0.6s steps(2) forwards; } }
 @media (max-width: 699px) {
   .boot { flex-direction: column; gap: 16px; padding: calc(20px + env(safe-area-inset-top)) 16px 20px; font-size: 9.5px; }
@@ -595,3 +595,32 @@ input[type='radio'] { width: auto; min-height: 0; }
 .intro-sortie { animation: intro-sortie 0.7s ease-in forwards; }
 @keyframes intro-sortie { 40% { opacity: 1; filter: brightness(1.6); } 100% { opacity: 0; filter: brightness(0.5); } }
 @media (prefers-reduced-motion: reduce) { .intro-bloc { animation-duration: 0.01s; } .intro-cadre rect { animation-duration: 0.2s; } }
+
+/* La carte 2D du châssis, ancrée dans le coin bas gauche : opaque dans le coin, fondue en arc vers la scène. */
+.hud-carte {
+  --cote: 420px;
+  left: 0; bottom: 0; width: var(--cote); height: var(--cote); pointer-events: none;
+}
+/* Le fond tient plus loin dans l'arc que la carte : la scène ne transparaît jamais derrière elle.
+   Les deux arcs s'achèvent sur les bords haut et droit (rayon = côté) : aucun bord du carré ne se voit. */
+.hud-carte::before {
+  /* La couleur du sol de la vue 3D telle qu'elle sort à l'écran (grille, brouillard et vignette compris). */
+  content: ''; position: absolute; inset: 0; background: #1d2126;
+  -webkit-mask-image: radial-gradient(circle var(--cote) at 0% 100%, #000 80%, transparent 100%);
+  mask-image: radial-gradient(circle var(--cote) at 0% 100%, #000 80%, transparent 100%);
+}
+.hud-carte canvas {
+  position: relative; width: 100%; height: 100%; display: block;
+  -webkit-mask-image: radial-gradient(circle var(--cote) at 0% 100%, #000 72%, transparent 100%);
+  mask-image: radial-gradient(circle var(--cote) at 0% 100%, #000 72%, transparent 100%);
+}
+.hud-carte-legende {
+  position: absolute; left: calc(20px + env(safe-area-inset-left)); bottom: calc(16px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 3px;
+  font-family: ui-monospace, monospace; font-size: 9px; letter-spacing: 0.18em; color: #8a93a3;
+}
+@media (max-width: 1099px) { .hud-carte { --cote: 320px; } }
+@media (max-width: 699px) {
+  .hud-carte { --cote: 230px; bottom: calc(70px + env(safe-area-inset-bottom)); }
+  .hud-carte-legende { bottom: 10px; font-size: 7.5px; }
+}
