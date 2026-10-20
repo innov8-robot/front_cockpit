@@ -38,7 +38,7 @@ export const GLSL_SONAR = /* glsl */ `
   }
 `;
 
-/** Avance l'impulsion : `origine` est la tête du robot dans le monde, `force` de 0 (éteinte) à 1. */
+/** Avance l'impulsion : `origine` est le sol sous le robot, dans le monde ; `force` de 0 (éteinte) à 1. */
 export function mettreAJourSonar(t: number, origine: THREE.Vector3, force: number): void {
   const periode = PORTEE / VITESSE + SILENCE_S;
   SONAR.uSonarRayon.value = (t % periode) * VITESSE;

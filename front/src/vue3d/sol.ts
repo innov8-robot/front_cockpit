@@ -2,9 +2,8 @@ import * as THREE from 'three';
 import { GLSL_EMISSION, GLSL_SONAR, SONAR } from './sonar';
 
 /**
- * Le sol : une grille de lignes et de points qui s'efface avec la distance, et un anneau sous le robot qui s'avive à
- * chaque impulsion du sonar. L'impulsion elle-même ne se voit pas sur ce plan : seulement sur les points mémorisés
- * du sol, là où le lidar l'a vu (sous un meuble, rien).
+ * Le sol : une grille de lignes et de points qui s'efface avec la distance, un anneau sous le robot qui s'avive à
+ * chaque impulsion du sonar, et l'impulsion elle-même, qui part de lui et s'étend sur le sol en s'évanouissant.
  */
 export function creerSol(): THREE.Mesh {
   const materiau = new THREE.ShaderMaterial({
@@ -19,9 +18,11 @@ export function creerSol(): THREE.Mesh {
     },
     vertexShader: /* glsl */ `
       varying vec2 vXZ;
+      varying vec3 vMonde;
       void main() {
         vec4 monde = modelMatrix * vec4(position, 1.0);
         vXZ = monde.xz;
+        vMonde = monde.xyz;
         gl_Position = projectionMatrix * viewMatrix * monde;
       }`,
     fragmentShader: /* glsl */ `
@@ -30,6 +31,7 @@ export function creerSol(): THREE.Mesh {
       uniform vec3 uLigne;
       uniform vec3 uAccent;
       varying vec2 vXZ;
+      varying vec3 vMonde;
       ${GLSL_SONAR}
 
       float ligne(vec2 p, float pas, float epaisseur) {
@@ -50,12 +52,13 @@ export function creerSol(): THREE.Mesh {
         float lignes = ligne(vXZ, 1.0, 1.0) * 0.32;
         float points = point(vXZ, 0.25, 0.012) * 0.45;
         float anneau = smoothstep(0.03, 0.0, abs(r - 0.62)) * (1.6 + 2.4 * ${GLSL_EMISSION});
-        vec3 couleur = uLigne * (lignes + points) * fondu + uSonarCouleur * anneau;
+        float onde = sonar(vMonde) * 1.5;
+        vec3 couleur = uLigne * (lignes + points) * fondu + uSonarCouleur * (anneau + onde);
         // Le déploiement : la grille n'existe qu'en deçà du front, qui brille en rouge en passant.
         float front = smoothstep(0.25, 0.0, abs(r - uRevele)) * step(0.05, uRevele) * step(uRevele, 30.0);
         float dedans = 1.0 - smoothstep(uRevele - 0.3, uRevele, r);
         couleur = couleur * dedans + uAccent * front * 1.4;
-        float alpha = clamp(((lignes + points) * fondu + anneau) * dedans + front, 0.0, 1.0);
+        float alpha = clamp(((lignes + points) * fondu + anneau + onde) * dedans + front, 0.0, 1.0);
         gl_FragColor = vec4(couleur, alpha);
       }`,
     extensions: { derivatives: true } as never,

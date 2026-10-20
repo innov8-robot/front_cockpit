@@ -115,6 +115,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
   let plongee = 0;
   let segmentation: Segmentation | null = null;
   let peau: THREE.Object3D | null = null;
+  const origineSonarLocale = new THREE.Vector3();
 
   const pret = chargerRobot().then((r) => {
     robot = r;
@@ -123,6 +124,8 @@ export function monterScene(hote: HTMLElement): Scene3D {
     const bornes = new THREE.Box3().setFromObject(r);
     const zSol = bornes.isEmpty() ? 0 : bornes.min.y;
     monde.position.y = -zSol;
+    // Le sonar part du sol, au centre de l'anneau sous le robot.
+    origineSonarLocale.set(0, 0, zSol + 0.02);
     scene.updateMatrixWorld(true);
 
     const lienTete = r.links.head_link ?? r.links.torso_link;
@@ -236,7 +239,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
     apparaitre(t);
     // Le sonar part de la tête une fois la scène déployée, et monte en force sur une seconde.
     if (nuages) {
-      origineSonar.copy(nuages.origineLidar);
+      origineSonar.copy(origineSonarLocale);
       mettreAJourSonar(t, monde.localToWorld(origineSonar), deploye === null ? 0 : Math.min(1, deploye));
     }
     if (robot) animerRobot(robot, t);
