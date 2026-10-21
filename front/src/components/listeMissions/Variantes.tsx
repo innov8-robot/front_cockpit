@@ -14,6 +14,19 @@ export interface ProprietesListe {
   robot: Robot | null;
   execution: Execution | null;
   relire(): void;
+  /** Le passage entre la liste (panneau de côté) et la vue développée (écran entier), à côté du titre. */
+  bascule?: { vers: string; developpee: boolean };
+}
+
+/** Développer la liste en vue entière, ou la replier en panneau. */
+function Bascule({ vers, developpee }: { vers: string; developpee: boolean }) {
+  return (
+    <Link className="lm-bascule" to={vers} title={developpee ? 'Replier en liste' : 'Développer'} aria-label={developpee ? 'Replier en liste' : 'Développer'}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d={developpee ? 'M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7' : 'M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7'} />
+      </svg>
+    </Link>
+  );
 }
 
 const ORDRE: EtatMission[] = ['en_cours', 'prete', 'echouee', 'brouillon', 'terminee'];
@@ -28,14 +41,15 @@ function useGestes({ robot, execution, relire }: ProprietesListe) {
 }
 
 /** La tête d'une liste : le titre, une recherche, les filtres par état, et « Nouvelle mission » (blanc, pas rouge). */
-function Tete({ resumes, execution, cherche, setCherche, filtre, setFiltre }: {
+function Tete({ resumes, execution, cherche, setCherche, filtre, setFiltre, bascule }: {
   resumes: Resume[]; execution: Execution | null; cherche: string; setCherche(s: string): void; filtre: EtatMission | null; setFiltre(f: EtatMission | null): void;
+  bascule?: ProprietesListe['bascule'];
 }) {
   const compte = (e: EtatMission) => resumes.filter((r) => etatDe(r, execution) === e).length;
   return (
     <header className="lm-tete">
       <div className="lm-tete-ligne">
-        <h2>Missions <span>{resumes.length}</span></h2>
+        <h2>Missions <span>{resumes.length}</span>{bascule && <Bascule {...bascule} />}</h2>
         <Link className="lm-nouvelle" to="/missions/nouvelle">+ Nouvelle mission</Link>
       </div>
       <div className="lm-tete-ligne">
@@ -73,7 +87,7 @@ export function ListeVivante(props: ProprietesListe) {
   const g = useGestes(props);
   return (
     <div className="lm-liste">
-      <Tete resumes={resumes} execution={execution} {...f} />
+      <Tete resumes={resumes} execution={execution} bascule={props.bascule} {...f} />
       <ul>
         {f.visibles.map((r) => {
           const etat = etatDe(r, execution);
@@ -105,7 +119,7 @@ export function Cartes(props: ProprietesListe) {
   const g = useGestes(props);
   return (
     <div className="lm-liste">
-      <Tete resumes={resumes} execution={execution} {...f} />
+      <Tete resumes={resumes} execution={execution} bascule={props.bascule} {...f} />
       <div className="lm-cartes">
         {f.visibles.map((r) => {
           const etat = etatDe(r, execution);
@@ -145,7 +159,7 @@ export function ListeApercu(props: ProprietesListe) {
   const joue = r && etatDe(r, execution) === 'en_cours' && execution ? execution : null;
   return (
     <div className="lm-liste lm-apercu">
-      <Tete resumes={resumes} execution={execution} {...f} />
+      <Tete resumes={resumes} execution={execution} bascule={props.bascule} {...f} />
       <div className="lm-apercu-corps">
         <ul className="lm-apercu-liste">
           {f.visibles.map((x) => (

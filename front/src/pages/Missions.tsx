@@ -1,37 +1,17 @@
-import { Link } from 'react-router-dom';
-import { api } from '../api/client';
-import { ETATS_MISSION, depuis, nbPrimitives } from '../api/libelles';
-import { Badge, Chargement, EnTete, Erreur, Icone, Vide } from '../components/ui';
-import { useCharge } from '../components/useCharge';
+import { useMissions } from '../components/listeMissions/donnees';
+import { ListeApercu, ListeVivante } from '../components/listeMissions/Variantes';
+import { Chargement } from '../components/ui';
 
+/** Les missions en liste, dans le panneau de côté ; l'icône à côté du titre développe la vue. */
 export function Missions() {
-  const missions = useCharge(() => api.missions());
+  const donnees = useMissions();
+  if (!donnees.pret) return <Chargement />;
+  return <ListeVivante {...donnees} bascule={{ vers: '/missions/developpees', developpee: false }} />;
+}
 
-  return (
-    <>
-      <EnTete titre="Missions" sousTitre="Des primitives enchaînées"
-        actions={<Link to="/missions/nouvelle" className="bouton bouton-primaire"><Icone nom="plus" taille={16} />Nouvelle mission</Link>} />
-
-      {missions.erreur && <Erreur message={missions.erreur} />}
-      {missions.enCours && !missions.donnee ? <Chargement /> : missions.donnee?.length === 0 ? (
-        <Vide titre="Aucune mission">Créez une mission en enchaînant des primitives.</Vide>
-      ) : (
-        <ul className="liste">
-          {missions.donnee?.map((m) => (
-            <li key={m.id}>
-              <Link to={`/missions/${m.id}`} className="liste-ligne liste-lien">
-                <div>
-                  <strong>{m.nom}</strong>
-                  <div className="discret">
-                    {nbPrimitives(m)} primitive{nbPrimitives(m) > 1 ? 's' : ''} · ×{m.repetitions} · modifiée {depuis(m.modifieeLe)}
-                  </div>
-                </div>
-                <Badge ton={ETATS_MISSION[m.etat].ton}>{ETATS_MISSION[m.etat].libelle}</Badge>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </>
-  );
+/** Les missions développées, sur l'écran entier : la liste à gauche, la mission choisie à droite. */
+export function MissionsDeveloppees() {
+  const donnees = useMissions();
+  if (!donnees.pret) return <Chargement />;
+  return <ListeApercu {...donnees} bascule={{ vers: '/missions', developpee: true }} />;
 }

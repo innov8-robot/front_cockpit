@@ -1667,6 +1667,10 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .lm-tete h2 { margin: 0; font-size: 1.35rem; letter-spacing: 0.04em; text-transform: uppercase; }
 .lm-tete h2 span { margin-left: 6px; padding: 2px 8px; border-radius: 999px; font: 700 0.75rem/1.4 ui-monospace, monospace; color: #9aa3ae; background: rgb(255 255 255 / 0.07); vertical-align: middle; }
 /* « Nouvelle mission » en blanc : le rouge est réservé au danger. */
+/* Dans l'overlay de l'appli : la tête laisse la place à sa croix de fermeture. */
+.overlay .lm-tete { padding-right: 44px; }
+.lm-bascule { display: inline-grid; place-items: center; width: 30px; height: 30px; margin-left: 8px; vertical-align: middle; border-radius: 8px; border: 1px solid rgb(255 255 255 / 0.12); color: #c9ced6; background: rgb(255 255 255 / 0.04); }
+.lm-bascule:hover { color: #fff; border-color: rgb(255 255 255 / 0.3); }
 .lm-nouvelle { display: inline-flex; align-items: center; height: 36px; padding: 0 14px; border-radius: 10px; background: #e9eef7; color: #0b0d10; font: 700 0.84rem/1 'Inter', system-ui, sans-serif; text-decoration: none; box-shadow: 0 0 18px rgb(233 238 247 / 0.18); }
 .lm-recherche { flex: 1 1 180px; height: 34px; padding: 0 12px; box-sizing: border-box; border-radius: 10px; border: 1px solid rgb(255 255 255 / 0.12); background: #070809; color: #e9eef7; font: inherit; font-size: 0.84rem; }
 .lm-filtres { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 2px; border-radius: 10px; border: 1px solid rgb(255 255 255 / 0.1); }

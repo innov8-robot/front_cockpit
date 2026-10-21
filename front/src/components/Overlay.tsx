@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Route, Routes, matchPath, useLocation, useNavigate } from 'react-router-dom';
 import { CorpsRobot } from '../pages/CorpsRobot';
 import { MissionEditeur } from '../pages/MissionEditeur';
-import { Missions } from '../pages/Missions';
+import { Missions, MissionsDeveloppees } from '../pages/Missions';
 import { NouvellePrimitive } from '../pages/NouvellePrimitive';
 import { Primitives } from '../pages/Primitives';
 import { RobotDetail } from '../pages/RobotDetail';
@@ -44,6 +44,7 @@ export function Overlay() {
             <Route path="robot" element={<RobotDetail />} />
             <Route path="robot/corps" element={<CorpsRobot />} />
             <Route path="missions" element={<Missions />} />
+            <Route path="missions/developpees" element={<MissionsDeveloppees />} />
             <Route path="missions/:id" element={<MissionEditeur />} />
             <Route path="primitives" element={<Primitives />} />
             <Route path="primitives/nouvelle" element={<NouvellePrimitive />} />
