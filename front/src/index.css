@@ -1714,18 +1714,23 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .lm-liste { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 .lm-liste > ul { list-style: none; margin: 0; padding: 0 2px 0 0; overflow-y: auto; min-height: 0; }
 .lm-tete { display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px; }
-.lm-tete-ligne { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
-.lm-tete h2 { margin: 0; font-size: 1.35rem; letter-spacing: 0.04em; text-transform: uppercase; }
-.lm-tete h2 span { margin-left: 6px; padding: 2px 8px; border-radius: 999px; font: 700 0.75rem/1.4 ui-monospace, monospace; color: #9aa3ae; background: rgb(255 255 255 / 0.07); vertical-align: middle; }
+/* Une rangée de la tête : une seule hauteur (36 px), un seul axe ; le titre, ses boutons et la croix y sont centrés. */
+.lm-tete-ligne { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-height: 36px; }
+.lm-tete h2 { margin: 0; font: 800 1.3rem/36px 'Inter', system-ui, sans-serif; letter-spacing: 0.05em; text-transform: uppercase; }
+.lm-compte { display: inline-grid; place-items: center; min-width: 26px; height: 22px; padding: 0 7px; box-sizing: border-box; border-radius: 999px; font: 700 0.74rem/1 ui-monospace, monospace; color: #9aa3ae; background: rgb(255 255 255 / 0.07); }
+.lm-carre {
+  display: inline-grid; place-items: center; flex: none; width: 36px; height: 36px; box-sizing: border-box; border-radius: 10px;
+  border: 1px solid rgb(255 255 255 / 0.12); background: rgb(255 255 255 / 0.04); color: #c9ced6; text-decoration: none; cursor: pointer;
+}
+.lm-carre:hover { color: #fff; border-color: rgb(255 255 255 / 0.3); }
 /* « Nouvelle mission » en blanc : le rouge est réservé au danger. */
-/* Dans l'overlay de l'appli : la tête laisse la place à sa croix de fermeture. */
-.overlay .lm-tete { padding-right: 44px; }
-.lm-bascule { display: inline-grid; place-items: center; width: 30px; height: 30px; margin-left: 8px; vertical-align: middle; border-radius: 8px; border: 1px solid rgb(255 255 255 / 0.12); color: #c9ced6; background: rgb(255 255 255 / 0.04); }
-.lm-bascule:hover { color: #fff; border-color: rgb(255 255 255 / 0.3); }
-.lm-nouvelle { display: inline-flex; align-items: center; height: 36px; padding: 0 14px; border-radius: 10px; background: #e9eef7; color: #0b0d10; font: 700 0.84rem/1 'Inter', system-ui, sans-serif; text-decoration: none; box-shadow: 0 0 18px rgb(233 238 247 / 0.18); }
-.lm-recherche { flex: 1 1 180px; height: 34px; padding: 0 12px; box-sizing: border-box; border-radius: 10px; border: 1px solid rgb(255 255 255 / 0.12); background: #070809; color: #e9eef7; font: inherit; font-size: 0.84rem; }
-.lm-filtres { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 2px; border-radius: 10px; border: 1px solid rgb(255 255 255 / 0.1); }
-.lm-filtres button { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 9px; }
+.lm-nouvelle {
+  display: inline-flex; align-items: center; gap: 7px; flex: none; height: 36px; padding: 0 14px; box-sizing: border-box; border-radius: 10px;
+  background: #e9eef7; color: #0b0d10; font: 700 0.84rem/1 'Inter', system-ui, sans-serif; text-decoration: none; box-shadow: 0 0 18px rgb(233 238 247 / 0.18);
+}
+.lm-recherche { flex: 1 1 160px; min-width: 0; height: 36px; min-height: 0; padding: 0 12px; box-sizing: border-box; border-radius: 10px; border: 1px solid rgb(255 255 255 / 0.12); background: #070809; color: #e9eef7; font: inherit; font-size: 0.84rem; }
+.lm-filtres { display: inline-flex; align-items: center; gap: 2px; height: 36px; padding: 2px; box-sizing: border-box; border-radius: 10px; border: 1px solid rgb(255 255 255 / 0.1); }
+.lm-filtres button { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; }
 .lm-filtres b { font: 700 10px/1 ui-monospace, monospace; opacity: 0.7; }
 .lm-etat { display: inline-flex; align-items: center; gap: 7px; font: 600 0.74rem/1 'Inter', system-ui, sans-serif; color: var(--etat); white-space: nowrap; }
 .lm-etat i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--etat); box-shadow: 0 0 8px var(--etat); }
@@ -1735,18 +1740,46 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .lm-ligne { display: grid; gap: 10px; margin-bottom: 8px; padding: 12px 14px; border-radius: 12px; border: 1px solid rgb(255 255 255 / 0.07); background: rgb(255 255 255 / 0.02); transition: border-color 0.2s, background 0.2s; }
 .lm-ligne:hover { border-color: rgb(255 255 255 / 0.16); background: rgb(255 255 255 / 0.035); }
 .lm-ligne-cours { border-color: rgb(233 238 247 / 0.35) !important; box-shadow: 0 0 24px rgb(233 238 247 / 0.08); }
-.lm-ligne-haut { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.lm-ligne-haut { display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 34px; }
 .lm-nom { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #e9eef7; font-weight: 650; font-size: 0.95rem; text-decoration: none; }
 .lm-nom:hover { text-decoration: underline; text-underline-offset: 3px; }
 .lm-espace { flex: 1; }
-.lm-gestes { display: inline-flex; gap: 6px; opacity: 0; transition: opacity 0.15s; }
-.lm-ligne:hover .lm-gestes, .lm-ligne:focus-within .lm-gestes, .lm-carte .lm-gestes, .lm-detail .lm-gestes { opacity: 1; }
-@media (hover: none) { .lm-gestes { opacity: 1; } }
-.lm-bouton { display: inline-flex; align-items: center; height: 28px; padding: 0 10px; border-radius: 8px; border: 1px solid rgb(255 255 255 / 0.14); background: rgb(255 255 255 / 0.04); color: #e9eef7; font: 600 0.76rem/1 'Inter', system-ui, sans-serif; text-decoration: none; cursor: pointer; }
+/* Les gestes d'une mission restent affichés : l'interface est faite pour la tablette. */
+.lm-gestes { display: inline-flex; align-items: center; gap: 6px; flex: none; }
+.lm-bouton {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 34px; padding: 0 12px; box-sizing: border-box; border-radius: 9px;
+  border: 1px solid rgb(255 255 255 / 0.14); background: rgb(255 255 255 / 0.04); color: #e9eef7; font: 600 0.8rem/1 'Inter', system-ui, sans-serif;
+  text-decoration: none; cursor: pointer;
+}
+.lm-bouton:hover:not(:disabled) { border-color: rgb(255 255 255 / 0.3); }
 .lm-bouton:disabled { opacity: 0.4; cursor: not-allowed; }
 .lm-lancer { background: #e9eef7; border-color: #e9eef7; color: #0b0d10; }
+.lm-carre-petit { width: 34px; padding: 0; }
+.lm-danger { background: #ff2d3a; border-color: #ff2d3a; color: #fff; }
+/* Le menu « ⋯ » des actions rapides, sous son bouton. */
+.lm-plus { position: relative; display: inline-flex; }
+.lm-menu {
+  position: fixed; z-index: 60; min-width: 210px; padding: 6px; box-sizing: border-box; border-radius: 12px; border: 1px solid rgb(255 255 255 / 0.14);
+  background: #0e1115; box-shadow: 0 16px 40px rgb(0 0 0 / 0.6); animation: em-surgit 0.12s ease-out; font-family: 'Inter', system-ui, sans-serif;
+}
+.lm-menu > button, .lm-menu > a {
+  display: flex; align-items: center; gap: 10px; width: 100%; height: 38px; padding: 0 10px; box-sizing: border-box; border: 0; border-radius: 8px;
+  background: none; color: #e9eef7; font: 500 0.84rem/1 'Inter', system-ui, sans-serif; text-align: left; text-decoration: none; cursor: pointer;
+}
+.lm-menu > button:hover:not(:disabled), .lm-menu > a:hover { background: rgb(255 255 255 / 0.07); }
+.lm-menu > button:disabled { opacity: 0.4; cursor: not-allowed; }
+.lm-menu svg { color: #8a93a3; }
+.lm-menu hr { margin: 4px 6px; border: 0; border-top: 1px solid rgb(255 255 255 / 0.08); }
+.lm-menu .lm-menu-suppr, .lm-menu .lm-menu-suppr svg { color: #ff5a64; }
+.lm-menu-confirmer { padding: 6px 8px 4px; }
+.lm-menu-confirmer p { margin: 0 0 10px; font-size: 0.82rem; color: #e9eef7; }
+.lm-menu-confirmer span { display: flex; justify-content: flex-end; gap: 6px; }
+.lm-nom-edition {
+  flex: 1; min-width: 0; height: 34px; min-height: 0; padding: 0 10px; box-sizing: border-box; border-radius: 9px; border: 1px solid rgb(233 238 247 / 0.5);
+  background: #070809; color: #fff; font: 650 0.95rem/1 'Inter', system-ui, sans-serif;
+}
 .lm-chaine { display: flex; flex-wrap: wrap; align-items: center; row-gap: 6px; }
-.lm-depart { width: 12px; height: 18px; box-sizing: border-box; border: 1.5px solid #e9eef7; border-radius: 9px 3px 3px 9px; }
+.lm-tuile-depart { --famille: #e9eef7; border-radius: 12px 6px 6px 12px; }
 .lm-maillon { display: inline-flex; align-items: center; }
 .lm-fil { width: 10px; height: 1.5px; background: rgb(154 163 174 / 0.6); }
 .lm-tuile { display: grid; place-items: center; width: 24px; height: 24px; box-sizing: border-box; border-radius: 6px; color: var(--famille); border: 1px solid color-mix(in srgb, var(--famille) 55%, transparent); background: color-mix(in srgb, var(--famille) 13%, #14181e); }
@@ -1797,7 +1830,8 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .lm-apercu-liste button.actif { background: rgb(255 255 255 / 0.07); color: #fff; box-shadow: inset 2px 0 0 #e9eef7; }
 .lm-apercu-liste small { color: #8a93a3; font: 600 0.74rem/1 ui-monospace, monospace; }
 .lm-detail { display: flex; flex-direction: column; gap: 10px; min-height: 0; min-width: 0; }
-.lm-detail h3 { margin: 0; flex: 1; font-size: 1.1rem; }
+.lm-detail h3 { display: flex; flex: 1; min-width: 0; margin: 0; font-size: 1.1rem; }
+.lm-detail h3 .lm-nom { font-size: 1.1rem; }
 .lm-description { margin: 0; color: #9aa3ae; font-size: 0.86rem; }
 .lm-detail-graphe { flex: 1; min-height: 220px; display: flex; }
 .lm-historique { list-style: none; margin: 0; padding: 0; font-size: 0.8rem; color: #c9ced6; }

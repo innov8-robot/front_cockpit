@@ -5,7 +5,7 @@ import { ETATS_MISSION, ISSUES_RUN, depuis } from '../../api/libelles';
 import type { EtatMission, Execution, Primitive, Robot } from '../../api/types';
 import { EditeurMission } from '../graphe/EditeurMission';
 import { chrono, etatDe, type Resume } from './donnees';
-import { BandeRuns, Chiffres, Gestes, MiniChaine, MiniGraphe, PointEtat, Progression } from './Pieces';
+import { BandeRuns, Chiffres, Gestes, MenuMission, MiniChaine, MiniGraphe, NomMission, PointEtat, Progression, Trait } from './Pieces';
 
 /** Ce que chaque proposition reçoit : les missions résumées, le robot, la mission en cours, et de quoi relire. */
 export interface ProprietesListe {
@@ -16,15 +16,15 @@ export interface ProprietesListe {
   relire(): void;
   /** Le passage entre la liste (panneau de côté) et la vue développée (écran entier), à côté du titre. */
   bascule?: { vers: string; developpee: boolean };
+  /** Où mène la croix de la ligne du titre ; sans elle, pas de croix (la page d'essai). */
+  fermer?: string;
 }
 
 /** Développer la liste en vue entière, ou la replier en panneau. */
 function Bascule({ vers, developpee }: { vers: string; developpee: boolean }) {
   return (
-    <Link className="lm-bascule" to={vers} title={developpee ? 'Replier en liste' : 'Développer'} aria-label={developpee ? 'Replier en liste' : 'Développer'}>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d={developpee ? 'M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7' : 'M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7'} />
-      </svg>
+    <Link className="lm-carre" to={vers} title={developpee ? 'Replier en liste' : 'Développer'} aria-label={developpee ? 'Replier en liste' : 'Développer'}>
+      <Trait d={developpee ? 'M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7' : 'M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7'} />
     </Link>
   );
 }
@@ -41,16 +41,20 @@ function useGestes({ robot, execution, relire }: ProprietesListe) {
 }
 
 /** La tête d'une liste : le titre, une recherche, les filtres par état, et « Nouvelle mission » (blanc, pas rouge). */
-function Tete({ resumes, execution, cherche, setCherche, filtre, setFiltre, bascule }: {
+function Tete({ resumes, execution, cherche, setCherche, filtre, setFiltre, bascule, fermer }: {
   resumes: Resume[]; execution: Execution | null; cherche: string; setCherche(s: string): void; filtre: EtatMission | null; setFiltre(f: EtatMission | null): void;
-  bascule?: ProprietesListe['bascule'];
+  bascule?: ProprietesListe['bascule']; fermer?: string;
 }) {
   const compte = (e: EtatMission) => resumes.filter((r) => etatDe(r, execution) === e).length;
   return (
     <header className="lm-tete">
       <div className="lm-tete-ligne">
-        <h2>Missions <span>{resumes.length}</span>{bascule && <Bascule {...bascule} />}</h2>
-        <Link className="lm-nouvelle" to="/missions/nouvelle">+ Nouvelle mission</Link>
+        <h2>Missions</h2>
+        <span className="lm-compte">{resumes.length}</span>
+        {bascule && <Bascule {...bascule} />}
+        <span className="lm-espace" />
+        <Link className="lm-nouvelle" to="/missions/nouvelle"><Trait d="M12 5v14M5 12h14" taille={15} />Nouvelle mission</Link>
+        {fermer && <Link className="lm-carre" to={fermer} aria-label="Fermer"><Trait d="M6 6l12 12M18 6L6 18" taille={18} /></Link>}
       </div>
       <div className="lm-tete-ligne">
         <input className="lm-recherche" placeholder="Chercher une mission…" value={cherche} onChange={(e) => setCherche(e.target.value)} />
@@ -84,31 +88,39 @@ function useFiltre(resumes: Resume[], execution: Execution | null) {
 export function ListeVivante(props: ProprietesListe) {
   const { resumes, execution } = props;
   const f = useFiltre(resumes, execution);
-  const g = useGestes(props);
   return (
     <div className="lm-liste">
-      <Tete resumes={resumes} execution={execution} bascule={props.bascule} {...f} />
+      <Tete resumes={resumes} execution={execution} bascule={props.bascule} fermer={props.fermer} {...f} />
       <ul>
-        {f.visibles.map((r) => {
-          const etat = etatDe(r, execution);
-          const joue = etat === 'en_cours' && execution ? execution : null;
-          return (
-            <li key={r.mission.id} className={`lm-ligne ${joue ? 'lm-ligne-cours' : ''}`}>
-              <div className="lm-ligne-haut">
-                <PointEtat etat={etat} texte={false} />
-                <Link className="lm-nom" to={`/missions/${r.mission.id}`}>{r.mission.nom}</Link>
-                {!joue && <Gestes m={r.mission} peutLancer={g.peutLancer(r)} lancer={() => g.lancer(r)} />}
-              </div>
-              <MiniChaine r={r} execution={execution} />
-              {joue ? <Progression r={r} execution={joue} pause={g.pause} /> : (
-                <div className="lm-ligne-bas"><BandeRuns r={r} /><Chiffres r={r} /></div>
-              )}
-            </li>
-          );
-        })}
+        {f.visibles.map((r) => <LigneMission key={r.mission.id} r={r} {...props} />)}
       </ul>
       {f.visibles.length === 0 && <p className="lm-rien">Aucune mission ne correspond.</p>}
     </div>
+  );
+}
+
+/** Une ligne de la liste vivante : l'état, le nom (renommable), les gestes, la chaîne, puis les runs ou l'étape. */
+function LigneMission({ r, ...props }: ProprietesListe & { r: Resume }) {
+  const { execution, relire } = props;
+  const g = useGestes(props);
+  const [renomme, setRenomme] = useState(false);
+  const etat = etatDe(r, execution);
+  const joue = etat === 'en_cours' && execution ? execution : null;
+  return (
+    <li className={`lm-ligne ${joue ? 'lm-ligne-cours' : ''}`}>
+      <div className="lm-ligne-haut">
+        <PointEtat etat={etat} texte={false} />
+        <NomMission m={r.mission} enEdition={renomme} finir={() => setRenomme(false)} relire={relire} />
+        {joue ? <MenuMission m={r.mission} enCours renommer={() => setRenomme(true)} relire={relire} /> : (
+          <Gestes m={r.mission} peutLancer={g.peutLancer(r)} lancer={() => g.lancer(r)}
+            menu={<MenuMission m={r.mission} enCours={false} renommer={() => setRenomme(true)} relire={relire} />} />
+        )}
+      </div>
+      <MiniChaine r={r} execution={execution} />
+      {joue ? <Progression r={r} execution={joue} pause={g.pause} /> : (
+        <div className="lm-ligne-bas"><BandeRuns r={r} /><Chiffres r={r} /></div>
+      )}
+    </li>
   );
 }
 
@@ -119,7 +131,7 @@ export function Cartes(props: ProprietesListe) {
   const g = useGestes(props);
   return (
     <div className="lm-liste">
-      <Tete resumes={resumes} execution={execution} bascule={props.bascule} {...f} />
+      <Tete resumes={resumes} execution={execution} bascule={props.bascule} fermer={props.fermer} {...f} />
       <div className="lm-cartes">
         {f.visibles.map((r) => {
           const etat = etatDe(r, execution);
@@ -155,11 +167,12 @@ export function ListeApercu(props: ProprietesListe) {
   const f = useFiltre(resumes, execution);
   const g = useGestes(props);
   const [choisie, setChoisie] = useState<string | null>(null);
+  const [renomme, setRenomme] = useState(false);
   const r = f.visibles.find((x) => x.mission.id === choisie) ?? f.visibles[0];
   const joue = r && etatDe(r, execution) === 'en_cours' && execution ? execution : null;
   return (
     <div className="lm-liste lm-apercu">
-      <Tete resumes={resumes} execution={execution} bascule={props.bascule} {...f} />
+      <Tete resumes={resumes} execution={execution} bascule={props.bascule} fermer={props.fermer} {...f} />
       <div className="lm-apercu-corps">
         <ul className="lm-apercu-liste">
           {f.visibles.map((x) => (
@@ -176,8 +189,11 @@ export function ListeApercu(props: ProprietesListe) {
           <section className="lm-detail">
             <div className="lm-ligne-haut">
               <PointEtat etat={etatDe(r, execution)} />
-              <h3>{r.mission.nom}</h3>
-              {!joue && <Gestes m={r.mission} peutLancer={g.peutLancer(r)} lancer={() => g.lancer(r)} />}
+              <h3><NomMission key={r.mission.id} m={r.mission} enEdition={renomme} finir={() => setRenomme(false)} relire={props.relire} /></h3>
+              {joue ? <MenuMission m={r.mission} enCours renommer={() => setRenomme(true)} relire={props.relire} /> : (
+                <Gestes m={r.mission} peutLancer={g.peutLancer(r)} lancer={() => g.lancer(r)}
+                  menu={<MenuMission m={r.mission} enCours={false} renommer={() => setRenomme(true)} relire={props.relire} />} />
+              )}
             </div>
             {r.mission.description && <p className="lm-description">{r.mission.description}</p>}
             {joue && <Progression r={r} execution={joue} pause={g.pause} />}

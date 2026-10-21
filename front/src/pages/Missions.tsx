@@ -6,12 +6,12 @@ import { Chargement } from '../components/ui';
 export function Missions() {
   const donnees = useMissions();
   if (!donnees.pret) return <Chargement />;
-  return <ListeVivante {...donnees} bascule={{ vers: '/missions/developpees', developpee: false }} />;
+  return <ListeVivante {...donnees} fermer="/" bascule={{ vers: '/missions/developpees', developpee: false }} />;
 }
 
 /** Les missions développées, sur l'écran entier : la liste à gauche, la mission choisie à droite. */
 export function MissionsDeveloppees() {
   const donnees = useMissions();
   if (!donnees.pret) return <Chargement />;
-  return <ListeApercu {...donnees} bascule={{ vers: '/missions', developpee: true }} />;
+  return <ListeApercu {...donnees} fermer="/" bascule={{ vers: '/missions', developpee: true }} />;
 }

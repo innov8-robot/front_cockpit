@@ -10,6 +10,8 @@ import { Icone } from './ui';
 
 /** Les écrans qui prennent toute la scène ; les autres s'ouvrent en panneau sur le côté. */
 const GRANDS = ['/missions/:id', '/primitives/nouvelle'];
+/** Ceux qui portent leur croix dans la ligne de leur titre : l'overlay n'en ajoute pas une seconde, mal alignée. */
+const AVEC_CROIX = ['/missions', '/missions/developpees'];
 /** Ceux qui se taillent sur leur contenu, centrés. */
 const AJUSTES = ['/robot/corps'];
 
@@ -20,6 +22,7 @@ export function Overlay() {
   const ouvert = lieu.pathname !== '/';
   const grand = GRANDS.some((g) => matchPath(g, lieu.pathname));
   const ajuste = AJUSTES.some((g) => matchPath(g, lieu.pathname));
+  const croix = !AVEC_CROIX.some((g) => matchPath(g, lieu.pathname));
 
   useEffect(() => {
     if (!ouvert) return;
@@ -36,9 +39,11 @@ export function Overlay() {
     <>
       <div className="overlay-voile" onClick={() => naviguer('/')} aria-hidden="true" />
       <section className={`overlay hud-theme ${ajuste ? 'overlay-ajuste' : grand ? 'overlay-grand' : 'overlay-cote'}`} role="dialog" aria-modal="true">
-        <button className="overlay-fermer" onClick={() => naviguer('/')} aria-label="Fermer">
-          <Icone nom="croix" taille={18} />
-        </button>
+        {croix && (
+          <button className="overlay-fermer" onClick={() => naviguer('/')} aria-label="Fermer">
+            <Icone nom="croix" taille={18} />
+          </button>
+        )}
         <div className="overlay-corps">
           <Routes>
             <Route path="robot" element={<RobotDetail />} />

@@ -1,4 +1,7 @@
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
+import { api } from '../../api/client';
 import { ETATS_MISSION, ISSUES_RUN, depuis } from '../../api/libelles';
 import type { EtatMission, Execution, Mission, Primitive } from '../../api/types';
 import { typePrimitive } from '../graphe/correspondance';
@@ -31,7 +34,9 @@ export function MiniChaine({ r, execution }: { r: Resume; execution: Execution |
   const enCours = execution?.missionId === r.mission.id ? execution : null;
   return (
     <span className="lm-chaine" aria-label={`${r.chaine.length} primitives`}>
-      <span className="lm-depart" aria-hidden="true" />
+      <span className="lm-tuile lm-tuile-depart" title="Au lancement">
+        <svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d={ICONES.eclair} fill="currentColor" /></svg>
+      </span>
       {r.chaine.map((c, i) => (
         <span key={c.noeud} className="lm-maillon">
           <span className="lm-fil" />
@@ -88,13 +93,121 @@ export function Progression({ r, execution, pause }: { r: Resume; execution: Exe
   );
 }
 
-/** Les deux gestes d'une mission : la lancer, l'ouvrir dans l'éditeur. */
-export function Gestes({ m, peutLancer, lancer }: { m: Mission; peutLancer: boolean; lancer(): void }) {
+/** Une icône au trait de 24 × 24, pour les boutons carrés. */
+export function Trait({ d, taille = 16 }: { d: string; taille?: number }) {
+  return (
+    <svg width={taille} height={taille} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"
+      strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>
+  );
+}
+
+const TROIS_POINTS = 'M5 12h.01M12 12h.01M19 12h.01';
+
+/**
+ * Les gestes d'une mission, toujours affichés (l'interface est faite pour la tablette) : la lancer, l'ouvrir dans
+ * l'éditeur, et le menu « ⋯ » des actions rapides.
+ */
+export function Gestes({ m, peutLancer, lancer, menu }: { m: Mission; peutLancer: boolean; lancer(): void; menu?: ReactNode }) {
   return (
     <span className="lm-gestes">
-      <button className="lm-bouton lm-lancer" disabled={!peutLancer} onClick={lancer} title={peutLancer ? 'Lancer la mission' : 'Le robot n’est pas disponible, ou la mission est vide'}>▶ Lancer</button>
+      <button className="lm-bouton lm-lancer" disabled={!peutLancer} onClick={lancer} title={peutLancer ? 'Lancer la mission' : 'Le robot n’est pas disponible, ou la mission est vide'}>
+        <Trait d="M8 5l11 7-11 7z" taille={13} />Lancer
+      </button>
       <Link className="lm-bouton" to={`/missions/${m.id}`}>Éditer</Link>
+      {menu}
     </span>
+  );
+}
+
+/** La place qu'il faut sous le bouton pour y ouvrir le menu ; sinon il s'ouvre au-dessus (la barre du robot est en bas). */
+const PLACE_SOUS_MENU = 300;
+
+/** Où poser le menu, en position fixe : sous son bouton, aligné à droite, ou au-dessus s'il n'a pas la place. */
+function placer(bouton: HTMLElement): CSSProperties {
+  const r = bouton.getBoundingClientRect();
+  const droite = innerWidth - r.right;
+  return innerHeight - r.bottom > PLACE_SOUS_MENU ? { top: r.bottom + 6, right: droite } : { bottom: innerHeight - r.top + 6, right: droite };
+}
+
+/**
+ * Le menu « ⋯ » d'une mission : renommer, dupliquer, supprimer (avec confirmation). Il s'ouvre au-dessus de tout,
+ * hors de la liste qui défile et le couperait. Échap ou un appui ailleurs le ferme sans fermer l'écran des missions.
+ */
+export function MenuMission({ m, enCours, renommer, relire }: { m: Mission; enCours: boolean; renommer(): void; relire(): void }) {
+  const [place, setPlace] = useState<CSSProperties | null>(null);
+  const ouvert = place !== null;
+  const [confirmer, setConfirmer] = useState(false);
+  const boite = useRef<HTMLSpanElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!ouvert) return;
+    const dehors = (e: PointerEvent) => {
+      const cible = e.target as Node;
+      if (!boite.current?.contains(cible) && !menu.current?.contains(cible)) fermer();
+    };
+    const echap = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); fermer(); } };
+    document.addEventListener('pointerdown', dehors);
+    window.addEventListener('keydown', echap, true);
+    return () => { document.removeEventListener('pointerdown', dehors); window.removeEventListener('keydown', echap, true); };
+  }, [ouvert]);
+  function fermer() { setPlace(null); setConfirmer(false); }
+  async function dupliquer() {
+    fermer();
+    await api.enregistrerMission({ ...m, id: '', nom: `${m.nom} (copie)`, etat: 'brouillon' }).catch(() => undefined);
+    relire();
+  }
+  async function supprimer() {
+    fermer();
+    await api.supprimerMission(m.id).catch(() => undefined);
+    relire();
+  }
+  return (
+    <span className="lm-plus" ref={boite}>
+      <button className="lm-bouton lm-carre-petit" aria-label={`Plus d’actions pour ${m.nom}`} aria-expanded={ouvert}
+        onClick={(e) => (ouvert ? fermer() : setPlace(placer(e.currentTarget)))}>
+        <Trait d={TROIS_POINTS} taille={18} />
+      </button>
+      {place && createPortal(
+        <div className="lm-menu" role="menu" ref={menu} style={place}>
+          <button role="menuitem" onClick={() => { fermer(); renommer(); }}><Trait d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4" />Renommer</button>
+          <button role="menuitem" onClick={dupliquer}><Trait d="M8 8h11v11H8zM5 15V5h10" />Dupliquer</button>
+          <Link role="menuitem" to={`/missions/${m.id}`}><Trait d="M4 20h16M6 16l9-9 3 3-9 9H6z" />Ouvrir l’éditeur</Link>
+          <hr />
+          {confirmer ? (
+            <div className="lm-menu-confirmer">
+              <p>Supprimer « {m.nom} » ?</p>
+              <span>
+                <button className="lm-bouton" onClick={() => setConfirmer(false)}>Annuler</button>
+                <button className="lm-bouton lm-danger" onClick={supprimer}>Supprimer</button>
+              </span>
+            </div>
+          ) : (
+            <button role="menuitem" className="lm-menu-suppr" disabled={enCours} title={enCours ? 'Arrêtez la mission avant de la supprimer' : undefined}
+              onClick={() => setConfirmer(true)}><Trait d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />Supprimer</button>
+          )}
+        </div>,
+        document.body,
+      )}
+    </span>
+  );
+}
+
+/** Le nom d'une mission : un lien vers l'éditeur, ou un champ quand on la renomme (Entrée garde, Échap annule). */
+export function NomMission({ m, enEdition, finir, relire }: { m: Mission; enEdition: boolean; finir(): void; relire(): void }) {
+  const [nom, setNom] = useState(m.nom);
+  if (!enEdition) return <Link className="lm-nom" to={`/missions/${m.id}`}>{m.nom}</Link>;
+  async function garder() {
+    finir();
+    const propre = nom.trim();
+    if (propre && propre !== m.nom) await api.enregistrerMission({ ...m, nom: propre }).catch(() => undefined);
+    relire();
+  }
+  return (
+    <input className="lm-nom-edition" value={nom} autoFocus aria-label="Nouveau nom de la mission" onChange={(e) => setNom(e.target.value)}
+      onBlur={garder} onKeyDown={(e) => {
+        if (e.key === 'Enter') garder();
+        if (e.key === 'Escape') { e.stopPropagation(); setNom(m.nom); finir(); }
+      }} />
   );
 }
 
