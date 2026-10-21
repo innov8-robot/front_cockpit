@@ -137,6 +137,8 @@ export interface Nuages {
   reveler(rayon: number): void;
   /** La part de la couleur de leur classe dans les points des objets déclarés, de 0 (aucune) à 1. */
   colorerObjets(niveau: number): void;
+  /** Change les couleurs : la caméra et le lidar (ce qui est vu maintenant), la carte mémorisée. */
+  teinter(camera: string, lidar: string, memoire: string): void;
   /** Le nombre de points de la caméra sur chaque objet déclaré, à sa dernière image : 0 = l'objet n'est pas vu. */
   pointsParObjet: Int32Array;
 }
@@ -259,6 +261,12 @@ export function creerNuages(tete: THREE.Vector3, lancer: Lancer, objets: ObjetDe
     origineLidar: origineLid,
     materiaux,
     pointsParObjet,
+    teinter(couleurCamera: string, couleurLidar: string, couleurMemoire: string) {
+      for (const [ms, c] of [[camera.materiaux, couleurCamera], [lidar.materiaux, couleurLidar],
+        [carte.materiaux, couleurMemoire]] as const) {
+        for (const m of ms) m.uniforms.uCouleur.value.set(c).multiply(m.uniforms.uCanal.value);
+      }
+    },
     colorerObjets(niveau: number) {
       for (const m of materiaux) m.uniforms.uObjets.value = niveau;
     },

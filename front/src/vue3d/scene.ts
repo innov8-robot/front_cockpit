@@ -6,12 +6,13 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import type { URDFRobot } from 'urdf-loader';
 import { CALQUE_DETECTIONS, creerDetections, PREMIER_CADRE_S, type Detections } from './detections';
-import { creerEnvironnement, type Segmentation } from './environnement';
+import { creerEnvironnement, teinterMeubles, type Segmentation } from './environnement';
 import { creerHologramme } from './hologramme';
 import { CAMERA_TETE, creerNuages, type Nuages } from './nuages';
 import { allumerRobot, animerRobot, chargerRobot } from './robot';
 import { creerBandeSol, creerSol } from './sol';
-import { fixerObstacles, mettreAJourSonar } from './sonar';
+import { fixerObstacles, mettreAJourSonar, teinterSonar } from './sonar';
+import { THEME_PAR_DEFAUT, type ThemeScene } from './theme';
 
 /** Le fond de la scène, le gris très sombre qu'on voyait déjà (la mini-carte s'y accorde). */
 const FOND = '#1a1f23';
@@ -52,6 +53,8 @@ export interface Scene3D {
   plongerCamera(entrer: boolean): Promise<void>;
   detruire(): void;
   pret: Promise<void>;
+  /** Applique un thème de couleurs (vue3d/theme.ts) ; avant que la scène soit prête, il l'attend. */
+  theme(t: ThemeScene): void;
   /** Les objets déclarés de l'atelier : leur nom et leur couleur, une fois la scène prête. */
   objets(): { nom: string; couleur: string }[];
 }
@@ -117,6 +120,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
   let plongee = 0;
   let segmentation: Segmentation | null = null;
   let peau: THREE.Object3D | null = null;
+  let themeCourant: ThemeScene = THEME_PAR_DEFAUT;
   const origineSonarLocale = new THREE.Vector3();
 
   const pret = chargerRobot().then((r) => {
@@ -154,7 +158,19 @@ export function monterScene(hote: HTMLElement): Scene3D {
     monde.add(hologramme.groupe);
     monde.add(nuages.carte, nuages.camera, nuages.lidar);
     appliquerVisibilite();
+    appliquerTheme(themeCourant);
   });
+
+  /** Pose les couleurs du thème sur la scène : nuages, sonar, arêtes, sol et front du déploiement. */
+  function appliquerTheme(t: ThemeScene): void {
+    themeCourant = t;
+    nuages?.teinter(t.camera, t.lidar, t.memoire);
+    teinterSonar(t.sonar);
+    teinterMeubles(t.meubles);
+    const u = (sol.material as THREE.ShaderMaterial).uniforms;
+    u.uLigne.value.set(t.sol);
+    u.uAccent.value.set(t.deploiement);
+  }
 
   function appliquerVisibilite(): void {
     sol.visible = visibles.sol;
@@ -266,6 +282,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
   return {
     pret,
     objets: () => objets,
+    theme: appliquerTheme,
     projeterSol(clientX, clientY) {
       const r = rendu.domElement.getBoundingClientRect();
       rayonSouris.setFromCamera(new THREE.Vector2(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1), camera);

@@ -85,6 +85,11 @@ export function mettreAJourSonar(t: number, origine: THREE.Vector3, oeil: THREE.
   SONAR.uSonarForce.value = force;
 }
 
+/** Change la couleur de l'impulsion. */
+export function teinterSonar(couleur: string): void {
+  SONAR.uSonarCouleur.value.set(couleur);
+}
+
 /** Déclare les obstacles qui font de l'ombre à l'impulsion : leurs boîtes englobantes, dans le monde. */
 export function fixerObstacles(boites: THREE.Box3[]): void {
   const n = Math.min(boites.length, MAX_OBSTACLES);

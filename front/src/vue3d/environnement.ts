@@ -197,6 +197,12 @@ const TONS: Record<Ton, THREE.LineBasicMaterial> = {
 // L'impulsion du sonar épouse les arêtes des meubles en passant.
 for (const materiau of Object.values(TONS)) sonariser(materiau);
 
+/** Change la couleur des arêtes des meubles et des objets ; celle des machines (zone de danger) reste rouge. */
+export function teinterMeubles(couleur: string): void {
+  TONS.meuble.color.set(couleur);
+  TONS.objet.color.set(couleur).lerp(new THREE.Color('#ffffff'), 0.5);
+}
+
 function dessiner(formes: Forme[], sol: number): THREE.Group {
   const groupe = new THREE.Group();
   for (const f of formes) {
