@@ -127,6 +127,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
   let detections: Detections | null = null;
   let objets: { nom: string; couleur: string }[] = [];
   let atelier: THREE.Object3D | null = null;
+  let masqueAtelier: THREE.Object3D | null = null;
   let hologramme: ReturnType<typeof creerHologramme> | null = null;
   let debutApparition: number | null = null;
   let rayon = 0;
@@ -163,6 +164,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
     }
     monde.add(atelier);
     nuages = creerNuages(teteLocale, env.lancer, env.objets);
+    masqueAtelier = env.masque;
     monde.add(env.masque);
     // Les ombres du sonar : les obstacles de l'atelier, ramenés dans le monde.
     fixerObstacles(env.obstacles.map((b) => b.clone().applyMatrix4(monde.matrixWorld)));
@@ -352,8 +354,10 @@ export function monterScene(hote: HTMLElement): Scene3D {
     async brancherReel() {
       await pret;
       reels = creerNuagesReels();
-      const simules = [atelier, peau, segmentation?.groupe, nuages?.camera, nuages?.lidar, nuages?.carte];
+      const simules = [atelier, masqueAtelier, peau, segmentation?.groupe, nuages?.camera, nuages?.lidar, nuages?.carte];
       for (const o of simules) if (o) o.removeFromParent();
+      // Les meubles simulés ne font plus d'ombre à l'impulsion : elle se réfléchit sur les murs de la carte.
+      fixerObstacles([]);
       detections?.afficher(false);
       detections = null;
       // Le modèle suit désormais le robot : plus de respiration simulée.

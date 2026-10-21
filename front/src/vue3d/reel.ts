@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { TrameImage, TrameNuage } from '../api/flux';
+import { GLSL_SONAR, SONAR } from './sonar';
 
 /** Le plus grand nuage que les tampons tiennent : celui du lidar (60 000 points côté serveur). */
 const MAX_LIDAR = 60_000;
@@ -106,6 +107,36 @@ const SOL_Z = 0.02;
 const MUR_Z = [0.2, 0.67, 1.13, 1.6];
 const PAS_SOL = 2;
 
+/** Les points de la carte, que l'impulsion du sonar allume en bleu quand elle les traverse. */
+function materiauCarte(): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    uniforms: { ...SONAR, uTaille: { value: 0.03 } },
+    vertexShader: /* glsl */ `
+      ${GLSL_SONAR}
+      uniform float uTaille;
+      attribute vec3 color;
+      varying vec3 vCouleur;
+      varying float vAlpha;
+      void main() {
+        vec4 vue = modelViewMatrix * vec4(position, 1.0);
+        float s = min(1.0, sonar((modelMatrix * vec4(position, 1.0)).xyz) * 1.3);
+        vCouleur = mix(color, uSonarCouleur * uSonarEclat, s);
+        vAlpha = max(0.85, s);
+        gl_PointSize = clamp(uTaille * 900.0 / -vue.z, 1.5, 6.0) * (1.0 + 0.6 * s);
+        gl_Position = projectionMatrix * vue;
+      }`,
+    fragmentShader: /* glsl */ `
+      varying vec3 vCouleur;
+      varying float vAlpha;
+      void main() {
+        if (length(gl_PointCoord - 0.5) > 0.5) discard;
+        gl_FragColor = vec4(vCouleur, vAlpha);
+      }`,
+  });
+}
+
 /**
  * La carte du châssis en relief, dans le repère de la carte. `poserBase` la place sous le robot : le repère du
  * modèle est celui de la base, que la pose du châssis situe dans la carte.
@@ -139,9 +170,7 @@ export function creerCarteChassis() {
       points.geometry = geo;
       return;
     }
-    points = new THREE.Points(geo, new THREE.PointsMaterial({
-      size: 0.03, vertexColors: true, sizeAttenuation: true, transparent: true, opacity: 0.85, depthWrite: false,
-    }));
+    points = new THREE.Points(geo, materiauCarte());
     points.frustumCulled = false;
     groupe.add(points);
   }
