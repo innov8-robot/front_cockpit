@@ -1,15 +1,16 @@
 import {
-  addEdge, Background, BackgroundVariant, BaseEdge, Controls, getBezierPath, MiniMap, ReactFlow, ReactFlowProvider,
-  useEdgesState, useNodesState, useReactFlow, type Connection, type Edge, type EdgeProps, type XYPosition,
+  addEdge, Background, BackgroundVariant, Controls, MiniMap, ReactFlow, ReactFlowProvider, useEdgesState, useNodesState,
+  useReactFlow, type Connection, type XYPosition,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useContext, useEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent, type ReactNode } from 'react';
 import { Actions, type ActionsCanevas, type Point } from './actions';
 import { ApparenceContexte, teinte, type Apparence } from './apparence';
-import { FAMILLE, FAMILLES, SORTIES, STATUTS, type EtatLien, type EtatNoeud, type Sortie, type Ton } from './charte';
+import { FAMILLE, FAMILLES, SORTIES, STATUTS, type EtatLien, type EtatNoeud, type Sortie } from './charte';
 import { CATALOGUE, sortiesVisibles, typeNoeud, type TypeNoeud } from './catalogue';
 import { IconeNoeud, NoeudCarte, NoeudVide, type DonneesNoeud, type Direct, type NoeudMission } from './Noeud';
-import { OndeChemin } from './Onde';
+import { LienPulse } from './Lien';
+import { lien, tonDe, type LienCanevas } from './liens';
 
 /** Un pas de la simulation dure un peu plus d'une période de l'onde (1 Hz) : on la voit passer au moins une fois. */
 const PAS_MS = 1100;
@@ -18,56 +19,13 @@ const GLISSE = 'application/x-noeud-mission';
 const COLONNE = 180;
 const RANGEE = 120;
 
-type DonneesLien = { sortie: Sortie; etat?: EtatLien; ton?: Ton };
-type LienMission = Edge<DonneesLien, 'pulse'>;
-
-/** La couleur de l'onde d'un lien : l'issue de sa sortie ; un choix (alors, sinon, faire) n'en est pas une. */
-function tonDe(s: Sortie): Ton {
-  if (s === 'echec') return 'echec';
-  return ['faire', 'alors', 'sinon', 'cas1', 'cas2', 'autre'].includes(s) ? 'neutre' : 'ok';
-}
-
-/** Un lien qui revient en arrière — la fin d'un tour vers l'entrée de sa boucle — passe sous les nœuds, comme dans n8n. */
-function cheminRetour(sx: number, sy: number, tx: number, ty: number) {
-  const bas = Math.max(sy, ty) + 96;
-  const r = 12;
-  const a = sx + 24;
-  const b = tx - 24;
-  const m = (a + b) / 2;
-  return {
-    d: `M${sx} ${sy}H${a - r}Q${a} ${sy} ${a} ${sy + r}V${bas - r}Q${a} ${bas} ${a - r} ${bas}H${b + r}Q${b} ${bas} ${b} ${bas - r}V${ty + r}Q${b} ${ty} ${b + r} ${ty}H${tx}`,
-    fleche: `M${m + 5} ${bas - 5}L${m - 4} ${bas}L${m + 5} ${bas + 5}z`,
-  };
-}
-
-/** Un lien de mission : une courbe vers l'avant, un retour par-dessous ; parcouru ou actif, l'onde par-dessus. */
-function LienPulse({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data, style }: EdgeProps<LienMission>) {
-  const retour = targetX < sourceX + 20 ? cheminRetour(sourceX, sourceY, targetX, targetY) : null;
-  const d = retour?.d ?? getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition })[0];
-  const etat = data?.etat ?? 'aucun';
-  return (
-    <>
-      <BaseEdge id={id} path={d} style={{ ...style, opacity: etat === 'aucun' ? 0.75 : 1 }} />
-      {retour && <path d={retour.fleche} fill={String(style?.stroke ?? '#9aa3ae')} />}
-      <OndeChemin d={d} etat={etat} ton={data?.ton ?? 'neutre'} />
-    </>
-  );
-}
+type LienMission = LienCanevas;
 
 const TYPES_NOEUDS = { carte: NoeudCarte, vide: NoeudVide };
 const TYPES_LIENS = { pulse: LienPulse };
 /** La vue de départ cadre le début de la mission à une taille lisible ; la suite vient en suivant l'exécution. */
 const VUE_DE_DEPART = { nodes: [{ id: 'depart' }, { id: 'appel_bac' }, { id: 'prendre' }, { id: 'appel_prise' }], padding: 0.1, maxZoom: 1 };
 const nouvelId = (prefixe: string) => `${prefixe}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-
-/** Un lien selon sa sortie : gris pour le chemin, pointillé ambre pour l'échec ; ni flèche ni texte. */
-function lien(id: string, source: string, sortie: Sortie, target: string): LienMission {
-  const s = SORTIES[sortie];
-  return {
-    id, source, target, sourceHandle: sortie, type: 'pulse', data: { sortie },
-    style: { stroke: s.couleur, strokeWidth: 2, strokeDasharray: s.pointille ? '6 5' : undefined },
-  };
-}
 
 function carte(id: string, cle: string, x: number, y: number, valeurs = {}, plus: Partial<DonneesNoeud> = {}): NoeudMission {
   return { id, type: 'carte', position: { x, y }, data: { type: typeNoeud(cle), valeurs, ...plus } };

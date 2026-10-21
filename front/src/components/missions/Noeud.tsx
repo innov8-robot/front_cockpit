@@ -115,6 +115,8 @@ export interface ProprietesCarte {
   prise?: string;
   /** Une boucle qui attend la fin de son tour : elle tourne, mais le rond de chargement reste à l'étape en cours. */
   veille?: boolean;
+  /** Ce qui ne va pas, à la place du résumé (« non relié au départ »). */
+  alerte?: string;
   /** Les poignées de React Flow ; sans elles, la carte est une image (galerie). */
   poignees?: boolean;
   /** Les sorties libres, qui portent un « + », et ce qu'il fait. */
@@ -127,13 +129,13 @@ export interface ProprietesCarte {
  * à droite portent leur nom quand il y en a plusieurs (alors / sinon, fini / faire) et un « + » quand elles sont libres.
  * Un déclencheur a le bord gauche arrondi, une fin le bord droit.
  */
-export function CarteNoeud({ type, valeurs = {}, etat, choisi, desactive, echec, direct, prise, veille, poignees, libres, surPlus }: ProprietesCarte) {
+export function CarteNoeud({ type, valeurs = {}, etat, choisi, desactive, echec, direct, prise, veille, alerte, poignees, libres, surPlus }: ProprietesCarte) {
   const { apparence } = useContext(ApparenceContexte);
   const f = FAMILLE[type.famille];
   const sorties = sortiesVisibles(type, echec);
   const hauteur = (i: number) => `${(100 / (sorties.length + 1)) * (i + 1)}%`;
   const expr = expression(type, valeurs);
-  const resume = expr ? direct?.texte : direct?.texte ?? resumer(type, valeurs);
+  const resume = alerte ?? (expr ? direct?.texte : direct?.texte ?? resumer(type, valeurs));
   const verdict = prise === 'alors' ? 'oui' : prise === 'sinon' ? 'non' : undefined;
   const d = ICONES[type.icone] ?? ICONES.note;
   return (
@@ -162,7 +164,7 @@ export function CarteNoeud({ type, valeurs = {}, etat, choisi, desactive, echec,
       ))}
       <div className="em-tuile-nom">{type.nom}</div>
       {expr && <Expression texte={expr.texte} condition={expr.condition} verdict={verdict} />}
-      {resume && <div className={`em-tuile-resume ${expr ? 'em-tuile-sous-expr' : ''} ${direct ? 'em-tuile-direct' : ''} ${direct?.relance ? 'em-tuile-relance' : ''}`}>{resume}</div>}
+      {resume && <div className={`em-tuile-resume ${expr ? 'em-tuile-sous-expr' : ''} ${direct ? 'em-tuile-direct' : ''} ${direct?.relance || alerte ? 'em-tuile-relance' : ''}`}>{resume}</div>}
     </div>
   );
 }
@@ -176,6 +178,9 @@ export type DonneesNoeud = {
   direct?: Direct;
   prise?: string;
   veille?: boolean;
+  alerte?: string;
+  /** En lecture seule (mission en cours) : pas de « + » au bout des sorties. */
+  figee?: boolean;
   desactive?: boolean;
 };
 
@@ -186,7 +191,7 @@ export function NoeudCarte({ id, data, selected }: NodeProps<NoeudMission>) {
   const actions = useContext(Actions);
   const liens = useNodeConnections({ handleType: 'source' });
   const prises = new Set(liens.map((l) => l.sourceHandle));
-  const libres = sortiesVisibles(data.type, data.echec).filter((s) => !prises.has(s));
+  const libres = data.figee ? [] : sortiesVisibles(data.type, data.echec).filter((s) => !prises.has(s));
   return (
     <CarteNoeud {...data} choisi={selected} poignees libres={libres}
       surPlus={(s, e) => { e.stopPropagation(); actions?.ajouter(id, s, { x: e.clientX, y: e.clientY }); }} />

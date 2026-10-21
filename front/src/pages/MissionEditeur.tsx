@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, robotUnique } from '../api/client';
 import { ETATS_MISSION, nbPrimitives } from '../api/libelles';
-import type { LienMission, Mission, NoeudMission } from '../api/types';
+import type { Execution, LienMission, Mission, NoeudMission } from '../api/types';
 import { EditeurGraphe } from '../components/graphe/EditeurGraphe';
+import { EditeurMission } from '../components/graphe/EditeurMission';
 import { Badge, Chargement, Erreur, Icone, Vide } from '../components/ui';
 import { useCharge } from '../components/useCharge';
 
@@ -11,6 +12,36 @@ const vierge = (): Mission => ({
   id: '', nom: '', description: '', robotId: null, repetitions: 1, etat: 'brouillon', modifieeLe: '',
   noeuds: [{ id: 'depart', primitiveId: null, x: 0, y: 80 }], liens: [],
 });
+
+/** L'éditeur proposé (canevas façon n8n) ou l'actuel, retenu par navigateur le temps de comparer. */
+type Editeur = 'propose' | 'actuel';
+const CLE_EDITEUR = 'mpc.front.editeur';
+
+function editeurRetenu(): Editeur {
+  try {
+    return localStorage.getItem(CLE_EDITEUR) === 'actuel' ? 'actuel' : 'propose';
+  } catch {
+    return 'propose';
+  }
+}
+
+/** La mission en cours sur le robot, relue chaque seconde tant qu'elle est celle qu'on regarde. */
+function useExecution(robotId: string | undefined, missionId: string, active: boolean, fini: () => void): Execution | null {
+  const [execution, setExecution] = useState<Execution | null>(null);
+  useEffect(() => {
+    if (!robotId || !active) return;
+    let vivant = true;
+    const lire = () => api.execution(robotId).then((x) => {
+      if (!vivant) return;
+      setExecution(x?.missionId === missionId ? x : null);
+      if (!x) fini();
+    }).catch(() => undefined);
+    lire();
+    const t = setInterval(lire, 1000);
+    return () => { vivant = false; clearInterval(t); };
+  }, [robotId, missionId, active]); // eslint-disable-line react-hooks/exhaustive-deps
+  return active ? execution : null;
+}
 
 /** Les nœuds joués : ceux qu'on atteint depuis le départ. */
 function joues(m: Mission): number {
@@ -32,8 +63,15 @@ export function MissionEditeur() {
   const robot = useCharge(robotUnique);
   const [m, setM] = useState<Mission | null>(null);
   const [message, setMessage] = useState<{ ton: 'ok' | 'danger'; texte: string } | null>(null);
+  const [editeur, setEditeur] = useState<Editeur>(editeurRetenu);
+  const execution = useExecution(robot.donnee?.id, m?.id ?? '', m?.etat === 'en_cours', source.recharger);
 
   useEffect(() => { if (source.donnee) setM(source.donnee); }, [source.donnee]);
+
+  function choisirEditeur(e: Editeur) {
+    setEditeur(e);
+    try { localStorage.setItem(CLE_EDITEUR, e); } catch { /* le choix ne vit que pendant la session */ }
+  }
 
   if ((source.enCours && !m) || !primitives.donnee) return <Chargement />;
   if (!m) return <Vide titre="Mission introuvable"><Link to="/missions">Retour aux missions</Link></Vide>;
@@ -84,6 +122,10 @@ export function MissionEditeur() {
           placeholder="Nom de la mission" aria-label="Nom de la mission" />
         <Badge ton={ETATS_MISSION[m.etat].ton}>{ETATS_MISSION[m.etat].libelle}</Badge>
         <span className="espace" />
+        <span className="em-segment graphe-choix-editeur" title="Comparer l’éditeur proposé et l’actuel">
+          <button className={editeur === 'propose' ? 'actif' : ''} onClick={() => choisirEditeur('propose')}>Proposé</button>
+          <button className={editeur === 'actuel' ? 'actif' : ''} onClick={() => choisirEditeur('actuel')}>Actuel</button>
+        </span>
         <label className="graphe-repet">×
           <input type="number" min={1} max={999} value={m.repetitions} disabled={enCours} aria-label="Répétitions"
             onChange={(e) => maj({ repetitions: Math.max(1, Number(e.target.value) || 1) })} />
@@ -107,9 +149,15 @@ export function MissionEditeur() {
         {enCours && ' · mission en cours, lecture seule'}
       </p>
 
-      <EditeurGraphe key={m.id || 'nouvelle'} noeuds={m.noeuds} liens={m.liens} primitives={primitives.donnee}
-        modifiable={!enCours}
-        onChange={(noeuds: NoeudMission[], liens: LienMission[]) => maj({ noeuds, liens })} />
+      {editeur === 'propose' ? (
+        <EditeurMission key={`${m.id || 'nouvelle'}-${enCours}`} noeuds={m.noeuds} liens={m.liens} primitives={primitives.donnee}
+          modifiable={!enCours} execution={execution}
+          onChange={(noeuds: NoeudMission[], liens: LienMission[]) => maj({ noeuds, liens })} />
+      ) : (
+        <EditeurGraphe key={m.id || 'nouvelle'} noeuds={m.noeuds} liens={m.liens} primitives={primitives.donnee}
+          modifiable={!enCours}
+          onChange={(noeuds: NoeudMission[], liens: LienMission[]) => maj({ noeuds, liens })} />
+      )}
     </div>
   );
 }

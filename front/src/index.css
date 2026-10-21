@@ -1219,6 +1219,28 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 /* La planche réduite d'un bloc (tablette) : le dessin, les traits et les tableaux gardent leurs positions. */
 .corps-echelle { position: relative; transform-origin: 0 0; }
 
+/* L'éditeur proposé, dans l'écran des missions (components/graphe/EditeurMission) : le canevas et la palette à droite. */
+.em-editeur {
+  position: relative; flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 220px; border-radius: 14px; overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 0.1); background: #0b0d10; color: #e9eef7;
+}
+.em-editeur-lecture { grid-template-columns: 1fr; }
+.em-editeur-canevas { position: relative; min-width: 0; }
+.em-editeur-canevas .react-flow { background: #0b0d10; }
+.em-editeur .em-panneau { top: 10px; }
+.em-editeur-aide { position: absolute; left: 50%; top: 50%; transform: translate(-50%, 60px); margin: 0; text-align: center; color: #8a93a3; font-size: 0.88rem; line-height: 1.6; pointer-events: none; }
+.em-palette-avenir .em-palette-item { opacity: 0.45; cursor: not-allowed; }
+.em-palette .em-palette-item { width: 100%; border: 0; background: none; text-align: left; font-family: inherit; }
+.em-fiche { list-style: none; margin: 0 0 4px; padding: 0 !important; }
+.em-fiche li { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-bottom: 1px solid rgb(255 255 255 / 0.05); color: #e9eef7; }
+.em-fiche li span { color: #8a93a3; }
+.graphe-choix-editeur button { height: 28px; padding: 0 10px; border: 0; border-radius: 7px; background: none; color: #8a93a3; font: 600 0.78rem/1 'Inter', system-ui, sans-serif; cursor: pointer; }
+.graphe-choix-editeur button.actif { color: #0b0d10; background: #e9eef7; }
+@media (max-width: 899px) {
+  .em-editeur { grid-template-columns: 1fr; }
+  .em-editeur .em-palette { display: none; }
+}
+
 /* L'éditeur de missions (components/missions) : nœuds, poignées, états. Charte : components/missions/charte.ts. */
 .em-icone { display: grid; place-items: center; width: 26px; height: 26px; flex: none; border-radius: 7px; border: 1px solid; }
 .em-phrase { font-size: 0.84rem; line-height: 1.5; font-weight: 600; }

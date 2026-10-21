@@ -66,6 +66,16 @@ question) dessinée de trois façons — A ligne de métro, B blocs empilés fa�
 jouée dans les trois à la fois. La mission est écrite une fois dans `logique.ts` ; chaque dessin est un fichier
 (`LogiqueMetro.tsx`, `LogiqueBlocs.tsx`, `LogiqueColonne.tsx`), l'onde des liens vit dans `Onde.tsx`.
 
+## L'éditeur proposé, dans l'écran des missions
+
+`#/missions/:id` montre l'éditeur proposé par défaut ; l'interrupteur « Proposé / Actuel » de la barre ramène
+l'éditeur d'origine (`EditeurGraphe`), intact, et le navigateur retient le choix. Le proposé
+(`components/graphe/EditeurMission.tsx`) dessine la même mission de l'API : les primitives en tuiles, « réussi » tout
+droit, « échec » en ambre quand une primitive l'ouvre (sa fiche, au double-clic : « si ça rate »), un « + » au bout
+des sorties libres, la palette à droite ; la logique y est annoncée, grisée, tant que le back ne la joue pas. Pendant
+une mission, il lit `Execution` : le chemin joué, l'étape en cours avec son avancement, l'onde qui y mène, le tour.
+`components/graphe/correspondance.ts` fait le pont entre la mission de l'API et le canevas.
+
 ## Les couleurs de la scène
 
 Une couleur = un sens. **Le rouge est réservé au danger** (arrêt d'urgence, alarme, moteur trop chaud, zone machine),
