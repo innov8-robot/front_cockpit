@@ -66,3 +66,7 @@ export const ETATS = {
 } as const;
 
 export type EtatNoeud = keyof typeof ETATS;
+
+/** La couleur de l'onde d'un lien pendant une exécution : l'issue qu'elle porte ; l'entrée dans une boucle est neutre. */
+export type Ton = 'ok' | 'echec' | 'danger' | 'neutre';
+export const TONS: Record<Ton, string> = { ok: '#3dff8a', echec: '#ffb02e', danger: '#ff2d3a', neutre: '#e9eef7' };

@@ -1,8 +1,8 @@
-import { FAMILLE, FAMILLES, ETATS, SORTIES, STATUTS } from '../components/missions/charte';
+import { FAMILLE, FAMILLES, ETATS, SORTIES, STATUTS, TONS, type Ton } from '../components/missions/charte';
 import { CATALOGUE } from '../components/missions/catalogue';
 import { CarteNoeud } from '../components/missions/Noeud';
 import { EXIGENCES, EXISTANT, HISTOIRES, PERSONAS, PRINCIPES, QUESTIONS } from '../components/missions/proposition';
-import { Prototype } from '../components/missions/Prototype';
+import { OndeExemple, Prototype } from '../components/missions/Prototype';
 
 const SECTIONS: [string, string][] = [
   ['intention', 'L’intention'], ['existant', 'Ce qui existe'], ['personas', 'Pour qui'], ['histoires', 'User stories'],
@@ -11,6 +11,8 @@ const SECTIONS: [string, string][] = [
 ];
 
 const PRIORITE: Record<string, string> = { Doit: 'em-p-doit', Devrait: 'em-p-devrait', Pourrait: 'em-p-pourrait' };
+
+const ONDES: [Ton, string][] = [['ok', 'après un succès'], ['echec', 'après un échec'], ['danger', 'arrêt d’urgence']];
 
 /** La proposition d'éditeur de missions : du besoin au prototype (#/essai/missions). */
 export function EssaiMissions() {
@@ -121,16 +123,30 @@ export function EssaiMissions() {
               </div>
             ))}
           </div>
-          <h3 className="em-sous">États d’exécution : la couleur et une icône</h3>
+          <h3 className="em-sous">Pendant l’exécution : une onde vers l’étape en cours</h3>
+          <div className="em-grille-ondes">
+            {ONDES.map(([ton, texte]) => (
+              <div key={ton} className="em-onde-ex">
+                <OndeExemple ton={ton} />
+                <span style={{ color: TONS[ton] }}>{texte}</span>
+              </div>
+            ))}
+          </div>
+          <h3 className="em-sous">États d’une étape : en haut à droite</h3>
           <div className="em-grille-etats">
             {(Object.keys(ETATS) as (keyof typeof ETATS)[]).map((e) => (
-              <CarteNoeud key={e} type={CATALOGUE.find((t) => t.cle === 'prise_objet')!} valeurs={{ primitive: 'Prendre la pièce' }} etat={e} titre={ETATS[e].libelle} />
+              <figure key={e}>
+                <CarteNoeud type={CATALOGUE.find((t) => t.cle === 'prise_objet')!} valeurs={{ primitive: 'pièce' }} etat={e} />
+                <figcaption>{ETATS[e].libelle}</figcaption>
+              </figure>
             ))}
           </div>
           <h3 className="em-sous">Typographie et mesures</h3>
           <ul className="em-constats">
             <li>Inter pour les phrases des nœuds (0,86 rem, gras) ; mono majuscules espacées pour les familles, sorties et états.</li>
-            <li>Nœud de 236 px, coins de 12 px ; cadre de boucle aux coins de 16 px, bordure pointillée de sa famille.</li>
+            <li>Un nœud tient sur une ligne : une icône, deux ou trois mots, ses réglages en pastilles. Son nom complet est dans l’info-bulle et dans ses réglages.</li>
+            <li>Coins de 12 px ; cadre de boucle aux coins de 16 px, bordure pointillée de sa famille, numéro du tour en pastille.</li>
+            <li>Sorties : un signe à côté de la poignée (✓ réussi, ✕ échoué, oui / non), jamais d’étiquette sur les liens.</li>
             <li>Poignées de 11 px (22 px de zone tactile), cibles d’au moins 44 px sur tablette ; grille de points de 24 px.</li>
             <li>Une pastille = un réglage ; une pastille hexagonale = une condition (vrai / faux), comme les booléens de Scratch.</li>
           </ul>
@@ -164,7 +180,7 @@ export function EssaiMissions() {
 
         <section id="prototype">
           <h2><span>08</span>Prototype</h2>
-          <p className="em-intro">« Vider la table dans le bac » : aller à la table, pour chaque pièce vue la prendre (deux essais), la déposer, compter ; une pièce imprenable appelle l’opérateur ; à la fin, rentrer les bras et retourner à la base. Cliquez un nœud pour ouvrir son panneau ; « Simuler » joue une exécution (une prise rate une fois, puis passe).</p>
+          <p className="em-intro">« Vider la table dans le bac » : aller à la table, pour chaque pièce vue la prendre (deux essais), la déposer, compter ; une pièce imprenable appelle l’opérateur ; à la fin, rentrer les bras et retourner à la base. « ▶ Simuler » joue une exécution : la première pièce passe, la seconde rate deux fois et l’opérateur est appelé. Clic droit sur un nœud : ses actions ; double-clic : ses réglages ; la palette, à droite, se glisse sur le canevas.</p>
           <Prototype />
         </section>
 

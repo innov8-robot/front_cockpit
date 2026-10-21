@@ -34,6 +34,8 @@ export interface TypeNoeud {
   aujourdhui?: string;
   /** Il fait bouger le robot : marqué sur le canevas, et vérifié avant le lancement. */
   bouge?: boolean;
+  /** C'est un cadre : ses étapes sont dedans, comme un bloc en C de Scratch. */
+  contient?: boolean;
   aide: string;
 }
 
@@ -66,12 +68,12 @@ export const ICONES: Record<string, string> = {
 /** Les nœuds de logique, de données, de temps, d'opérateur, et les déclencheurs : indépendants du robot. */
 export const NOEUDS_GENERAUX: TypeNoeud[] = [
   {
-    cle: 'au_lancement', statut: 'existe', famille: 'declencheur', nom: 'Au lancement', phrase: 'Quand on lance la mission', icone: 'eclair',
+    cle: 'au_lancement', statut: 'existe', famille: 'declencheur', nom: 'Au lancement', phrase: 'Lancement', icone: 'eclair',
     sorties: ['suite'], entree: false, reglages: [], aujourdhui: "le bouton « ▶ Lancer la mission » de l’onglet Exécution",
     aide: 'Le départ : la mission commence quand quelqu’un appuie sur « Lancer ».',
   },
   {
-    cle: 'a_heure_fixe', statut: 'nouveau', famille: 'declencheur', nom: 'À heure fixe', phrase: 'Chaque {jours} à {heure}', icone: 'horloge',
+    cle: 'a_heure_fixe', statut: 'nouveau', famille: 'declencheur', nom: 'À heure fixe', phrase: '{heure}', icone: 'horloge',
     sorties: ['suite'], entree: false,
     reglages: [
       { cle: 'jours', libelle: 'Jours', type: 'choix', options: ['jour ouvré', 'jour', 'lundi', 'vendredi'], defaut: 'jour ouvré' },
@@ -80,41 +82,41 @@ export const NOEUDS_GENERAUX: TypeNoeud[] = [
     aide: 'Planifier une mission : la tournée de 6 h 30, le rangement de fin de poste.',
   },
   {
-    cle: 'sur_signal', statut: 'nouveau', famille: 'declencheur', nom: 'Sur signal', phrase: 'Quand {signal} arrive', icone: 'signal',
+    cle: 'sur_signal', statut: 'nouveau', famille: 'declencheur', nom: 'Sur signal', phrase: '{signal}', icone: 'signal',
     sorties: ['suite'], entree: false,
-    reglages: [{ cle: 'signal', libelle: 'Signal', type: 'choix', options: ['un bac plein', 'un appel de l’atelier', 'la fin de charge'], defaut: 'un bac plein' }],
+    reglages: [{ cle: 'signal', libelle: 'Signal', type: 'choix', options: ['bac plein', 'appel atelier', 'fin de charge'], defaut: 'bac plein' }],
     aide: 'Démarrer sur un évènement extérieur (un capteur, un bouton d’appel, un autre système).',
   },
   {
     cle: 'si', statut: 'nouveau', famille: 'logique', nom: 'Si', phrase: 'Si {condition}', icone: 'si', sorties: ['vrai', 'faux'], entree: true,
-    reglages: [{ cle: 'condition', libelle: 'Condition', type: 'condition', defaut: 'il reste une pièce sur la table' }],
+    reglages: [{ cle: 'condition', libelle: 'Condition', type: 'condition', defaut: 'pièce restante' }],
     aide: 'Choisir un chemin selon une condition lue sur le robot ou dans la mission.',
   },
   {
-    cle: 'repeter', statut: 'existe', famille: 'logique', nom: 'Répéter', phrase: 'Répéter {fois} fois', icone: 'repeter', sorties: ['corps', 'fini'],
+    cle: 'repeter', contient: true, statut: 'existe', famille: 'logique', nom: 'Répéter', phrase: 'Répéter {fois}×', icone: 'repeter', sorties: ['corps', 'fini'],
     entree: true, reglages: [{ cle: 'fois', libelle: 'Nombre de tours', type: 'nombre', defaut: 3 }],
     aujourdhui: "la mission entière boucle : un nombre de tours, ou jusqu’au Stop",
     aide: 'Refaire les étapes du cadre un nombre de fois fixé, puis continuer.',
   },
   {
-    cle: 'pour_chaque', statut: 'nouveau', famille: 'logique', nom: 'Pour chaque', phrase: 'Pour chaque {objet} vu', icone: 'chaque',
+    cle: 'pour_chaque', contient: true, statut: 'nouveau', famille: 'logique', nom: 'Pour chaque', phrase: 'Chaque {objet}', icone: 'chaque',
     sorties: ['corps', 'fini'], entree: true,
     reglages: [{ cle: 'objet', libelle: 'Objet', type: 'objet', defaut: 'pièce Novares' }],
     produit: ['l’objet courant'],
     aide: 'Refaire les étapes du cadre pour chaque objet que le robot voit, le plus proche d’abord.',
   },
   {
-    cle: 'tant_que', statut: 'atome', famille: 'logique', nom: 'Tant que', phrase: 'Tant que {condition}', icone: 'tantque',
+    cle: 'tant_que', contient: true, statut: 'atome', famille: 'logique', nom: 'Tant que', phrase: 'Tant que {condition}', icone: 'tantque',
     sorties: ['corps', 'fini'], entree: true,
     reglages: [
-      { cle: 'condition', libelle: 'Condition', type: 'condition', defaut: 'le bac n’est pas plein' },
+      { cle: 'condition', libelle: 'Condition', type: 'condition', defaut: 'bac pas plein' },
       { cle: 'max', libelle: 'Au plus', type: 'nombre', unite: 'tours', defaut: 20, aide: 'Une boucle a toujours une limite.' },
     ],
     aujourdhui: "l’atome repeat de l’arbre (until, max_iter)",
     aide: 'Refaire le cadre tant que la condition tient, jamais plus que la limite.',
   },
   {
-    cle: 'essayer', statut: 'existe', famille: 'logique', nom: 'Réessayer', phrase: 'Réessayer jusqu’à {fois} fois', icone: 'essayer',
+    cle: 'essayer', contient: true, statut: 'existe', famille: 'logique', nom: 'Réessayer', phrase: '{fois} essais', icone: 'essayer',
     sorties: ['ok', 'echec'], entree: true,
     reglages: [
       { cle: 'fois', libelle: 'Essais', type: 'nombre', defaut: 2 },
@@ -124,16 +126,16 @@ export const NOEUDS_GENERAUX: TypeNoeud[] = [
     aide: 'Rejouer le cadre s’il échoue ; « échoué » ne sort qu’après le dernier essai.',
   },
   {
-    cle: 'compteur', statut: 'nouveau', famille: 'donnees', nom: 'Compter', phrase: 'Ajouter {pas} à {variable}', icone: 'plus', sorties: ['suite'],
+    cle: 'compteur', statut: 'nouveau', famille: 'donnees', nom: 'Compter', phrase: '{variable} +{pas}', icone: 'plus', sorties: ['suite'],
     entree: true,
     reglages: [
-      { cle: 'variable', libelle: 'Variable', type: 'variable', defaut: 'pièces déposées' },
+      { cle: 'variable', libelle: 'Variable', type: 'variable', defaut: 'déposées' },
       { cle: 'pas', libelle: 'Ajouter', type: 'nombre', defaut: 1 },
     ],
     aide: 'Tenir un compte : les pièces déposées, les échecs, les tours.',
   },
   {
-    cle: 'definir', statut: 'nouveau', famille: 'donnees', nom: 'Définir', phrase: 'Mettre {variable} à {valeur}', icone: 'variable', sorties: ['suite'],
+    cle: 'definir', statut: 'nouveau', famille: 'donnees', nom: 'Définir', phrase: '{variable} = {valeur}', icone: 'variable', sorties: ['suite'],
     entree: true,
     reglages: [
       { cle: 'variable', libelle: 'Variable', type: 'variable', defaut: 'bac courant' },
@@ -142,22 +144,22 @@ export const NOEUDS_GENERAUX: TypeNoeud[] = [
     aide: 'Donner une valeur à une variable de la mission.',
   },
   {
-    cle: 'attendre', statut: 'atome', famille: 'temps', nom: 'Attendre', phrase: 'Attendre {duree}', icone: 'attendre', sorties: ['suite'], entree: true,
+    cle: 'attendre', statut: 'atome', famille: 'temps', nom: 'Attendre', phrase: '{duree}', icone: 'attendre', sorties: ['suite'], entree: true,
     reglages: [{ cle: 'duree', libelle: 'Durée', type: 'duree', unite: 's', defaut: 5 }],
     aujourdhui: "l’atome wait de l’arbre (seconds)",
     aide: 'Une pause : laisser une machine finir, un opérateur s’écarter.',
   },
   {
-    cle: 'attendre_signal', statut: 'nouveau', famille: 'temps', nom: 'Attendre un signal', phrase: 'Attendre {signal}', icone: 'signal',
+    cle: 'attendre_signal', statut: 'nouveau', famille: 'temps', nom: 'Attendre un signal', phrase: '{signal}', icone: 'signal',
     sorties: ['ok', 'echec'], entree: true,
     reglages: [
-      { cle: 'signal', libelle: 'Signal', type: 'choix', options: ['la presse prête', 'un bac vide', 'le feu vert de l’opérateur'], defaut: 'la presse prête' },
+      { cle: 'signal', libelle: 'Signal', type: 'choix', options: ['presse prête', 'bac vide', 'feu vert'], defaut: 'presse prête' },
       { cle: 'limite', libelle: 'Au plus', type: 'duree', unite: 's', defaut: 120 },
     ],
     aide: 'Attendre un évènement ; « échoué » si la limite passe sans lui.',
   },
   {
-    cle: 'demander', statut: 'existe', famille: 'operateur', nom: 'Demander à l’opérateur', phrase: 'Demander : « {message} »', icone: 'operateur',
+    cle: 'demander', statut: 'existe', famille: 'operateur', nom: 'Demander à l’opérateur', phrase: 'Appeler l’opérateur', icone: 'operateur',
     sorties: ['ok', 'echec'], entree: true,
     reglages: [
       { cle: 'message', libelle: 'Message', type: 'texte', defaut: 'Remettez un bac vide' },
@@ -167,13 +169,13 @@ export const NOEUDS_GENERAUX: TypeNoeud[] = [
     aide: 'Le robot s’arrête et attend un humain : une notification sur la tablette, « fait » ou « abandonner ».',
   },
   {
-    cle: 'sous_mission', statut: 'nouveau', famille: 'logique', nom: 'Sous-mission', phrase: 'Jouer {mission}', icone: 'sousmission',
+    cle: 'sous_mission', statut: 'nouveau', famille: 'logique', nom: 'Sous-mission', phrase: '{mission}', icone: 'sousmission',
     sorties: ['ok', 'echec'], entree: true,
     reglages: [{ cle: 'mission', libelle: 'Mission', type: 'choix', options: ['Ranger le poste', 'Recharger'], defaut: 'Ranger le poste' }],
     aide: 'Réutiliser une mission entière comme une seule étape.',
   },
   {
-    cle: 'terminer', statut: 'nouveau', famille: 'fin', nom: 'Terminer', phrase: 'Terminer : {verdict}', icone: 'fin', sorties: [], entree: true,
+    cle: 'terminer', statut: 'nouveau', famille: 'fin', nom: 'Terminer', phrase: 'Fin {verdict}', icone: 'fin', sorties: [], entree: true,
     reglages: [{ cle: 'verdict', libelle: 'Verdict', type: 'choix', options: ['réussie', 'échouée'], defaut: 'réussie' }],
     aide: 'Finir la mission en disant comment : c’est ce verdict que l’historique retient.',
   },
@@ -188,7 +190,7 @@ export const NOEUDS_ROBOT: TypeNoeud[] = [
     cle: 'prise_objet', statut: 'existe', famille: 'robot', nom: 'Prendre un objet', phrase: 'Prendre {primitive}', icone: 'prendre',
     sorties: ['ok', 'echec'], entree: true, bouge: true,
     reglages: [
-      { cle: 'primitive', libelle: 'Prise enregistrée', type: 'primitive', defaut: 'Prendre la pièce Novares', aide: 'Une prise montrée au bras mou, avec la signature de l’objet.' },
+      { cle: 'primitive', libelle: 'Prise enregistrée', type: 'primitive', defaut: 'pièce Novares', aide: 'Une prise montrée au bras mou, avec la signature de l’objet.' },
       { cle: 'orientation', libelle: 'Orientation', type: 'choix', options: ['suivie', 'ignorée'], defaut: 'suivie' },
       { cle: 'tolerance', libelle: 'Peut tourner de ±', type: 'nombre', unite: '°', defaut: 0, aide: 'De 0 à 90°, essayé par pas de 10°.' },
     ],
@@ -198,7 +200,7 @@ export const NOEUDS_ROBOT: TypeNoeud[] = [
     aide: 'Un objet pris d’une main, puis soulevé. Le robot retrouve l’objet par sa signature ; il essaie la main de la démo, puis l’autre.',
   },
   {
-    cle: 'prise_boite', statut: 'existe', famille: 'robot', nom: 'Prendre une boîte', phrase: 'Prendre {repere} à deux mains', icone: 'bac',
+    cle: 'prise_boite', statut: 'existe', famille: 'robot', nom: 'Prendre une boîte', phrase: 'Prendre {repere}', icone: 'bac',
     sorties: ['ok', 'echec'], entree: true, bouge: true,
     reglages: [
       { cle: 'repere', libelle: 'Boîte', type: 'choix', options: ['boite_novares'], defaut: 'boite_novares', aide: 'Une boîte du registre de la cellule, repérée par ses tags.' },
@@ -210,7 +212,7 @@ export const NOEUDS_ROBOT: TypeNoeud[] = [
     aide: 'Une boîte prise par ses poignées, à deux mains : approche, perception, survol, insertion, serrage, levée.',
   },
   {
-    cle: 'depose', statut: 'existe', famille: 'robot', nom: 'Poser la boîte', phrase: 'Poser la boîte {genre}', icone: 'deposer',
+    cle: 'depose', statut: 'existe', famille: 'robot', nom: 'Poser la boîte', phrase: 'Poser la boîte', icone: 'deposer',
     sorties: ['ok', 'echec'], entree: true, bouge: true,
     reglages: [
       { cle: 'genre', libelle: 'Où', type: 'choix', options: ['sur place', 'sur un plateau vu'], defaut: 'sur un plateau vu', aide: '« sur un plateau vu » : la zone de dépose enseignée, plateau remesuré au lidar.' },
@@ -224,7 +226,7 @@ export const NOEUDS_ROBOT: TypeNoeud[] = [
     cle: 'depose_objet', statut: 'existe', famille: 'robot', nom: 'Poser un objet', phrase: 'Poser {primitive}', icone: 'deposer',
     sorties: ['ok', 'echec'], entree: true, bouge: true,
     reglages: [
-      { cle: 'primitive', libelle: 'Dépose enregistrée', type: 'primitive', defaut: 'Déposer dans le bac B', aide: 'Un endroit montré au bras mou.' },
+      { cle: 'primitive', libelle: 'Dépose enregistrée', type: 'primitive', defaut: 'bac B', aide: 'Un endroit montré au bras mou.' },
       { cle: 'ancrage', libelle: 'Par rapport à', type: 'choix', options: ['au robot', 'au tag de table', 'à un objet'], defaut: 'à un objet' },
     ],
     prerequis: ['charge = une main (la prise d’avant)'],
@@ -233,7 +235,7 @@ export const NOEUDS_ROBOT: TypeNoeud[] = [
     aide: 'L’objet tenu, posé au point montré, par rapport au robot, au tag de table ou à un objet de référence.',
   },
   {
-    cle: 'deplacer', statut: 'existe', famille: 'deplacement', nom: 'Aller à un poste', phrase: 'Aller à {poste}', icone: 'rouler',
+    cle: 'deplacer', statut: 'existe', famille: 'deplacement', nom: 'Aller à un poste', phrase: 'Aller {poste}', icone: 'rouler',
     sorties: ['ok', 'echec'], entree: true, bouge: true,
     reglages: [{ cle: 'poste', libelle: 'Poste', type: 'poste', options: ['table', 'étagère', 'base', 'bac B'], defaut: 'table', aide: 'Un poste de la carte du châssis.' }],
     prerequis: ['bras dans une posture connue', 'châssis localisé sur la carte du poste'],
@@ -242,14 +244,14 @@ export const NOEUDS_ROBOT: TypeNoeud[] = [
     aide: 'La base roule jusqu’au poste : 0,5 m/s à vide, 0,25 puis 0,08 m/s en portant une boîte.',
   },
   {
-    cle: 'tourner_base', statut: 'existe', famille: 'deplacement', nom: 'Tourner sur place', phrase: 'Tourner la base de {angle}', icone: 'repeter',
+    cle: 'tourner_base', statut: 'existe', famille: 'deplacement', nom: 'Tourner sur place', phrase: 'Pivoter {angle}', icone: 'repeter',
     sorties: ['ok', 'echec'], entree: true, bouge: true,
     reglages: [{ cle: 'angle', libelle: 'Angle', type: 'nombre', unite: '°', defaut: 180, aide: 'Entre −360 et 360, positif vers la gauche.' }],
     prerequis: ['bras dans une posture connue'], produit: ['base déplacée'], issues: ['en_route'],
     aide: 'La base pivote sur place.',
   },
   {
-    cle: 'tourner_buste', statut: 'existe', famille: 'deplacement', nom: 'Tourner le buste', phrase: 'Tourner le buste à {lacet}', icone: 'rentrer',
+    cle: 'tourner_buste', statut: 'existe', famille: 'deplacement', nom: 'Tourner le buste', phrase: 'Buste {lacet}', icone: 'rentrer',
     sorties: ['ok', 'echec'], entree: true, bouge: true,
     reglages: [{ cle: 'lacet', libelle: 'Lacet', type: 'nombre', unite: '°', defaut: 90, aide: 'Absolu, de −155 à 155 (0 = face avant).' }],
     prerequis: ['bras dans une posture connue'], issues: ['buste_bloque (réessayable)', 'piece_perdue'],
@@ -262,14 +264,14 @@ export const NOEUDS_ROBOT: TypeNoeud[] = [
     aide: 'Les bras reviennent au repos par un chemin planifié. Seulement mains vides.',
   },
   {
-    cle: 'voir', statut: 'atome', famille: 'perception', nom: 'Voir', phrase: 'Si {objet} est visible', icone: 'oeil',
+    cle: 'voir', statut: 'atome', famille: 'perception', nom: 'Voir', phrase: '{objet} vu ?', icone: 'oeil',
     sorties: ['vrai', 'faux'], entree: true,
     reglages: [{ cle: 'objet', libelle: 'Objet', type: 'objet', defaut: 'pièce Novares', aide: 'Un objet dont on a la signature.' }],
     aujourdhui: 'les atomes perceive et perceive_fixe, sous une prise',
     aide: 'Regarder sans bouger : oui si l’objet est vu, non sinon.',
   },
   {
-    cle: 'compter', statut: 'nouveau', famille: 'perception', nom: 'Compter', phrase: 'Compter les {objet}', icone: 'compter',
+    cle: 'compter', statut: 'nouveau', famille: 'perception', nom: 'Compter', phrase: 'Compter {objet}', icone: 'compter',
     sorties: ['suite'], entree: true,
     reglages: [
       { cle: 'objet', libelle: 'Objet', type: 'objet', defaut: 'pièce Novares' },
@@ -279,7 +281,7 @@ export const NOEUDS_ROBOT: TypeNoeud[] = [
     aide: 'Compter les objets visibles et ranger le nombre dans une variable : « tant que pièces restantes > 0 ».',
   },
   {
-    cle: 'selon_issue', statut: 'nouveau', famille: 'logique', nom: 'Selon l’échec', phrase: 'Selon l’échec de {etape}', icone: 'si',
+    cle: 'selon_issue', statut: 'nouveau', famille: 'logique', nom: 'Selon l’échec', phrase: 'Selon l’échec', icone: 'si',
     sorties: ['cas1', 'cas2', 'autre'], entree: true,
     reglages: [
       { cle: 'etape', libelle: 'Étape', type: 'texte', defaut: 'la prise' },

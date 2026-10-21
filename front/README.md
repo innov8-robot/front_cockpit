@@ -43,10 +43,13 @@ L'enregistrement d'une primitive est simulé (2,5 s) : au réel, il pilotera la 
 ## La proposition d'éditeur de missions
 
 **`#/essai/missions`** : user stories, cahier des charges, primitives réelles du cockpit, principes repris de n8n et
-de Scratch, charte graphique des nœuds, galerie des composants et prototype interactif (canevas, panneau, simulation).
-Le code est dans `src/components/missions/` : `charte.ts` (familles, sorties, états), `catalogue.ts` (les types de
-nœuds — en ajouter un, c'est une entrée), `Noeud.tsx` (nœud et cadre de boucle), `Prototype.tsx`, `proposition.ts`
-(le texte de la proposition).
+de Scratch, charte graphique des nœuds, galerie des composants et prototype interactif. Dans le prototype : palette à
+droite (on glisse un nœud sur le canevas), clic droit sur un nœud pour ses actions, double-clic pour ses réglages ;
+« Simuler » joue une exécution — le nœud en cours porte un rond de chargement, le lien qui y mène une onde à 1 Hz
+(verte après un succès, ambre après un échec, rouge à l'arrêt d'urgence), et la vue suit l'étape quand elle sort du
+cadre. Le code est dans `src/components/missions/` : `charte.ts` (familles, sorties, états, couleurs de l'onde),
+`catalogue.ts` (les types de nœuds — en ajouter un, c'est une entrée), `Noeud.tsx` (nœud et cadre de boucle),
+`Prototype.tsx` (canevas, lien animé, menu, simulation), `proposition.ts` (le texte de la proposition).
 
 ## Les couleurs de la scène
 
