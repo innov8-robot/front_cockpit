@@ -278,8 +278,10 @@ function Canevas({ noeuds, liens, primitives, modifiable, execution, onChange }:
             fitView fitViewOptions={{ padding: 0.25, maxZoom: 1 }} minZoom={0.3} maxZoom={1.6} proOptions={{ hideAttribution: true }}>
             <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#2a3038" />
             <Controls showInteractive={false} position="bottom-left" />
-            <MiniMap pannable zoomable position="bottom-right" maskColor="rgb(5 6 8 / 0.75)" style={{ background: '#0b0d10', width: 140, height: 84 }}
-              nodeColor={(n) => teinte((n.data as NoeudCanevas['data']).type.famille, couleurs)} />
+            {modifiable && (
+              <MiniMap pannable zoomable position="bottom-right" maskColor="rgb(5 6 8 / 0.75)" style={{ background: '#0b0d10', width: 140, height: 84 }}
+                nodeColor={(n) => teinte((n.data as NoeudCanevas['data']).type.famille, couleurs)} />
+            )}
           </ReactFlow>
           {nodes.length <= 1 && modifiable && (
             <p className="em-editeur-aide">Touchez une primitive à droite pour l’ajouter au bout de la mission,<br />ou glissez-la où vous voulez puis reliez-la.</p>

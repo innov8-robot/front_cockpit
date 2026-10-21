@@ -76,6 +76,14 @@ des sorties libres, la palette à droite ; la logique y est annoncée, grisée, 
 une mission, il lit `Execution` : le chemin joué, l'étape en cours avec son avancement, l'onde qui y mène, le tour.
 `components/graphe/correspondance.ts` fait le pont entre la mission de l'API et le canevas.
 
+## La liste des missions : trois propositions
+
+**`#/essai/liste-missions`**, sur les données de l'API : A · liste vivante (le panneau de côté : chaque ligne montre
+la chaîne de primitives en tuiles, les huit derniers runs, réussite, durée moyenne, répétitions ; Lancer et Éditer au
+survol ; la mission qui joue montre son étape, son tour et sa pause), B · cartes (l'écran entier, le graphe de chaque
+mission en miniature), C · liste et aperçu (la mission choisie : son graphe dans l'éditeur en lecture, ses derniers
+runs et leur cause). « Nouvelle mission » y est blanc : le rouge est réservé au danger. Code : `components/listeMissions/`.
+
 ## Les couleurs de la scène
 
 Une couleur = un sens. **Le rouge est réservé au danger** (arrêt d'urgence, alarme, moteur trop chaud, zone machine),

@@ -1647,3 +1647,110 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 }
 @keyframes lg-remonte { from { top: 100%; opacity: 0.2; } 30% { opacity: 1; } to { top: -20px; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .lg-col-retour-actif::after { animation-duration: 3s; } .lg-tete-lecture { transition: none; } }
+
+/* La liste des missions, trois propositions (#/essai/liste-missions ; components/listeMissions). */
+.lm-page { position: fixed; inset: 0; overflow-y: auto; padding: 24px 32px; box-sizing: border-box; color: #e9eef7; font-family: 'Inter', system-ui, sans-serif; }
+.lm-page-tete { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; margin-bottom: 16px; }
+.lm-choix button, .lm-filtres button { height: 30px; padding: 0 12px; border: 0; border-radius: 8px; background: none; color: #8a93a3; font: 600 0.78rem/1 'Inter', system-ui, sans-serif; cursor: pointer; }
+.lm-choix button.actif, .lm-filtres button.actif { color: #0b0d10; background: #e9eef7; }
+.lm-idee { margin: 0; flex-basis: 100%; color: #9aa3ae; font-size: 0.86rem; }
+.lm-cadre {
+  box-sizing: border-box; height: calc(100vh - 150px); min-height: 480px; padding: 22px; border-radius: 18px; border: 1px solid rgb(255 255 255 / 0.1);
+  background: rgb(11 13 16 / 0.92); backdrop-filter: blur(12px); box-shadow: 0 20px 60px rgb(0 0 0 / 0.5);
+}
+.lm-cadre-cote { width: min(540px, 100%); margin-left: auto; }
+.lm-cadre-grand { width: 100%; }
+.lm-liste { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.lm-liste > ul { list-style: none; margin: 0; padding: 0 2px 0 0; overflow-y: auto; min-height: 0; }
+.lm-tete { display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px; }
+.lm-tete-ligne { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.lm-tete h2 { margin: 0; font-size: 1.35rem; letter-spacing: 0.04em; text-transform: uppercase; }
+.lm-tete h2 span { margin-left: 6px; padding: 2px 8px; border-radius: 999px; font: 700 0.75rem/1.4 ui-monospace, monospace; color: #9aa3ae; background: rgb(255 255 255 / 0.07); vertical-align: middle; }
+/* « Nouvelle mission » en blanc : le rouge est réservé au danger. */
+.lm-nouvelle { display: inline-flex; align-items: center; height: 36px; padding: 0 14px; border-radius: 10px; background: #e9eef7; color: #0b0d10; font: 700 0.84rem/1 'Inter', system-ui, sans-serif; text-decoration: none; box-shadow: 0 0 18px rgb(233 238 247 / 0.18); }
+.lm-recherche { flex: 1 1 180px; height: 34px; padding: 0 12px; box-sizing: border-box; border-radius: 10px; border: 1px solid rgb(255 255 255 / 0.12); background: #070809; color: #e9eef7; font: inherit; font-size: 0.84rem; }
+.lm-filtres { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 2px; border-radius: 10px; border: 1px solid rgb(255 255 255 / 0.1); }
+.lm-filtres button { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 9px; }
+.lm-filtres b { font: 700 10px/1 ui-monospace, monospace; opacity: 0.7; }
+.lm-etat { display: inline-flex; align-items: center; gap: 7px; font: 600 0.74rem/1 'Inter', system-ui, sans-serif; color: var(--etat); white-space: nowrap; }
+.lm-etat i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--etat); box-shadow: 0 0 8px var(--etat); }
+.lm-etat-en_cours i { animation: lm-respire 1s ease-in-out infinite; }
+@keyframes lm-respire { 50% { box-shadow: 0 0 0 4px rgb(233 238 247 / 0.15), 0 0 14px var(--etat); } }
+/* A · une ligne par mission. */
+.lm-ligne { display: grid; gap: 10px; margin-bottom: 8px; padding: 12px 14px; border-radius: 12px; border: 1px solid rgb(255 255 255 / 0.07); background: rgb(255 255 255 / 0.02); transition: border-color 0.2s, background 0.2s; }
+.lm-ligne:hover { border-color: rgb(255 255 255 / 0.16); background: rgb(255 255 255 / 0.035); }
+.lm-ligne-cours { border-color: rgb(233 238 247 / 0.35) !important; box-shadow: 0 0 24px rgb(233 238 247 / 0.08); }
+.lm-ligne-haut { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.lm-nom { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #e9eef7; font-weight: 650; font-size: 0.95rem; text-decoration: none; }
+.lm-nom:hover { text-decoration: underline; text-underline-offset: 3px; }
+.lm-espace { flex: 1; }
+.lm-gestes { display: inline-flex; gap: 6px; opacity: 0; transition: opacity 0.15s; }
+.lm-ligne:hover .lm-gestes, .lm-ligne:focus-within .lm-gestes, .lm-carte .lm-gestes, .lm-detail .lm-gestes { opacity: 1; }
+@media (hover: none) { .lm-gestes { opacity: 1; } }
+.lm-bouton { display: inline-flex; align-items: center; height: 28px; padding: 0 10px; border-radius: 8px; border: 1px solid rgb(255 255 255 / 0.14); background: rgb(255 255 255 / 0.04); color: #e9eef7; font: 600 0.76rem/1 'Inter', system-ui, sans-serif; text-decoration: none; cursor: pointer; }
+.lm-bouton:disabled { opacity: 0.4; cursor: not-allowed; }
+.lm-lancer { background: #e9eef7; border-color: #e9eef7; color: #0b0d10; }
+.lm-chaine { display: flex; flex-wrap: wrap; align-items: center; row-gap: 6px; }
+.lm-depart { width: 12px; height: 18px; box-sizing: border-box; border: 1.5px solid #e9eef7; border-radius: 9px 3px 3px 9px; }
+.lm-maillon { display: inline-flex; align-items: center; }
+.lm-fil { width: 10px; height: 1.5px; background: rgb(154 163 174 / 0.6); }
+.lm-tuile { display: grid; place-items: center; width: 24px; height: 24px; box-sizing: border-box; border-radius: 6px; color: var(--famille); border: 1px solid color-mix(in srgb, var(--famille) 55%, transparent); background: color-mix(in srgb, var(--famille) 13%, #14181e); }
+.lm-tuile-fait { border-color: #3dff8a; box-shadow: 0 0 8px rgb(61 255 138 / 0.3); }
+.lm-tuile-cours { border-color: #e9eef7; animation: lm-tuile-respire 1s ease-in-out infinite; }
+@keyframes lm-tuile-respire { 50% { box-shadow: 0 0 14px rgb(233 238 247 / 0.6); } }
+.lm-echecs { margin-left: 8px; font: 700 10px/1 ui-monospace, monospace; color: #ffb02e; }
+.lm-vide { color: #6b7380; font-size: 0.78rem; }
+.lm-ligne-bas { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.lm-runs { display: inline-flex; gap: 3px; }
+.lm-runs i, .lm-historique i { display: inline-block; width: 5px; height: 14px; border-radius: 2px; }
+.lm-run-reussi { background: #3dff8a; box-shadow: 0 0 6px rgb(61 255 138 / 0.35); }
+.lm-run-echoue { background: #ffb02e; }
+.lm-run-interrompu { background: #5b636e; }
+.lm-run-vide { background: rgb(255 255 255 / 0.07); }
+.lm-chiffres { display: inline-flex; flex-wrap: wrap; gap: 10px; font: 500 0.76rem/1 'Inter', system-ui, sans-serif; color: #8a93a3; }
+.lm-chiffres b { font: 700 0.78rem/1 ui-monospace, monospace; }
+.lm-bon { color: #3dff8a; }
+.lm-moyen { color: #ffb02e; }
+.lm-progression { display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; align-items: center; }
+.lm-progression-texte { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 0.8rem; color: #c9ced6; }
+.lm-progression-texte b { color: #fff; }
+.lm-chrono { font: 600 0.74rem/1.4 ui-monospace, monospace; color: #8a93a3; }
+.lm-barre { grid-column: 1; height: 4px; border-radius: 2px; background: rgb(255 255 255 / 0.08); overflow: hidden; }
+.lm-barre i { display: block; height: 100%; border-radius: 2px; background: #e9eef7; box-shadow: 0 0 10px rgb(233 238 247 / 0.6); transition: width 0.9s linear; }
+.lm-progression .lm-bouton { grid-column: 2; grid-row: 1 / span 2; }
+.lm-rien { color: #8a93a3; font-size: 0.86rem; }
+/* B · les cartes. */
+.lm-cartes { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; overflow-y: auto; min-height: 0; align-content: start; }
+.lm-carte { display: flex; flex-direction: column; border-radius: 14px; border: 1px solid rgb(255 255 255 / 0.08); background: rgb(255 255 255 / 0.02); overflow: hidden; transition: border-color 0.2s; }
+.lm-carte:hover { border-color: rgb(255 255 255 / 0.18); }
+.lm-carte-apercu { display: block; background: #0b0d10 radial-gradient(rgb(255 255 255 / 0.06) 1px, transparent 1px) 0 0 / 14px 14px; border-bottom: 1px solid rgb(255 255 255 / 0.06); }
+.lm-graphe { display: block; width: 100%; height: 120px; }
+.lm-graphe-lien { fill: none; stroke: #9aa3ae; stroke-width: 1.2; opacity: 0.7; }
+.lm-graphe-echec { stroke: #ffb02e; stroke-dasharray: 3 3; }
+.lm-graphe rect { stroke-width: 1; }
+.lm-graphe .lm-graphe-cours { stroke: #e9eef7 !important; filter: drop-shadow(0 0 4px #e9eef7); }
+.lm-carte-corps { display: grid; gap: 9px; padding: 12px 14px 14px; }
+.lm-carte-corps h3 { margin: 0; font-size: 0.98rem; }
+.lm-carte-corps small { color: #8a93a3; font-size: 0.74rem; }
+.lm-carte-nouvelle { align-items: center; justify-content: center; gap: 8px; min-height: 230px; border-style: dashed; color: #9aa3ae; text-decoration: none; font-weight: 600; }
+.lm-carte-nouvelle span { font-size: 2rem; font-weight: 300; color: #e9eef7; }
+/* C · la liste et l'aperçu. */
+.lm-apercu-corps { flex: 1; min-height: 0; display: grid; grid-template-columns: 260px 1fr; gap: 16px; }
+.lm-apercu-liste { list-style: none; margin: 0; padding: 0; overflow-y: auto; }
+.lm-apercu-liste button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border: 0; border-radius: 10px; background: none; color: #c9ced6; font: inherit; text-align: left; cursor: pointer; }
+.lm-apercu-liste button:hover { background: rgb(255 255 255 / 0.04); }
+.lm-apercu-liste button.actif { background: rgb(255 255 255 / 0.07); color: #fff; box-shadow: inset 2px 0 0 #e9eef7; }
+.lm-apercu-liste small { color: #8a93a3; font: 600 0.74rem/1 ui-monospace, monospace; }
+.lm-detail { display: flex; flex-direction: column; gap: 10px; min-height: 0; min-width: 0; }
+.lm-detail h3 { margin: 0; flex: 1; font-size: 1.1rem; }
+.lm-description { margin: 0; color: #9aa3ae; font-size: 0.86rem; }
+.lm-detail-graphe { flex: 1; min-height: 220px; display: flex; }
+.lm-historique { list-style: none; margin: 0; padding: 0; font-size: 0.8rem; color: #c9ced6; }
+.lm-historique li { display: grid; grid-template-columns: 10px 80px 1fr 50px 90px; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid rgb(255 255 255 / 0.05); }
+.lm-historique small { color: #8a93a3; text-align: right; }
+.lm-cause { color: #ffcf7a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 899px) {
+  .lm-page { padding: 16px; }
+  .lm-apercu-corps { grid-template-columns: 1fr; }
+  .lm-apercu-liste { max-height: 160px; }
+}
