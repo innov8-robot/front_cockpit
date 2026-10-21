@@ -1,4 +1,4 @@
-import { FAMILLE, FAMILLES, ETATS, SORTIES, STATUTS, TONS, type EtatLien, type Ton } from '../components/missions/charte';
+import { FAMILLE, FAMILLES, ETATS, SORTIES, STATUTS, TONS, type Ton } from '../components/missions/charte';
 import { CATALOGUE } from '../components/missions/catalogue';
 import { CarteNoeud } from '../components/missions/Noeud';
 import { EXIGENCES, EXISTANT, HISTOIRES, PERSONAS, PRINCIPES, QUESTIONS } from '../components/missions/proposition';
@@ -13,10 +13,7 @@ const SECTIONS: [string, string][] = [
 
 const PRIORITE: Record<string, string> = { Doit: 'em-p-doit', Devrait: 'em-p-devrait', Pourrait: 'em-p-pourrait' };
 
-const ONDES: [Ton, string, EtatLien][] = [
-  ['ok', 'vers l’étape en cours', 'actif'], ['ok', 'chemin validé', 'parcouru'], ['echec', 'après un échec', 'actif'],
-  ['echec', 'chemin d’échec pris', 'parcouru'], ['danger', 'arrêt d’urgence', 'actif'],
-];
+const ONDES: [Ton, string][] = [['ok', 'après un succès'], ['echec', 'après un échec'], ['danger', 'arrêt d’urgence']];
 
 /** La proposition d'éditeur de missions : du besoin au prototype (#/essai/missions). */
 export function EssaiMissions() {
@@ -127,11 +124,11 @@ export function EssaiMissions() {
               </div>
             ))}
           </div>
-          <h3 className="em-sous">Pendant l’exécution : une onde vers l’étape en cours</h3>
+          <h3 className="em-sous">Pendant l’exécution : une onde part du lancement et suit le chemin pris jusqu’à l’étape en cours, puis repart</h3>
           <div className="em-grille-ondes">
-            {ONDES.map(([ton, texte, etat]) => (
-              <div key={texte} className="em-onde-ex">
-                <OndeExemple ton={ton} etat={etat} />
+            {ONDES.map(([ton, texte]) => (
+              <div key={ton} className="em-onde-ex">
+                <OndeExemple ton={ton} />
                 <span style={{ color: TONS[ton] }}>{texte}</span>
               </div>
             ))}

@@ -3,11 +3,12 @@ import {
   useEdgesState, useNodesState, useReactFlow, type Connection, type Edge, type EdgeProps, type XYPosition,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { useEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent, type ReactNode } from 'react';
+import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent, type ReactNode } from 'react';
 import { Actions, type ActionsCanevas, type Point } from './actions';
-import { FAMILLE, FAMILLES, SORTIES, STATUTS, type EtatLien, type EtatNoeud, type Sortie, type Ton } from './charte';
+import { FAMILLE, FAMILLES, SORTIES, STATUTS, TONS, type EtatLien, type EtatNoeud, type Sortie, type Ton } from './charte';
 import { CATALOGUE, sortiesVisibles, typeNoeud, type TypeNoeud } from './catalogue';
 import { IconeNoeud, NoeudCarte, NoeudVide, type DonneesNoeud, type Direct, type NoeudMission } from './Noeud';
+import { Flux, useFlux } from './flux';
 import { OndeChemin } from './Onde';
 
 /** Un pas de la simulation dure un peu plus d'une période de l'onde (1 Hz) : on la voit passer au moins une fois. */
@@ -38,16 +39,31 @@ function cheminRetour(sx: number, sy: number, tx: number, ty: number) {
   };
 }
 
-/** Un lien de mission : une courbe vers l'avant, un retour par-dessous ; parcouru ou actif, l'onde par-dessus. */
+/**
+ * Un lien de mission : une courbe vers l'avant, un retour par-dessous. Parcouru, une lueur de son issue ; l'onde du
+ * parcours (flux.ts) y passe quand il est sur le chemin pris. À l'arrêt d'urgence, le lien qui menait à l'étape en
+ * cours porte une onde rouge.
+ */
 function LienPulse({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data, style }: EdgeProps<LienMission>) {
   const retour = targetX < sourceX + 20 ? cheminRetour(sourceX, sourceY, targetX, targetY) : null;
   const d = retour?.d ?? getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition })[0];
   const etat = data?.etat ?? 'aucun';
+  const urgence = etat === 'actif' && data?.ton === 'danger';
+  const flux = useContext(Flux);
+  const tete = useRef<SVGPathElement>(null);
+  const traine = useRef<SVGPathElement>(null);
+  useLayoutEffect(() => {
+    flux?.inscrire(id, { longueur: tete.current?.getTotalLength() ?? 0, tete: tete.current, traine: traine.current });
+    return () => flux?.desinscrire(id);
+  }, [d, flux, id]);
+  const couleur = TONS[data?.sortie === 'echec' ? 'echec' : 'ok'];
   return (
     <>
       <BaseEdge id={id} path={d} style={{ ...style, opacity: etat === 'aucun' ? 0.75 : 1 }} />
       {retour && <path d={retour.fleche} fill={String(style?.stroke ?? '#9aa3ae')} />}
-      <OndeChemin d={d} etat={etat} ton={data?.ton ?? 'neutre'} />
+      <OndeChemin d={d} etat={urgence ? 'actif' : etat === 'aucun' ? 'aucun' : 'parcouru'} ton={data?.ton ?? 'neutre'} />
+      <path ref={traine} d={d} className="em-flux em-flux-traine" style={{ stroke: couleur, color: couleur }} />
+      <path ref={tete} d={d} className="em-flux" style={{ stroke: couleur, color: couleur }} />
     </>
   );
 }
@@ -139,6 +155,8 @@ const DEROULE: Pas[] = [
 ];
 
 interface Instantane {
+  /** Les liens pris, dans l'ordre : le chemin que l'onde parcourt du lancement à l'étape en cours. */
+  parcours: string[];
   noeuds: Map<string, EtatNoeud>;
   /** Le dernier état d'une étape aux tours d'avant : à la fin, ce qui a été validé une fois le reste. */
   anciens: Map<string, EtatNoeud>;
@@ -150,7 +168,7 @@ interface Instantane {
 
 /** L'état de la mission après `k` pas : chaque nœud et chaque lien à leur dernier état. */
 function rejouer(k: number): Instantane {
-  const e: Instantane = { noeuds: new Map(), anciens: new Map(), tours: new Map(), essais: new Map(), prises: new Map(), liens: new Map() };
+  const e: Instantane = { parcours: [], noeuds: new Map(), anciens: new Map(), tours: new Map(), essais: new Map(), prises: new Map(), liens: new Map() };
   const eteindre = () => {
     for (const [id, x] of e.liens) if (x === 'actif') e.liens.set(id, 'parcouru');
   };
@@ -160,7 +178,7 @@ function rejouer(k: number): Instantane {
       if (avant) e.anciens.set(id, avant);
       for (const m of [e.noeuds, e.essais, e.prises]) m.delete(id);
     }
-    if (p.lien) { eteindre(); e.liens.set(p.lien, 'actif'); }
+    if (p.lien) { eteindre(); e.liens.set(p.lien, 'actif'); e.parcours.push(p.lien); }
     e.noeuds.set(p.noeud, p.etat);
     if (p.tour) e.tours.set(p.noeud, p.tour);
     if (p.essai) e.essais.set(p.noeud, p.essai);
@@ -363,6 +381,8 @@ function Canevas() {
   const minuterie = useRef<number | undefined>(undefined);
   const boite = useRef<HTMLDivElement>(null);
   const canevas = useRef<HTMLDivElement>(null);
+  const parcours = useRef<string[]>([]);
+  const flux = useFlux(parcours);
 
   useEffect(() => () => clearInterval(minuterie.current), []);
   useEffect(() => {
@@ -411,6 +431,7 @@ function Canevas() {
   function poser(k: number, urgence = false) {
     const e = rejouer(k);
     const lienActif = [...e.liens].find(([, x]) => x === 'actif')?.[0];
+    parcours.current = k < 0 || urgence ? [] : e.parcours;
     setNodes((ns) => ns.map((n) => {
       const etat = e.noeuds.get(n.id);
       return {
@@ -525,7 +546,7 @@ function Canevas() {
   const enCours = pas >= 0 && pas < DEROULE.length - 1 && !arrete;
   const etiquette = arrete ? 'arrêt d’urgence' : pas >= DEROULE.length - 1 ? 'terminée' : pas >= 0 ? `pas ${pas + 1} / ${DEROULE.length}` : 'prête';
   return (
-    <Actions.Provider value={actionsCanevas}>
+    <Actions.Provider value={actionsCanevas}><Flux.Provider value={flux}>
       <div className="em-prototype" ref={boite} onClick={() => { setMenu(null); setChoix(null); }}>
         <div className="em-canevas" ref={canevas} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }} onDrop={deposer}>
           <div className="em-barre-outils">
@@ -557,7 +578,7 @@ function Canevas() {
         {choix && <Choisir choix={choix} choisir={choisir} />}
         {noeudReglages && <Panneau noeud={noeudReglages} modifier={(d) => modifier(noeudReglages.id, d)} fermer={() => setReglages(null)} />}
       </div>
-    </Actions.Provider>
+    </Flux.Provider></Actions.Provider>
   );
 }
 

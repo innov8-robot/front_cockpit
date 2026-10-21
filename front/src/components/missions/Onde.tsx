@@ -13,9 +13,8 @@ function trait(longueur: number, traine: number, couleur: string): CSSProperties
 }
 
 /**
- * La lueur et l'onde d'un chemin SVG, par-dessus le trait de base que l'appelant dessine. Parcouru : le flux coule
- * vers le bout du chemin, dans la couleur de l'issue — tout le chemin validé reste vivant. Actif : une tête vive et sa
- * traîne filent vers l'étape en cours, une fois par seconde.
+ * La lueur et l'onde d'un chemin SVG, par-dessus le trait de base que l'appelant dessine. Parcouru : une lueur de la
+ * couleur de l'issue. Actif : une tête vive et sa traîne filent vers le bout du chemin, une fois par seconde.
  */
 export function OndeChemin({ d, etat, ton }: { d: string; etat: EtatLien; ton: Ton }) {
   const lueur = useRef<SVGPathElement>(null);
@@ -30,7 +29,6 @@ export function OndeChemin({ d, etat, ton }: { d: string; etat: EtatLien; ton: T
   return (
     <>
       <path ref={lueur} d={d} className="em-lien-lueur" style={{ stroke: couleur }} />
-      {etat === 'parcouru' && <path d={d} className="em-lien-flux" style={{ stroke: couleur, color: couleur }} />}
       {etat === 'actif' && <>
         <path d={d} pathLength={1} className="em-lien-onde em-lien-traine" style={trait(traine, traine, couleur)} />
         <path d={d} pathLength={1} className="em-lien-onde" style={trait(tete, traine, couleur)} />
@@ -39,11 +37,11 @@ export function OndeChemin({ d, etat, ton }: { d: string; etat: EtatLien; ton: T
   );
 }
 
-/** L'onde seule, sur un lien droit : la charte la montre dans chaque couleur, active ou parcourue. */
-export function OndeExemple({ ton, etat = 'actif', largeur = 140 }: { ton: Ton; etat?: EtatLien; largeur?: number }) {
+/** L'onde seule, sur un lien droit : la charte la montre dans chaque couleur. */
+export function OndeExemple({ ton, largeur = 140 }: { ton: Ton; largeur?: number }) {
   return (
     <svg width={largeur + 10} height="16" aria-hidden="true" style={{ overflow: 'visible' }}>
-      <OndeChemin d={`M4 8H${largeur}`} etat={etat} ton={ton} />
+      <OndeChemin d={`M4 8H${largeur}`} etat="actif" ton={ton} />
       <path d={`M${largeur} 3l8 5-8 5z`} fill={TONS[ton]} />
     </svg>
   );
