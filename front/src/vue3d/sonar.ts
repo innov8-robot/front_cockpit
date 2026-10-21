@@ -17,6 +17,7 @@ const MAX_OBSTACLES = 48;
  */
 export const SONAR = {
   uSonarOrigine: { value: new THREE.Vector3() },
+  uSonarOeil: { value: new THREE.Vector3() },
   uSonarRayon: { value: 0 },
   uSonarForce: { value: 0 },
   uSonarCouleur: { value: BLEU_SONAR },
@@ -27,29 +28,31 @@ export const SONAR = {
 
 /**
  * L'intensité de l'impulsion en un point du monde : un front net sur la sphère, une traîne derrière lui, et le tout
- * s'éteint avec la distance parcourue, comme l'écho d'un sonar. Un obstacle entre l'origine et le point lui fait
- * de l'ombre : l'impulsion ne le traverse pas.
+ * s'éteint avec la distance parcourue, comme l'écho d'un sonar. L'onde naît au sol, mais ce qu'elle éclaire est ce
+ * que voit le lidar de tête (l'œil) : un obstacle entre l'œil et le point lui fait de l'ombre. Depuis le sol, le dessus
+ * d'un carton ne se verrait jamais ; depuis la tête, si.
  */
 export const GLSL_SONAR = /* glsl */ `
   uniform vec3 uSonarOrigine;
+  uniform vec3 uSonarOeil;
   uniform float uSonarRayon;
   uniform float uSonarForce;
   uniform vec3 uSonarCouleur;
   uniform vec3 uObstaclesMin[${MAX_OBSTACLES}];
   uniform vec3 uObstaclesMax[${MAX_OBSTACLES}];
   uniform int uNbObstacles;
-  // 1 si l'impulsion atteint p, 0 si un obstacle est entre l'origine et p. Le segment s'arrête 3 cm avant p :
-  // la surface sur laquelle p est posé ne s'ombre pas elle-même.
+  // 1 si l'œil voit p, 0 si un obstacle est entre eux. Le segment s'arrête 3 cm avant p : la surface sur laquelle
+  // p est posé ne s'ombre pas elle-même.
   float eclaire(vec3 p) {
-    vec3 d = p - uSonarOrigine;
+    vec3 d = p - uSonarOeil;
     float l = length(d);
     if (l < 0.05) return 1.0;
     vec3 inv = 1.0 / (d / l + vec3(1e-6));
     float fin = l - 0.03;
     for (int i = 0; i < ${MAX_OBSTACLES}; i++) {
       if (i >= uNbObstacles) break;
-      vec3 t0 = (uObstaclesMin[i] - uSonarOrigine) * inv;
-      vec3 t1 = (uObstaclesMax[i] - uSonarOrigine) * inv;
+      vec3 t0 = (uObstaclesMin[i] - uSonarOeil) * inv;
+      vec3 t1 = (uObstaclesMax[i] - uSonarOeil) * inv;
       vec3 a = min(t0, t1);
       vec3 b = max(t0, t1);
       float entree = max(max(a.x, a.y), a.z);
@@ -68,11 +71,17 @@ export const GLSL_SONAR = /* glsl */ `
   }
 `;
 
-/** Avance l'impulsion : `origine` est le sol sous le robot, dans le monde ; `force` de 0 (éteinte) à 1. */
-export function mettreAJourSonar(t: number, origine: THREE.Vector3, force: number): void {
+/**
+ * Avance l'impulsion.
+ *
+ * `origine` : le sol sous le robot, d'où l'onde part ; `oeil` : le lidar de tête, d'où se calculent les ombres ;
+ * tous deux dans le monde. `force` de 0 (éteinte) à 1.
+ */
+export function mettreAJourSonar(t: number, origine: THREE.Vector3, oeil: THREE.Vector3, force: number): void {
   const periode = PORTEE / VITESSE + SILENCE_S;
   SONAR.uSonarRayon.value = (t % periode) * VITESSE;
   SONAR.uSonarOrigine.value.copy(origine);
+  SONAR.uSonarOeil.value.copy(oeil);
   SONAR.uSonarForce.value = force;
 }
 

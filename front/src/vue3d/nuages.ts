@@ -129,6 +129,8 @@ export interface Nuages {
   lidar: THREE.Group;
   /** La carte mémorisée : tout ce que les capteurs ont vu, un point par cube de 5 cm. */
   carte: THREE.Group;
+  /** Le lidar de tête, dans le repère du robot : l'œil d'où se calculent les ombres du sonar. */
+  origineLidar: THREE.Vector3;
   materiaux: THREE.ShaderMaterial[];
   mettreAJour(t: number): void;
   /** Le rayon (m) jusqu'où les nuages sont révélés, pendant le déploiement. */
@@ -254,6 +256,7 @@ export function creerNuages(tete: THREE.Vector3, lancer: Lancer, objets: ObjetDe
     camera: camera.groupe,
     lidar: lidar.groupe,
     carte: carte.groupe,
+    origineLidar: origineLid,
     materiaux,
     pointsParObjet,
     colorerObjets(niveau: number) {

@@ -237,6 +237,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
   }
 
   const origineSonar = new THREE.Vector3();
+  const oeilSonar = new THREE.Vector3();
   function boucle(): void {
     image = requestAnimationFrame(boucle);
     const t = horloge.getElapsedTime();
@@ -245,7 +246,9 @@ export function monterScene(hote: HTMLElement): Scene3D {
     // Le sonar part de la tête une fois la scène déployée, et monte en force sur une seconde.
     if (nuages) {
       origineSonar.copy(origineSonarLocale);
-      mettreAJourSonar(t, monde.localToWorld(origineSonar), deploye === null ? 0 : Math.min(1, deploye));
+      oeilSonar.copy(nuages.origineLidar);
+      mettreAJourSonar(t, monde.localToWorld(origineSonar), monde.localToWorld(oeilSonar),
+        deploye === null ? 0 : Math.min(1, deploye));
     }
     if (robot) animerRobot(robot, t);
     nuages?.mettreAJour(t);
