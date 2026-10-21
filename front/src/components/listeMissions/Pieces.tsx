@@ -75,19 +75,21 @@ export function Chiffres({ r }: { r: Resume }) {
   );
 }
 
-/** La mission qui joue : l'étape, le chrono, le tour, l'avancement, et la pause. */
-export function Progression({ r, execution, pause }: { r: Resume; execution: Execution; pause(): void }) {
-  const etape = r.chaine[execution.etape - 1];
-  const total = r.chaine.length || 1;
-  const fait = (execution.etape - 1 + execution.avancement) / total;
+/**
+ * La mission qui joue : l'étape (celle du chemin réellement pris), le chrono, le tour, et la pause. Pas de jauge : on
+ * ne sait pas combien de temps une étape va tourner.
+ */
+export function Progression({ r, primitives, execution, pause }: { r: Resume; primitives: Primitive[]; execution: Execution; pause(): void }) {
+  const noeud = r.mission.noeuds.find((n) => n.id === execution.chemin[execution.etape]);
+  const primitive = primitives.find((p) => p.id === noeud?.primitiveId);
+  const total = Math.max(1, execution.chemin.length - 1);
   return (
     <div className="lm-progression">
       <span className="lm-progression-texte">
         <b>{execution.enPause ? 'En pause' : `Étape ${execution.etape}/${total}`}</b>
-        {etape?.primitive && <span>{etape.primitive.nom}</span>}
+        {primitive && <span>{primitive.nom}</span>}
         <span className="lm-chrono">{chrono(execution.dureeS)}{execution.repetitions > 1 && ` · tour ${execution.repetition}/${execution.repetitions}`}</span>
       </span>
-      <span className="lm-barre"><i style={{ width: `${Math.round(fait * 100)}%` }} /></span>
       <button className="lm-bouton" onClick={pause} aria-label={execution.enPause ? 'Reprendre' : 'Mettre en pause'}>{execution.enPause ? '▶' : '❚❚'}</button>
     </div>
   );

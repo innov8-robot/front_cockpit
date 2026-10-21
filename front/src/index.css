@@ -238,7 +238,8 @@ input[type='radio'] { width: auto; min-height: 0; }
   --hud-2: #8a93a3;
   --hud-accent: #ff2d3a;
   --hud-vert: #3dff8a;
-  position: fixed; inset: 0; background: #030405; color: var(--hud); overflow: hidden;
+  /* clip, pas hidden : la zone de la mini-carte déborde à droite, et une vue « hidden » peut défiler toute seule. */
+  position: fixed; inset: 0; background: #030405; color: var(--hud); overflow: clip;
   font-family: 'Inter', system-ui, sans-serif;
 }
 .accueil-scene { position: absolute; inset: 0; }
@@ -1107,7 +1108,8 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
   display: flex; align-items: center; gap: 8px; height: 42px; padding: 0 22px; border-radius: 12px; cursor: pointer;
   font: 700 12px/1 ui-monospace, monospace; letter-spacing: 0.18em; border: 1px solid;
 }
-.barre-mission-lancer { color: #062211; background: #3dff8a; border-color: #3dff8a; box-shadow: 0 0 18px rgb(61 255 138 / 0.35); }
+.barre-mission-lancer { color: #0b0d10; background: #e9eef7; border-color: #e9eef7; box-shadow: 0 0 18px rgb(233 238 247 / 0.2); }
+.barre-mission-lancer:hover:not(:disabled) { background: #fff; }
 .barre-mission-lancer:disabled { color: #5b636e; background: transparent; border-color: rgb(255 255 255 / 0.12); box-shadow: none; cursor: not-allowed; }
 .barre-mission-stop { color: #fff; background: rgb(255 45 58 / 0.18); border-color: #ff2d3a; }
 .barre-mission-stop:hover { background: rgb(255 45 58 / 0.32); }
@@ -1115,10 +1117,10 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .barre-mission-chrono { font-size: 18px; font-weight: 700; letter-spacing: 0.06em; }
 .barre-mission-detail { font-size: 10px; color: #8a93a3; letter-spacing: 0.08em; }
 .barre-mission-erreur { font-size: 10px; color: #ff5a64; letter-spacing: 0.06em; max-width: 220px; }
-.accueil .barre-mission, .accueil .hud-rail { opacity: 0; transition: opacity 0.8s ease 0.15s; }
-.accueil-demarre .barre-mission, .accueil-demarre .hud-rail { opacity: 1; transition-delay: 2.4s; }
-.hud-pret .barre-mission, .hud-pret .hud-rail { transition-delay: 0s !important; }
-.accueil[class*='plein-'] .barre-mission, .accueil[class*='plein-'] .hud-rail { opacity: 0 !important; pointer-events: none; }
+.accueil .barre-mission, .accueil .barre-mission-fil, .accueil .hud-rail { opacity: 0; transition: opacity 0.8s ease 0.15s; }
+.accueil-demarre .barre-mission, .accueil-demarre .barre-mission-fil, .accueil-demarre .hud-rail { opacity: 1; transition-delay: 2.4s; }
+.hud-pret .barre-mission, .hud-pret .barre-mission-fil, .hud-pret .hud-rail { transition-delay: 0s !important; }
+.accueil[class*='plein-'] .barre-mission, .accueil[class*='plein-'] .barre-mission-fil, .accueil[class*='plein-'] .hud-rail { opacity: 0 !important; pointer-events: none; }
 /* Les écrans ouverts laissent la barre du robot en haut et la barre de mission en bas. */
 .avec-barre .overlay-cote, .avec-barre .overlay-grand { top: calc(84px + env(safe-area-inset-top)); bottom: calc(88px + env(safe-area-inset-bottom)); }
 .avec-barre .overlay-cote { right: 24px; }
@@ -1145,6 +1147,15 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 /* La barre de mission passe en haut, la barre du robot en bas ; le rail se range sous la mini-carte du coin
    haut droit. */
 .barre-mission { top: calc(16px + env(safe-area-inset-top)); bottom: auto; }
+/* Pendant une mission, la barre devient le fil (components/lecture) : plus haute, au-dessus des écrans ouverts pour que
+   son message se voie ; les écrans et les calques se rangent dessous. */
+.barre-mission-fil {
+  position: absolute; z-index: 6; left: 50%; top: calc(16px + env(safe-area-inset-top)); transform: translateX(-50%);
+  width: min(940px, calc(100% - 32px));
+}
+.avec-barre:has(.barre-mission-fil) .overlay-cote, .avec-barre:has(.barre-mission-fil) .overlay-grand { top: calc(118px + env(safe-area-inset-top)); }
+@media (max-width: 1499px) { .accueil:has(.barre-mission-fil) .hud-calques { top: calc(118px + env(safe-area-inset-top)); } }
+@media (max-width: 599px) { .barre-mission-fil { width: calc(100% - 24px); } }
 /* Le rail des écrans est à gauche, centré en hauteur, sous les calques : le coin haut droit est à la carte. */
 .hud-rail { right: auto; left: 20px; top: 50%; transform: translateY(-50%); }
 .hud-rail-lien.active::before { left: auto; right: -8px; }
@@ -1184,40 +1195,6 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
   .essai-da-panneau { left: 12px; right: 12px; top: auto; bottom: 12px; width: auto; max-height: 46vh; }
 }
 
-/* La mission en cours : le nom, le graphe à plat qui avance, et un seul bouton pause / reprise à droite. */
-.barre-mission.en-cours { gap: 16px; padding-right: 8px; }
-.graphe-direct { display: flex; align-items: center; gap: 0; margin: 0; padding: 0; list-style: none; min-width: 0; overflow-x: auto; scrollbar-width: none; }
-.graphe-direct::-webkit-scrollbar { display: none; }
-.graphe-direct-etape {
-  position: relative; display: flex; align-items: center; gap: 7px; flex: none; padding: 6px 10px 6px 6px;
-  border-radius: 10px; border: 1px solid rgb(255 255 255 / 0.08); color: #8a93a3; font-size: 11px;
-}
-.graphe-direct-etape + .graphe-direct-etape { margin-left: 18px; }
-.graphe-direct-etape + .graphe-direct-etape::before {
-  content: ''; position: absolute; right: 100%; top: 50%; width: 18px; height: 1px; background: rgb(255 255 255 / 0.18);
-}
-.graphe-direct-etape.fait + .graphe-direct-etape::before { background: var(--couleur); opacity: 0.6; }
-.graphe-direct-pastille {
-  width: 20px; height: 20px; display: grid; place-items: center; border-radius: 6px; font-size: 10px; font-weight: 700;
-  border: 1px solid rgb(255 255 255 / 0.14); color: #8a93a3;
-}
-.graphe-direct-nom { max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.graphe-direct-etape.fait { opacity: 0.55; }
-.graphe-direct-etape.fait .graphe-direct-pastille { background: var(--couleur); border-color: var(--couleur); color: #0b0d10; }
-.graphe-direct-etape.courant { color: #fff; border-color: var(--couleur); background: rgb(255 255 255 / 0.04);
-  box-shadow: 0 0 16px color-mix(in srgb, var(--couleur) 35%, transparent); padding-bottom: 9px; }
-.graphe-direct-etape.courant .graphe-direct-pastille { border-color: var(--couleur); color: var(--couleur); animation: indice-pulse 1.2s ease-in-out infinite; }
-.graphe-direct-jauge { position: absolute; left: 6px; right: 6px; bottom: 3px; height: 2px; border-radius: 2px; background: rgb(255 255 255 / 0.1); overflow: hidden; }
-.graphe-direct-jauge span { display: block; height: 100%; background: var(--couleur); transition: width 0.9s linear; }
-.en-pause .graphe-direct-etape.courant .graphe-direct-pastille { animation: none; }
-.en-pause .barre-mission-textes small { color: #ffb02e; }
-.barre-mission-pause {
-  flex: none; width: 46px; height: 46px; display: grid; place-items: center; border-radius: 14px; cursor: pointer;
-  color: #e9eef7; background: rgb(255 255 255 / 0.06); border: 1px solid rgb(255 255 255 / 0.18);
-}
-.barre-mission-pause:hover { background: rgb(255 255 255 / 0.12); }
-.barre-mission-pause.reprendre { color: #062211; background: #3dff8a; border-color: #3dff8a; box-shadow: 0 0 18px rgb(61 255 138 / 0.35); }
-@media (max-width: 899px) { .graphe-direct-nom { max-width: 90px; } }
 /* La planche réduite d'un bloc (tablette) : le dessin, les traits et les tableaux gardent leurs positions. */
 .corps-echelle { position: relative; transform-origin: 0 0; }
 
@@ -1810,8 +1787,6 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .lm-progression-texte { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 0.8rem; color: #c9ced6; }
 .lm-progression-texte b { color: #fff; }
 .lm-chrono { font: 600 0.74rem/1.4 ui-monospace, monospace; color: #8a93a3; }
-.lm-barre { grid-column: 1; height: 4px; border-radius: 2px; background: rgb(255 255 255 / 0.08); overflow: hidden; }
-.lm-barre i { display: block; height: 100%; border-radius: 2px; background: #e9eef7; box-shadow: 0 0 10px rgb(233 238 247 / 0.6); transition: width 0.9s linear; }
 .lm-progression .lm-bouton { grid-column: 2; grid-row: 1 / span 2; }
 .lm-rien { color: #8a93a3; font-size: 0.86rem; }
 /* B · les cartes. */
@@ -2045,7 +2020,8 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 
 /* L'état : blanc qui vit, gris suspendu, vert réussi, ambre attention, rouge danger ; toujours avec son signe. */
 .bl-identite { flex: none; width: 200px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
-.bl-nom { font: 650 14px/1.15 'Inter', system-ui, sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bl-nom { font: 650 14px/1.15 'Inter', system-ui, sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: inherit; text-decoration: none; }
+a.bl-nom:hover { text-decoration: underline; text-underline-offset: 3px; }
 .bl-etat { display: flex; align-items: center; gap: 7px; font: 600 9.5px/1 ui-monospace, monospace; letter-spacing: 0.15em; text-transform: uppercase; color: #c9ced6; white-space: nowrap; }
 .bl-etat i { flex: none; width: 7px; height: 7px; border-radius: 50%; background: #e9eef7; box-shadow: 0 0 8px rgb(233 238 247 / 0.8); animation: indice-pulse 1.2s ease-in-out infinite; }
 .bl-etat b { flex: none; width: 9px; font: 800 10px/1 ui-monospace, monospace; letter-spacing: 0; text-align: center; }

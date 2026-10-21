@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { Link } from 'react-router-dom';
 import { duree } from '../executions/donnees';
 import { typePrimitive } from '../graphe/correspondance';
 import { teinte } from '../missions/apparence';
@@ -80,7 +81,7 @@ function Tuile({ n }: { n: NoeudFil }) {
  * Quand une étape finit, une étincelle part sur le fil qu'a pris la mission — vert pour « réussi », ambre pour
  * « échec » — et la caméra la suit dans tous les sens jusqu'à l'étape suivante, qui s'ouvre à son arrivée.
  */
-export function BarreFil({ l, pause, acquitter }: { l: Lecture; pause(): void; acquitter(): void }) {
+export function BarreFil({ l, pause, acquitter, lien }: { l: Lecture; pause(): void; acquitter(): void; lien?: string }) {
   const t = trajet(l);
   const { vue, monde, etincelle, arrivee } = useTravelling(t.cle, t.cible, t.lien, ANCRE);
   const arrive = arrivee === t.cle;
@@ -93,7 +94,8 @@ export function BarreFil({ l, pause, acquitter }: { l: Lecture; pause(): void; a
     <div className="bl-pile">
       <div className={`bl-barre bl-etat-${l.etat} ${l.message ? `bl-halo-${l.message.niveau}` : ''}`} role="toolbar" aria-label={`Mission ${l.mission.nom}`}>
         <div className="bl-identite">
-          <strong className="bl-nom" title={l.mission.nom}>{l.mission.nom}</strong>
+          {lien ? <Link className="bl-nom" to={lien} title={`Ouvrir ${l.mission.nom}`}>{l.mission.nom}</Link>
+            : <strong className="bl-nom" title={l.mission.nom}>{l.mission.nom}</strong>}
           <small className="bl-etat">
             {e.signe ? <b aria-hidden="true">{e.signe}</b> : <i aria-hidden="true" />}
             {e.libelle}{l.tours > 1 && <span className="bl-etat-tour"> · tour {l.tour}/{l.tours}</span>}
@@ -136,7 +138,7 @@ export function BarreFil({ l, pause, acquitter }: { l: Lecture; pause(): void; a
 
         <div className="bl-temps">
           <b>{duree(l.dureeS)}</b>
-          <small>{l.etat === 'erreur' ? 'arrêtée' : fini ? 'au total' : `étape ${duree(l.dureeEtapeS)}`}</small>
+          <small>{l.etat === 'erreur' ? 'arrêtée' : fini ? 'au total' : l.dureeEtapeS !== null ? `étape ${duree(l.dureeEtapeS)}` : ''}</small>
         </div>
         <button className={`bl-bouton ${enPause ? 'bl-principal' : ''}`} disabled={fini || l.etat === 'urgence'} onClick={pause}
           aria-label={enPause ? 'Reprendre la mission' : 'Mettre la mission en pause'}

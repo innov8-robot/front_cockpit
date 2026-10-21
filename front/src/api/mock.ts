@@ -221,6 +221,35 @@ function chemin(m: Mission): string[] {
   }
 }
 
+/** Une étape du parcours simulé d'un tour : son nœud, la sortie de l'étape d'avant qui y mène, et si elle rate. */
+interface PasSimule { noeud: string; par: 'ok' | 'echec'; rate: boolean }
+
+/**
+ * Le parcours d'un tour simulé : la chaîne « réussi », sauf au deuxième tour, où la première prise qui a une sortie
+ * « échec » rate et la mission suit sa branche échec — de quoi voir la barre de lecture prendre une autre branche.
+ */
+function parcours(m: Mission, tour: number): PasSimule[] {
+  const pas: PasSimule[] = [];
+  const vus = new Set(['depart']);
+  let de = 'depart';
+  let sortie: 'ok' | 'echec' = 'ok';
+  for (;;) {
+    const vers = m.liens.find((l) => l.de === de && l.sortie === sortie)?.vers;
+    if (!vers || vus.has(vers)) return pas;
+    vus.add(vers);
+    const type = magasin.primitives.find((p) => p.id === m.noeuds.find((n) => n.id === vers)?.primitiveId)?.type;
+    const rate = tour === 2 && !pas.some((p) => p.rate) && type === 'prise_objet' && m.liens.some((l) => l.de === vers && l.sortie === 'echec');
+    pas.push({ noeud: vers, par: sortie, rate });
+    de = vers;
+    sortie = rate ? 'echec' : 'ok';
+  }
+}
+
+/** Le temps joué par la mission simulée, pauses retirées (ms). */
+function tempsJoue(x: NonNullable<Magasin['execution']>): number {
+  return Date.now() - x.debut - x.pause - (x.pauseDepuis ? Date.now() - x.pauseDepuis : 0);
+}
+
 /** Un nombre entre 0 et 1 tiré d'un texte, toujours le même pour le même texte. */
 function hachage(texte: string): number {
   let h = 2166136261;
@@ -256,7 +285,10 @@ function detailler(u: Run): Run {
   return { ...u, etapes };
 }
 
-/** Fait avancer la mission simulée jusqu'à maintenant ; à la dernière répétition, elle se termine. */
+/**
+ * Fait avancer la mission simulée jusqu'à maintenant : chaque étape dure DUREE_ETAPE_MS, les tours s'enchaînent ; à
+ * la fin de la dernière répétition, elle se termine.
+ */
 function avancer(): Execution | null {
   const x = magasin.execution;
   if (!x) return null;
@@ -266,14 +298,18 @@ function avancer(): Execution | null {
     magasin.execution = null;
     return null;
   }
-  const c = chemin(m);
-  const etapes = Math.max(1, c.length - 1);
-  const joue = Date.now() - x.debut - x.pause - (x.pauseDepuis ? Date.now() - x.pauseDepuis : 0);
-  const fait = joue / DUREE_ETAPE_MS;
-  const repetition = Math.floor(fait / etapes);
-  if (repetition >= m.repetitions) {
+  const joue = tempsJoue(x);
+  const tours = Array.from({ length: m.repetitions }, (_, k) => parcours(m, k + 1));
+  let i = Math.floor(joue / DUREE_ETAPE_MS);
+  let tour = 0;
+  while (tour < tours.length && i >= Math.max(1, tours[tour].length)) {
+    i -= Math.max(1, tours[tour].length);
+    tour += 1;
+  }
+  const p = tours[tour] ?? [];
+  if (!p.length) {
     const run = magasin.runs.find((u) => u.robotId === r.id && u.missionId === m.id && u.dureeS === 0);
-    if (run) run.dureeS = Math.round(joue / 1000);
+    if (run) run.dureeS = Math.max(1, Math.round(joue / 1000));
     m.etat = 'terminee';
     r.etat = 'disponible';
     r.missionCourante = null;
@@ -281,9 +317,22 @@ function avancer(): Execution | null {
     sauver();
     return null;
   }
+  const ici = p[i].noeud;
+  const vus = new Set(['depart', ...p.slice(0, i + 1).map((y) => y.noeud)]);
+  const prevus: string[] = [];
+  for (let n = m.liens.find((l) => l.de === ici && l.sortie === 'ok')?.vers; n && !vus.has(n); n = m.liens.find((l) => l.de === n && l.sortie === 'ok')?.vers) {
+    prevus.push(n);
+    vus.add(n);
+  }
+  const ratee = p.findIndex((y) => y.rate);
+  const nom = magasin.primitives.find((q) => q.id === m.noeuds.find((n) => n.id === p[ratee]?.noeud)?.primitiveId)?.nom;
+  const avancement = (joue % DUREE_ETAPE_MS) / DUREE_ETAPE_MS;
   return {
-    missionId: m.id, chemin: c, etape: 1 + (Math.floor(fait) % etapes), avancement: fait % 1,
-    repetition: repetition + 1, repetitions: m.repetitions, enPause: x.pauseDepuis !== null, dureeS: joue / 1000,
+    missionId: m.id, chemin: ['depart', ...p.slice(0, i + 1).map((y) => y.noeud), ...prevus], etape: i + 1, avancement,
+    repetition: tour + 1, repetitions: m.repetitions, enPause: x.pauseDepuis !== null, dureeS: joue / 1000,
+    joues: p.slice(0, i + 1).map((y, k) => ({ noeud: y.noeud, par: y.par, issue: k < i ? (y.rate ? 'echoue' : 'reussi') : 'cours' })),
+    dureeEtapeS: (avancement * DUREE_ETAPE_MS) / 1000,
+    alerte: ratee >= 0 && ratee < i ? { niveau: 'attention', texte: `« ${nom} » a raté : aucune prise atteignable. La mission prend sa branche échec.` } : null,
   };
 }
 
@@ -300,6 +349,17 @@ export const apiSimulee: Api = {
     const r = magasin.robots.find((x) => x.id === robotId);
     if (!r) return Promise.reject(new Error('Robot inconnu'));
     r.etat = 'arret_urgence';
+    // La mission en cours s'arrête là : son run se ferme, interrompu par l'arrêt d'urgence.
+    const x = magasin.execution;
+    const run = magasin.runs.find((u) => u.robotId === robotId && u.dureeS === 0);
+    if (x && x.robotId === robotId && run) {
+      run.dureeS = Math.max(1, Math.round(tempsJoue(x) / 1000));
+      run.issue = 'interrompu';
+      run.cause = 'Arrêt d’urgence';
+      const m = magasin.missions.find((y) => y.id === x.missionId);
+      if (m) m.etat = 'prete';
+      magasin.execution = null;
+    }
     r.missionCourante = null;
     r.geste = null;
     sauver();

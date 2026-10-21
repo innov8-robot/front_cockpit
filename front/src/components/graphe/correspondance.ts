@@ -77,10 +77,14 @@ export function versMission(nodes: NoeudCanevas[], edges: LienCanevas[]): { noeu
   };
 }
 
-/** L'état de chaque nœud et de chaque lien pendant une exécution : le chemin joué, l'étape en cours, son avancement. */
+/**
+ * L'état de chaque nœud et de chaque lien pendant une exécution : le chemin joué (une étape ratée en échec), l'étape
+ * en cours, ce qu'on prévoit.
+ */
 export function etatsExecution(x: Execution, edges: LienCanevas[]) {
   const noeuds = new Map<string, EtatNoeud>();
-  x.chemin.forEach((id, i) => noeuds.set(id, i < x.etape ? 'ok' : i === x.etape ? 'cours' : 'attente'));
+  const ratees = new Set((x.joues ?? []).filter((j) => j.issue === 'echoue').map((j) => j.noeud));
+  x.chemin.forEach((id, i) => noeuds.set(id, ratees.has(id) ? 'echec' : i < x.etape ? 'ok' : i === x.etape ? 'cours' : 'attente'));
   const liens = new Map<string, 'parcouru' | 'actif'>();
   for (let i = 1; i <= x.etape && i < x.chemin.length; i++) {
     const l = edges.find((e) => e.source === x.chemin[i - 1] && e.target === x.chemin[i]);

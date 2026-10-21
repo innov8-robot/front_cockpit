@@ -6,7 +6,7 @@
 import { useEffect, useReducer } from 'react';
 import type { Mission, Primitive, TypePrimitive } from '../../api/types';
 import { duree } from '../executions/donnees';
-import { prevus, suivant, type Lecture, type MessageLecture, type PasLecture } from './lecture';
+import { MESSAGE_URGENCE, prevus, suivant, type Lecture, type MessageLecture, type PasLecture } from './lecture';
 
 const primitive = (id: string, nom: string, type: TypePrimitive): Primitive => ({
   id, nom, type, description: '', objet: null, ancrage: null, poste: null, vitesse: 1, creeLe: '', creePar: '',
@@ -155,7 +155,7 @@ function lire(m: Moteur): Lecture {
   return {
     mission: m.mission, primitives: PRIMITIVES, pas, courant, dureeS: m.t, dureeEtapeS: m.noeud ? m.t - m.debut : 0,
     tour: m.tour, tours: m.mission.repetitions, etat: m.urgence ? 'urgence' : m.fin ?? (m.enPause ? 'pause' : 'cours'),
-    message: m.urgence ? { niveau: 'erreur', texte: 'Arrêt d’urgence engagé. Réarmez-le depuis la barre du robot pour reprendre.' } : m.message,
+    message: m.urgence ? MESSAGE_URGENCE : m.message,
   };
 }
 

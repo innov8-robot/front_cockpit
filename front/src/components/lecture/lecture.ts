@@ -28,15 +28,20 @@ export interface MessageLecture {
   texte: string;
 }
 
+/** Le message de l'arrêt d'urgence : il reste jusqu'au réarmement. */
+export const MESSAGE_URGENCE: MessageLecture = {
+  niveau: 'erreur', texte: 'Arrêt d’urgence engagé. Réarmez-le depuis la barre du robot pour reprendre.',
+};
+
 export interface Lecture {
   mission: Mission;
   primitives: Primitive[];
   pas: PasLecture[];
   /** L'index de l'étape en cours dans `pas`, -1 quand la mission est finie. */
   courant: number;
-  /** Le temps joué depuis le lancement, et dans l'étape en cours (s). */
+  /** Le temps joué depuis le lancement, et dans l'étape en cours quand le robot le dit (s). */
   dureeS: number;
-  dureeEtapeS: number;
+  dureeEtapeS: number | null;
   tour: number;
   tours: number;
   etat: EtatLecture;

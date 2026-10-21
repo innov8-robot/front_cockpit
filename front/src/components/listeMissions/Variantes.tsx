@@ -117,7 +117,7 @@ function LigneMission({ r, ...props }: ProprietesListe & { r: Resume }) {
         )}
       </div>
       <MiniChaine r={r} execution={execution} />
-      {joue ? <Progression r={r} execution={joue} pause={g.pause} /> : (
+      {joue ? <Progression r={r} primitives={props.primitives} execution={joue} pause={g.pause} /> : (
         <div className="lm-ligne-bas"><BandeRuns r={r} /><Chiffres r={r} /></div>
       )}
     </li>
@@ -144,7 +144,7 @@ export function Cartes(props: ProprietesListe) {
               <div className="lm-carte-corps">
                 <div className="lm-ligne-haut"><PointEtat etat={etat} /><span className="lm-espace" />{r.dernier && <small>{depuis(r.dernier.debut)}</small>}</div>
                 <h3>{r.mission.nom}</h3>
-                {joue ? <Progression r={r} execution={joue} pause={g.pause} /> : <>
+                {joue ? <Progression r={r} primitives={props.primitives} execution={joue} pause={g.pause} /> : <>
                   <div className="lm-ligne-bas"><BandeRuns r={r} /><Chiffres r={r} /></div>
                   <Gestes m={r.mission} peutLancer={g.peutLancer(r)} lancer={() => g.lancer(r)} />
                 </>}
@@ -196,7 +196,7 @@ export function ListeApercu(props: ProprietesListe) {
               )}
             </div>
             {r.mission.description && <p className="lm-description">{r.mission.description}</p>}
-            {joue && <Progression r={r} execution={joue} pause={g.pause} />}
+            {joue && <Progression r={r} primitives={props.primitives} execution={joue} pause={g.pause} />}
             <div className="lm-detail-graphe">
               <EditeurMission key={r.mission.id} noeuds={r.mission.noeuds} liens={r.mission.liens} primitives={primitives}
                 modifiable={false} execution={joue} onChange={() => undefined} />

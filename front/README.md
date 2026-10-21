@@ -95,8 +95,13 @@ runs et leur cause). « Nouvelle mission » y est blanc : le rouge est réservé
 
 ## La barre de la mission qui joue : le fil
 
-**`#/essai/barre-lecture`**, sur une mission simulée (branche « échec », tours, pause, arrêt d'urgence, mission longue
-ou courte) : le graphe de la mission tel que l'éditeur le dessine, réduit dans la barre. Quand une étape finit, une
+En haut de l'accueil (`components/BarreMission.tsx`) : au repos, choisir une mission et la lancer (LANCER est blanc,
+le vert n'est jamais un bouton) ; pendant la mission, le fil ; à la fin, son issue, lue dans son dernier run. Le nom
+de la mission ouvre son onglet Exécutions. Pendant une mission, les écrans ouverts et les calques se rangent sous le
+fil, plus haut que la barre au repos. Banc d'essai : **`#/essai/barre-lecture`**, sur une mission simulée (branche
+« échec », tours, pause, avertissement, erreur bloquante, arrêt d'urgence, mission longue ou courte).
+
+Le fil : le graphe de la mission tel que l'éditeur le dessine, réduit dans la barre. Quand une étape finit, une
 étincelle part sur le fil que la mission a pris (vert « réussi », ambre « échec ») et la caméra la suit dans tous les
 sens jusqu'à l'étape suivante, qui s'ouvre à son arrivée avec son nom. Aucune durée n'est prédite : on ne sait pas
 combien de temps une étape va tourner. Le système de la barre : blanc ce qui vit, gris ce qui est suspendu (la pause
@@ -105,8 +110,11 @@ arrêté la mission ; les actions sont blanches, pleine pour la principale (Repr
 secondaire (Pause). Un halo autour de la barre et un message dessous disent l'issue : vert la mission terminée, ambre
 un avertissement ou une étape rattrapée par sa branche « échec » (il s'efface seul), rouge une erreur qui l'arrête
 (✕ sur l'étape fautive, jusqu'à l'acquittement) ou l'arrêt d'urgence (■, jusqu'au réarmement). Pour la brancher, le
-back doit servir le chemin RÉELLEMENT joué dans le run en cours (pas seulement le chemin « réussi » prévu), et ses
-alertes avec leur niveau (bloquante ou non) et leur texte. Code : `components/lecture/`.
+contrat `Execution` porte, en champs optionnels que le back du robot devra servir : `joues` (les étapes jouées dans le
+tour, avec la sortie qui y a mené et leur issue — sans eux, la barre suppose que tout a réussi), `dureeEtapeS` et
+`alerte` (niveau « attention » ou « erreur », et son texte) ; `chemin` est le chemin réellement pris, puis le chemin
+prévu. La simulation les sert : au tour 2, la première prise qui a une sortie « échec » rate et la mission suit sa
+branche ; l'arrêt d'urgence ferme le run en cours (interrompu). Code : `components/lecture/`.
 
 ## Les couleurs de la scène
 

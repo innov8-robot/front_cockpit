@@ -138,10 +138,26 @@ export interface EtatCapteurs {
   lidar: Verdict;
 }
 
+/** Une étape jouée dans le tour en cours : la sortie de l'étape d'avant qui y a mené, et son issue. */
+export interface EtapeJouee {
+  noeud: string;
+  par: 'ok' | 'echec';
+  issue: 'reussi' | 'echoue' | 'cours';
+}
+
+/** Une alerte du robot pendant une mission : « attention » ne l'arrête pas, « erreur » l'a arrêtée. */
+export interface AlerteMission {
+  niveau: 'attention' | 'erreur';
+  texte: string;
+}
+
 /** Où en est la mission en cours : le chemin joué, l'étape courante et son avancement, la pause. */
 export interface Execution {
   missionId: string;
-  /** Les nœuds joués dans l'ordre (le départ, puis les primitives qu'on atteint par « réussi »). */
+  /**
+   * Le chemin du tour en cours : le départ, les nœuds joués dans l'ordre (y compris par une sortie « échec »), puis
+   * ceux qu'on prévoit en suivant « réussi ».
+   */
   chemin: string[];
   /** L'index dans `chemin` de l'étape qui se joue, et son avancement de 0 à 1. */
   etape: number;
@@ -152,4 +168,13 @@ export interface Execution {
   enPause: boolean;
   /** Le temps joué depuis le lancement, pauses retirées (s). */
   dureeS: number;
+  /**
+   * Les étapes jouées dans ce tour avec leur issue ; la dernière est celle en cours. Sans elles, tout ce qui précède
+   * `etape` dans `chemin` passe pour réussi.
+   */
+  joues?: EtapeJouee[];
+  /** Depuis quand l'étape en cours tourne (s). */
+  dureeEtapeS?: number;
+  /** La dernière alerte du robot sur cette mission, s'il y en a une en cours. */
+  alerte?: AlerteMission | null;
 }
