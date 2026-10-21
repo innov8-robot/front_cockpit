@@ -1322,9 +1322,6 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
   filter: drop-shadow(0 0 3px currentColor) drop-shadow(0 0 9px currentColor); animation: em-onde 1s linear infinite;
 }
 .em-lien-traine { stroke-width: 2.5; opacity: 0.35; filter: drop-shadow(0 0 6px currentColor); }
-/* L'onde du parcours (components/missions/flux.ts) : posée image par image, cachée hors de son passage. */
-.em-flux { fill: none; stroke-width: 3.5; stroke-linecap: round; visibility: hidden; pointer-events: none; filter: drop-shadow(0 0 3px currentColor) drop-shadow(0 0 9px currentColor); }
-.em-flux-traine { stroke-width: 2.5; opacity: 0.4; filter: drop-shadow(0 0 6px currentColor); }
 @keyframes em-onde { from { stroke-dashoffset: var(--de); } to { stroke-dashoffset: var(--a); } }
 @media (prefers-reduced-motion: reduce) { .em-lien-onde { animation-duration: 3s; } }
 .em-astuce {

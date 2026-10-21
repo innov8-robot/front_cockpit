@@ -124,7 +124,7 @@ export function EssaiMissions() {
               </div>
             ))}
           </div>
-          <h3 className="em-sous">Pendant l’exécution : une onde part du lancement et suit le chemin pris jusqu’à l’étape en cours, puis repart</h3>
+          <h3 className="em-sous">Pendant l’exécution : une onde vers l’étape en cours</h3>
           <div className="em-grille-ondes">
             {ONDES.map(([ton, texte]) => (
               <div key={ton} className="em-onde-ex">
