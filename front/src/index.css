@@ -1993,3 +1993,179 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
   .an-tuiles { grid-template-columns: 1fr 1fr; }
   .an-deux { grid-template-columns: 1fr; }
 }
+
+/* La barre de la mission qui joue, trois propositions (#/essai/barre-lecture ; components/lecture). */
+.bl-page { padding-bottom: 60px; }
+.bl-commandes { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 4px 0 26px; }
+.bl-commandes .lm-bouton { height: 34px; }
+.bl-commande-urgence { color: #ff5a64; border-color: rgb(255 45 58 / 0.5); }
+.bl-commandes-note { color: #7c8798; font-size: 0.8rem; }
+.bl-proposition { margin-bottom: 34px; }
+.bl-proposition h2 { margin: 0 0 4px; font-size: 1rem; }
+.bl-proposition p { margin: 0 0 14px; max-width: 900px; color: #9aa3ae; font-size: 0.86rem; line-height: 1.45; }
+.bl-scene { padding: 14px 0; }
+
+.bl-barre {
+  --vert: #3dff8a; --ambre: #ffb02e; --rouge: #ff2d3a; --gris: #8a93a3;
+  container-type: inline-size; position: relative; box-sizing: border-box; display: flex; align-items: center; gap: 16px;
+  height: 76px; padding: 0 12px 0 20px; border-radius: 18px; overflow: hidden; color: #e9eef7;
+  background: rgb(10 13 17 / 0.8); border: 1px solid rgb(255 255 255 / 0.09); box-shadow: 0 14px 44px rgb(0 0 0 / 0.55);
+  backdrop-filter: blur(14px); font-family: 'Inter', system-ui, sans-serif; transition: border-color 0.3s, box-shadow 0.3s;
+}
+.bl-barre.bl-etat-urgence { border-color: rgb(255 45 58 / 0.7); box-shadow: 0 0 0 1px rgb(255 45 58 / 0.35), 0 14px 44px rgb(0 0 0 / 0.55); }
+.bl-barre.bl-etat-pause { border-color: rgb(255 176 46 / 0.35); }
+
+.bl-identite { flex: none; width: 200px; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+.bl-nom { font: 650 14px/1.15 'Inter', system-ui, sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bl-etat { display: flex; align-items: center; gap: 7px; font: 600 9.5px/1 ui-monospace, monospace; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gris); white-space: nowrap; }
+.bl-etat i { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--vert); box-shadow: 0 0 8px var(--vert); animation: indice-pulse 1.2s ease-in-out infinite; }
+.bl-etat-pause .bl-etat { color: var(--ambre); }
+.bl-etat-pause .bl-etat i { background: var(--ambre); box-shadow: 0 0 8px var(--ambre); animation: none; }
+.bl-etat-urgence .bl-etat { color: #ff5a64; }
+.bl-etat-urgence .bl-etat i { background: var(--rouge); box-shadow: 0 0 10px var(--rouge); animation: corps-alarme 0.8s steps(2) infinite; }
+.bl-etat-reussie .bl-etat i { animation: none; }
+.bl-etat-echouee .bl-etat { color: var(--ambre); }
+.bl-etat-echouee .bl-etat i { background: var(--ambre); box-shadow: 0 0 8px var(--ambre); animation: none; }
+
+.bl-centre { position: relative; flex: 1; min-width: 0; align-self: stretch; }
+.bl-vue {
+  position: absolute; inset: 0; overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 44px, #000 calc(100% - 60px), transparent);
+}
+.bl-piste {
+  position: absolute; left: 0; top: 0; bottom: 0; display: flex; align-items: center; width: max-content;
+  transition: transform 0.7s cubic-bezier(0.65, 0, 0.35, 1); will-change: transform;
+}
+.bl-temps { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 7px; min-width: 86px; padding-left: 16px; border-left: 1px solid rgb(255 255 255 / 0.08); }
+.bl-temps b { font: 700 21px/1 ui-monospace, monospace; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
+.bl-temps small { font: 600 9.5px/1 ui-monospace, monospace; letter-spacing: 0.1em; color: var(--gris); white-space: nowrap; }
+.bl-bouton {
+  flex: none; width: 50px; height: 50px; display: grid; place-items: center; border-radius: 14px; cursor: pointer;
+  color: #e9eef7; background: rgb(255 255 255 / 0.06); border: 1px solid rgb(255 255 255 / 0.18); transition: background 0.2s;
+}
+.bl-bouton:hover:not(:disabled) { background: rgb(255 255 255 / 0.12); }
+.bl-bouton.bl-reprendre { color: #062211; background: var(--vert); border-color: var(--vert); box-shadow: 0 0 18px rgb(61 255 138 / 0.35); }
+.bl-bouton:disabled { color: #5b636e; background: transparent; border-color: rgb(255 255 255 / 0.1); cursor: not-allowed; }
+.bl-etat-urgence .bl-bouton { border-color: rgb(255 45 58 / 0.5); color: #ff5a64; }
+
+/* La tuile d'une étape : celle de l'éditeur, en petit. */
+.bl-tuile {
+  --t: 34px; position: relative; flex: none; box-sizing: border-box; width: var(--t); height: var(--t); border-radius: 9px;
+  border: 1.5px solid rgb(255 255 255 / 0.16); background: #1b1f26; color: var(--famille); transition: border-color 0.3s, box-shadow 0.3s;
+}
+.bl-tuile-matrice { position: absolute; inset: 2px; border-radius: 7px; overflow: hidden; }
+.bl-tuile-cours { border-color: #e9eef7; box-shadow: 0 0 18px rgb(233 238 247 / 0.35); animation: em-respire-tuile 1s ease-in-out infinite; }
+.bl-tuile-ok { border-color: rgb(61 255 138 / 0.6); }
+.bl-tuile-echec { border-color: var(--ambre); box-shadow: 0 0 14px rgb(255 176 46 / 0.3); }
+.bl-tuile-danger { border-color: var(--rouge); box-shadow: 0 0 18px rgb(255 45 58 / 0.5); }
+.bl-tuile-attente { border-style: dashed; }
+.bl-tuile .em-chargement, .bl-tuile .em-badge-etat { width: 16px; height: 16px; top: -7px; right: -7px; font-size: 9px; }
+.bl-tuile .em-chargement { border-width: 2.5px; }
+
+.bl-lien { position: relative; flex: none; width: 36px; height: 14px; }
+.bl-lien svg { position: absolute; inset: 0; overflow: visible; }
+.bl-lien-trait { fill: none; stroke: rgb(255 255 255 / 0.22); stroke-width: 1.5; }
+.bl-lien-echec .bl-lien-trait { stroke: var(--ambre); stroke-dasharray: 4 3; opacity: 0.8; }
+.bl-lien small { position: absolute; left: 50%; bottom: calc(100% + 1px); transform: translateX(-50%); font: 700 8px/1 ui-monospace, monospace; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ambre); }
+.bl-lien-bout { width: 22px; margin-left: 10px; height: 1px; background: rgb(255 255 255 / 0.14); }
+.bl-tour, .bl-bout { flex: none; font: 700 9px/1 ui-monospace, monospace; letter-spacing: 0.14em; text-transform: uppercase; color: #7c8798; white-space: nowrap; }
+.bl-tour { display: flex; align-items: center; gap: 8px; padding: 0 12px; }
+.bl-tour i { width: 1px; height: 34px; background: rgb(255 255 255 / 0.14); }
+.bl-bout { margin-left: 6px; padding: 6px 10px; border-radius: 999px; border: 1px dashed rgb(255 255 255 / 0.2); }
+.bl-jauge { display: block; height: 2px; border-radius: 2px; background: rgb(255 255 255 / 0.1); overflow: hidden; }
+.bl-jauge i { display: block; height: 100%; background: #e9eef7; transition: width 0.3s linear; }
+
+/* A · Le travelling. */
+.bl-pas { position: relative; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 12px 0 4px; transition: opacity 0.5s; }
+.bl-pas-textes { display: flex; flex-direction: column; gap: 5px; min-width: 0; max-width: 168px; }
+.bl-pas-nom { font: 600 12.5px/1.15 'Inter', system-ui, sans-serif; color: #c9ced6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bl-pas-textes small { font: 600 10px/1 ui-monospace, monospace; color: #7c8798; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bl-pas-cours .bl-pas-nom { color: #fff; }
+.bl-pas-cours .bl-pas-textes small { color: #e9eef7; }
+.bl-pas-cours .bl-jauge { width: 120px; }
+.bl-pas-reussi { opacity: 0.6; }
+.bl-pas-echoue .bl-pas-textes small { color: var(--ambre); }
+.bl-pas-prevu { opacity: 0.5; }
+.bl-pas[data-ancien], .bl-maille[data-ancien], .bl-bloc[data-ancien] { opacity: 0.28; }
+.bl-fourche {
+  position: absolute; left: 20px; top: calc(50% + 21px); display: flex; align-items: flex-start; gap: 4px; white-space: nowrap;
+  font: 600 9.5px/1 ui-monospace, monospace; letter-spacing: 0.03em; color: var(--ambre); opacity: 0.85;
+}
+.bl-fourche svg { flex: none; overflow: visible; }
+.bl-fourche path { fill: none; stroke: var(--ambre); stroke-width: 1.3; stroke-dasharray: 2.5 2; }
+.bl-travelling .bl-pas, .bl-fil .bl-maille { animation: bl-entree 0.5s ease-out; }
+@keyframes bl-entree { from { opacity: 0; transform: translateY(10px); } }
+
+/* B · Le fil. */
+.bl-fil .bl-vue { bottom: 14px; }
+.bl-maille {
+  position: relative; flex: none; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 12px;
+  height: 100%; transition: width 0.7s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.5s;
+}
+.bl-maille .bl-tuile { --t: 28px; transition: width 0.7s cubic-bezier(0.65, 0, 0.35, 1), height 0.7s cubic-bezier(0.65, 0, 0.35, 1), border-color 0.3s, box-shadow 0.3s; }
+.bl-maille.bl-ouverte .bl-tuile { --t: 40px; }
+.bl-maille-textes { display: flex; flex-direction: column; gap: 6px; min-width: 0; max-width: 0; opacity: 0; overflow: hidden; transition: max-width 0.7s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.4s; }
+.bl-maille.bl-ouverte .bl-maille-textes { max-width: 210px; opacity: 1; transition-delay: 0s, 0.25s; }
+.bl-maille:not(.bl-ouverte) { justify-content: flex-start; }
+.bl-maille-nom { font: 650 15px/1.15 'Inter', system-ui, sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bl-maille-textes small { font: 600 10px/1 ui-monospace, monospace; color: var(--gris); letter-spacing: 0.04em; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bl-maille.bl-pas-reussi .bl-tuile { opacity: 0.7; }
+.bl-maille.bl-pas-prevu .bl-tuile { opacity: 0.5; }
+.bl-fil .bl-tour { padding: 0 6px; gap: 6px; }
+.bl-fil .bl-tour i { height: 24px; }
+.bl-segments { position: absolute; left: 10px; right: 10px; bottom: 11px; display: flex; gap: 4px; }
+.bl-segment { position: relative; flex: 1; height: 3px; border-radius: 2px; background: rgb(255 255 255 / 0.12); overflow: hidden; }
+.bl-segment b { position: absolute; inset: 0 auto 0 0; width: 100%; border-radius: inherit; transition: width 0.3s linear; }
+.bl-segment-reussi b { background: rgb(61 255 138 / 0.75); }
+.bl-segment-echoue b { background: var(--ambre); }
+.bl-segment-cours b { background: #e9eef7; box-shadow: 0 0 6px rgb(233 238 247 / 0.6); }
+.bl-segment-prevu b { width: 0; }
+.bl-segment-par-echec { background: rgb(255 176 46 / 0.2); }
+.bl-etat-urgence .bl-segment-cours b { background: var(--rouge); }
+.bl-etat-pause .bl-segment-cours b { background: var(--ambre); }
+
+/* C · La frise du temps. */
+.bl-frise .bl-piste { display: block; width: 1px; transition: transform 0.3s linear; }
+.bl-frise .bl-vue { mask-image: linear-gradient(90deg, transparent, #000 40px, #000 calc(100% - 40px), transparent); }
+.bl-bloc {
+  position: absolute; top: 15px; height: 30px; box-sizing: border-box; display: flex; align-items: center; gap: 7px; padding: 0 8px;
+  border-radius: 6px; overflow: hidden; color: var(--famille); font: 600 11.5px/1 'Inter', system-ui, sans-serif;
+  background: color-mix(in srgb, var(--famille) 16%, #12161b); border: 1px solid color-mix(in srgb, var(--famille) 40%, transparent);
+  transition: opacity 0.5s;
+}
+.bl-bloc-icone { position: relative; flex: none; }
+.bl-bloc-nom { position: relative; color: #e9eef7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bl-bloc.bl-pas-reussi { opacity: 0.75; }
+.bl-bloc.bl-pas-echoue { border-color: var(--ambre); }
+.bl-bloc.bl-pas-cours { background: transparent; border: 1px dashed rgb(255 255 255 / 0.3); }
+.bl-bloc-joue { position: absolute; inset: 0 auto 0 0; background: color-mix(in srgb, var(--famille) 26%, #12161b); border-right: 0; transition: width 0.3s linear; }
+.bl-bloc.bl-pas-prevu { background: transparent; border: 1px dashed rgb(255 255 255 / 0.18); color: #7c8798; }
+.bl-bloc.bl-pas-prevu .bl-bloc-nom { color: #7c8798; }
+.bl-bloc-par-echec { box-shadow: inset 2px 0 0 var(--ambre); }
+.bl-bloc-rate, .bl-bloc-urgence { position: relative; margin-left: auto; flex: none; width: 15px; height: 15px; display: grid; place-items: center; border-radius: 50%; font: 800 9px/1 ui-monospace, monospace; color: #0b0d10; }
+.bl-bloc-rate { background: var(--ambre); }
+.bl-bloc-urgence { background: var(--rouge); }
+.bl-graduation { position: absolute; bottom: 9px; width: 1px; height: 4px; background: rgb(255 255 255 / 0.14); }
+.bl-graduation-nommee { height: 6px; background: rgb(255 255 255 / 0.24); }
+.bl-graduation small { position: absolute; top: -12px; left: 4px; font: 600 8.5px/1 ui-monospace, monospace; color: #5b636e; white-space: nowrap; }
+.bl-frise-tour { position: absolute; top: 2px; bottom: 6px; padding-left: 4px; border-left: 1px solid rgb(255 255 255 / 0.18); font: 700 8.5px/1 ui-monospace, monospace; letter-spacing: 0.12em; color: #7c8798; white-space: nowrap; }
+.bl-tete { position: absolute; left: 62%; top: 8px; bottom: 8px; width: 2px; margin-left: -1px; border-radius: 1px; background: #e9eef7; box-shadow: 0 0 8px rgb(233 238 247 / 0.8); }
+.bl-etat-pause .bl-tete { background: var(--ambre); box-shadow: 0 0 8px var(--ambre); }
+.bl-etat-urgence .bl-tete { background: var(--rouge); box-shadow: 0 0 10px var(--rouge); }
+
+/* En pause ou à l'arrêt d'urgence, rien ne bouge sur la piste. */
+.bl-etat-pause .bl-piste *, .bl-etat-urgence .bl-piste * { animation-play-state: paused !important; }
+
+/* Une barre étroite (tablette en portrait) : l'état sans le tour, les étapes à venir sans leur nom. */
+@container (max-width: 760px) {
+  .bl-identite { width: 140px; }
+  .bl-etat-tour { display: none; }
+  .bl-temps small { display: none; }
+  .bl-temps { min-width: 0; }
+  .bl-pas:not(.bl-pas-cours) .bl-pas-textes { display: none; }
+  .bl-pas:not(.bl-pas-cours) { padding-right: 4px; }
+  .bl-vue, .bl-frise .bl-vue { mask-image: linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 20px), transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bl-piste, .bl-maille, .bl-maille .bl-tuile, .bl-maille-textes { transition-duration: 0.01s !important; }
+}
