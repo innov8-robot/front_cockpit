@@ -47,12 +47,15 @@ de Scratch, charte graphique des nœuds, galerie des composants et prototype int
 droite (on glisse un nœud sur le canevas), clic droit sur un nœud pour ses actions, double-clic pour ses réglages ;
 « Simuler » joue une exécution — le nœud en cours porte un rond de chargement, le lien qui y mène une onde à 1 Hz
 (verte après un succès, ambre après un échec, rouge à l'arrêt d'urgence), et la vue suit l'étape quand elle sort du
-cadre. Les nœuds de logique sont des structures qui se lisent comme du pseudocode — SI … ALORS … SINON … FIN SI,
-POUR i ALLANT DE 1 À 4 … FIN POUR, POUR CHAQUE … SUR …, TANT QUE … FAIRE, RÉPÉTER … JUSQU'À, ESSAYER … SI ÇA RATE
-ENCORE, SELON … CAS — avec PASSER AU SUIVANT et SORTIR DE LA BOUCLE ; ▸ marque où commencent les étapes d'une
-section, le rail de gauche est le retour de la boucle (`structure.ts` en porte les cotes). Le code est dans `src/components/missions/` : `charte.ts` (familles, sorties, états, couleurs de l'onde),
+cadre. Les nœuds sont dessinés comme dans n8n — une tuile et son icône, le nom et le résumé de ses réglages dessous —,
+et la logique est faite de nœuds, pas de cadres : « Si » sort par alors / sinon ; une boucle (pour, pour chaque, tant
+que, répéter, répéter jusqu'à) sort par faire à chaque tour et par fini à la fin, et la dernière étape du tour revient
+dans son entrée par un fil qui passe dessous ; « Selon l'échec » a une sortie par cas. Un geste a un paramètre
+« essais » et un « si ça rate » qui ouvre sa sortie échec. Une sortie libre porte un « + » qui ouvre le choix de
+l'étape suivante ; une boucle neuve arrive avec sa case à remplir. Le code est dans `src/components/missions/` : `charte.ts` (familles, sorties, états, couleurs de l'onde),
 `catalogue.ts` (les types de nœuds — en ajouter un, c'est une entrée), `Noeud.tsx` (nœud et cadre de boucle),
-`Prototype.tsx` (canevas, lien animé, menu, simulation), `proposition.ts` (le texte de la proposition).
+`Prototype.tsx` (canevas, liens, menu du « + », simulation), `actions.ts` (ce que les nœuds demandent au canevas),
+`proposition.ts` (le texte de la proposition).
 
 **`#/essai/logique`** (proposition écartée : on garde le canevas n8n) : la même mission (une boucle, un geste à deux essais qui appelle l'opérateur s'il rate, une
 question) dessinée de trois façons — A ligne de métro, B blocs empilés façon Scratch, C colonne façon Zapier — et

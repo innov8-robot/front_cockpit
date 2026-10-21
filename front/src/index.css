@@ -1217,26 +1217,15 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .barre-mission-pause.reprendre { color: #062211; background: #3dff8a; border-color: #3dff8a; box-shadow: 0 0 18px rgb(61 255 138 / 0.35); }
 @media (max-width: 899px) { .graphe-direct-nom { max-width: 90px; } }
 
-/* L'éditeur de missions (components/missions) : nœuds, cadres, poignées, états. Charte : components/missions/charte.ts. */
+/* L'éditeur de missions (components/missions) : nœuds, poignées, états. Charte : components/missions/charte.ts. */
 .em-icone { display: grid; place-items: center; width: 26px; height: 26px; flex: none; border-radius: 7px; border: 1px solid; }
-.em-noeud {
-  position: relative; display: flex; align-items: center; gap: 8px; min-height: 46px; box-sizing: border-box;
-  width: max-content; min-width: 150px; max-width: 260px; padding: 9px 30px 9px 10px; color: #e9eef7;
-  font-family: 'Inter', system-ui, sans-serif; background: #11151a; border: 1px solid rgb(255 255 255 / 0.1); border-radius: 12px;
-  box-shadow: inset 3px 0 0 var(--famille), 0 8px 24px rgb(0 0 0 / 0.35); transition: box-shadow 0.3s, opacity 0.3s;
-}
-.em-noeud.choisi { border-color: rgb(255 255 255 / 0.55); }
-.em-forme-chapeau { border-radius: 22px 22px 12px 12px; }
-.em-forme-question { border-radius: 999px; padding-left: 12px; }
-.em-forme-fin { border-radius: 12px 12px 4px 4px; border-bottom: 3px solid rgb(255 255 255 / 0.22); }
 .em-phrase { font-size: 0.84rem; line-height: 1.5; font-weight: 600; }
 .em-pastille {
   display: inline-block; padding: 0 7px; margin: 0 2px; border-radius: 999px; line-height: 1.5; font-weight: 600; font-size: 0.78rem;
   color: #0b0d10; background: color-mix(in srgb, var(--famille) 85%, white);
 }
-/* Une condition : la pastille hexagonale des booléens de Scratch. */
 .em-pastille-question { border-radius: 4px; clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 8px 100%, 0 50%); padding: 0 12px; }
-.em-badge-bouge { display: grid; place-items: center; flex: none; width: 17px; height: 17px; border-radius: 5px; color: var(--famille); background: color-mix(in srgb, var(--famille) 16%, transparent); }
+.em-mot { font: 800 0.7rem/1 ui-monospace, 'SF Mono', monospace; letter-spacing: 0.05em; color: color-mix(in srgb, var(--famille, #e9eef7) 30%, white); }
 /* L'état en haut à droite : le rond qui tourne pendant l'étape, puis ✓, !, ■. */
 .em-chargement, .em-badge-etat { position: absolute; top: -9px; right: -9px; width: 20px; height: 20px; border-radius: 50%; box-sizing: border-box; z-index: 2; }
 .em-chargement {
@@ -1245,14 +1234,7 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 }
 .em-badge-etat { display: grid; place-items: center; font: 800 11px/1 ui-monospace, monospace; color: #0b0d10; background: var(--etat); box-shadow: 0 0 10px var(--etat); }
 @keyframes em-tourne { to { transform: rotate(360deg); } }
-.em-signe { position: absolute; right: 9px; transform: translateY(-50%); font: 700 9.5px/1 ui-monospace, monospace; color: #c9ced6; pointer-events: none; }
-.em-signe-echec { color: #ffb02e; }
-.em-signe-faux, .em-signe-autre { color: #8a93a3; }
-.em-poignee { width: 10px !important; height: 10px !important; background: #0b0d10 !important; border: 2px solid #e9eef7 !important; }
-.em-poignee-echec { border-color: #ffb02e !important; }
-.em-poignee-faux, .em-poignee-autre { border-color: #8a93a3 !important; }
-.em-poignee-corps, .em-poignee-interieure { border-color: var(--famille) !important; }
-/* Les états : un halo de la couleur de l'issue ; en cours, un halo blanc qui respire. */
+/* Les états d'une carte compacte (pages d'essai) : un halo de la couleur de l'issue. */
 .em-etat-cours { box-shadow: inset 3px 0 0 var(--famille), 0 0 0 1.5px #e9eef7, 0 0 22px rgb(233 238 247 / 0.35); animation: em-respire 1s ease-in-out infinite; }
 .em-etat-ok { box-shadow: inset 3px 0 0 var(--famille), 0 0 0 1.5px #3dff8a, 0 0 18px rgb(61 255 138 / 0.3); }
 .em-etat-echec { box-shadow: inset 3px 0 0 var(--famille), 0 0 0 1.5px #ffb02e, 0 0 18px rgb(255 176 46 / 0.35); }
@@ -1262,56 +1244,58 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 @keyframes em-respire { 50% { box-shadow: inset 3px 0 0 var(--famille), 0 0 0 2.5px #e9eef7, 0 0 30px rgb(233 238 247 / 0.5); } }
 @media (prefers-reduced-motion: reduce) { .em-etat-cours, .em-chargement { animation-duration: 3s; } }
 
-/*
- * Une structure de logique, lue comme du pseudocode : une tête (« SI … ALORS »), un rail à gauche, des barres entre
- * les sections (« SINON »), une ligne de fin (« FIN SI »). Géométrie : components/missions/structure.ts.
- */
-.em-mot { font: 800 0.7rem/1 ui-monospace, 'SF Mono', monospace; letter-spacing: 0.05em; color: color-mix(in srgb, var(--famille, #e9eef7) 30%, white); }
-.em-struct { --fond-struct: color-mix(in srgb, var(--famille) 22%, #12161c); --bord-struct: color-mix(in srgb, var(--famille) 55%, transparent);
-  position: relative; width: 100%; box-sizing: border-box; color: #e9eef7; font-family: 'Inter', system-ui, sans-serif; transition: opacity 0.3s; }
-.em-struct-tete, .em-struct-barre, .em-struct-pied {
-  position: absolute; left: 0; right: 0; box-sizing: border-box; display: flex; align-items: center; gap: 8px;
-  background: var(--fond-struct); border: 1px solid var(--bord-struct); transition: box-shadow 0.3s;
+/* Un nœud du canevas, comme n8n : une tuile et son icône, le nom et le résumé dessous, les sorties à droite. */
+.em-tuile {
+  position: relative; box-sizing: border-box; width: 76px; height: 76px; display: grid; place-items: center; padding: 0;
+  border-radius: 10px; border: 1.5px solid rgb(255 255 255 / 0.16); background: #1b1f26; color: var(--famille);
+  font-family: 'Inter', system-ui, sans-serif; transition: border-color 0.3s, box-shadow 0.3s, opacity 0.3s;
 }
-.em-struct-tete { top: 0; padding: 0 12px 0 8px; border-radius: 12px 12px 12px 0; box-shadow: 0 8px 22px rgb(0 0 0 / 0.35); z-index: 1; }
-.em-struct-tete .em-phrase, .em-struct-barre .em-phrase, .em-struct-pied .em-phrase { white-space: nowrap; }
-.em-struct-barre { padding: 0 12px 0 26px; border-radius: 0 10px 10px 0; border-left: 0; }
-.em-struct-barre-echec { --fond-struct: rgb(255 176 46 / 0.16); --bord-struct: rgb(255 176 46 / 0.55); }
-.em-struct-barre-echec .em-mot { color: #ffcf7a; }
-.em-struct-pied { padding: 0 12px 0 26px; border-radius: 0 12px 12px 12px; }
-.em-struct-rail { position: absolute; left: 0; box-sizing: border-box; background: var(--fond-struct); border-left: 1px solid var(--bord-struct); border-right: 1px solid var(--bord-struct); overflow: hidden; }
-.em-struct-section { position: absolute; right: 0; box-sizing: border-box; border-right: 1px dashed color-mix(in srgb, var(--famille) 22%, transparent); background: rgb(10 12 15 / 0.35); transition: background 0.3s, box-shadow 0.3s; }
-.em-struct-vide { position: absolute; left: 30px; top: 50%; transform: translateY(-50%); font: 600 10px/1 ui-monospace, monospace; letter-spacing: 0.12em; color: #5b636e; }
-/* ▸ : où commencent les étapes d'une section. */
-.em-depart { width: 12px !important; height: 12px !important; min-width: 0 !important; border: 0 !important; border-radius: 0 !important; background: var(--famille) !important;
-  clip-path: polygon(0 0, 100% 50%, 0 100%); }
-.em-depart-image { position: absolute; transform: translate(-50%, -50%); }
-.em-depart-echec { background: #ffb02e !important; }
-.em-struct-boucle { margin-left: auto; font-size: 15px; line-height: 1; color: var(--famille); }
-/* Ce qu'elle vit pendant l'exécution, dans sa tête. */
-.em-direct { font: 700 10px/1 ui-monospace, monospace; padding: 4px 7px; border-radius: 999px; color: #0b0d10; background: color-mix(in srgb, var(--famille) 75%, white); white-space: nowrap; }
-.em-direct-relance { background: #ffb02e; box-shadow: 0 0 10px rgb(255 176 46 / 0.5); }
-.em-struct-cours > .em-struct-tete { box-shadow: 0 0 0 1.5px #e9eef7, 0 0 24px rgb(233 238 247 / 0.3); }
-.em-struct-ok > .em-struct-tete, .em-struct-ok > .em-struct-pied { box-shadow: 0 0 0 1.5px #3dff8a, 0 0 18px rgb(61 255 138 / 0.22); }
-.em-struct-echec > .em-struct-tete { box-shadow: 0 0 0 1.5px #ffb02e, 0 0 18px rgb(255 176 46 / 0.3); }
-.em-struct-danger > .em-struct-tete { box-shadow: 0 0 0 1.5px #ff2d3a, 0 0 22px rgb(255 45 58 / 0.45); }
-.em-struct-saute { opacity: 0.4; }
-.em-struct.choisi > .em-struct-tete { border-color: rgb(255 255 255 / 0.7); }
-/* La section que le « SI » a prise s'éclaire ; l'autre se hachure. */
-.em-struct-prise { background: color-mix(in srgb, var(--famille) 10%, rgb(10 12 15 / 0.35)); box-shadow: inset 3px 0 0 #e9eef7; }
-.em-struct-laissee { background: repeating-linear-gradient(135deg, rgb(255 255 255 / 0.035) 0 6px, transparent 6px 14px), rgb(10 12 15 / 0.35); }
-/* Une boucle qui repart pour un tour : une onde remonte le rail, le ↻ tourne. */
-.em-struct-reprise > .em-struct-rail::after {
-  content: ''; position: absolute; left: 2px; right: 2px; height: 44px; border-radius: 6px; background: #fff;
-  box-shadow: 0 0 10px #fff, 0 0 22px var(--famille); animation: em-remonte 1s linear infinite;
+.em-tuile.choisi { border-color: rgb(255 255 255 / 0.75); }
+.em-tuile.em-forme-chapeau { border-radius: 38px 10px 10px 38px; }
+.em-tuile.em-forme-fin { border-radius: 10px 38px 38px 10px; }
+.em-tuile-icone { color: var(--famille); }
+.em-eclair { position: absolute; left: -20px; top: 50%; transform: translateY(-50%); font-size: 13px; color: #e9eef7; }
+.em-tuile-nom, .em-tuile-resume {
+  position: absolute; left: 50%; transform: translateX(-50%); width: 168px; text-align: center; pointer-events: none;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.em-struct-reprise .em-struct-boucle { animation: em-tourne-arriere 1s linear infinite; }
-@keyframes em-remonte { from { top: 100%; } to { top: -44px; } }
-@keyframes em-tourne-arriere { to { transform: rotate(-360deg); } }
-@media (prefers-reduced-motion: reduce) { .em-struct-reprise > .em-struct-rail::after, .em-struct-reprise .em-struct-boucle { animation-duration: 3s; } }
+.em-tuile-nom { top: calc(100% + 8px); font: 600 12.5px/1.2 'Inter', system-ui, sans-serif; color: #e9eef7; }
+.em-tuile-resume { top: calc(100% + 25px); font: 500 11px/1.2 'Inter', system-ui, sans-serif; color: #8a93a3; }
+.em-tuile-direct { font: 700 11px/1.2 ui-monospace, monospace; color: #e9eef7; }
+.em-tuile-relance { color: #ffb02e; }
+.em-badge-bouge { position: absolute; left: 5px; bottom: 5px; display: grid; place-items: center; width: 16px; height: 16px; border-radius: 4px; color: var(--famille); background: color-mix(in srgb, var(--famille) 16%, transparent); }
+/* Les sorties : leur nom quand il y en a plusieurs, un « + » au bout quand elles sont libres. */
+.em-sortie-nom {
+  position: absolute; left: calc(100% + 9px); transform: translateY(-50%); padding: 1px 4px; border-radius: 4px; z-index: 1;
+  font: 500 10.5px/1.2 'Inter', system-ui, sans-serif; color: #9aa3ae; background: #0b0d10; white-space: nowrap; pointer-events: none; transition: color 0.3s, background 0.3s;
+}
+.em-sortie-echec { color: #ffb02e; }
+.em-sortie-prise { color: #0b0d10; background: #e9eef7; }
+.em-sortie-echec.em-sortie-prise { background: #ffb02e; }
+.em-bout { position: absolute; left: 100%; width: 62px; height: 1.5px; margin-top: -0.75px; background: rgb(154 163 174 / 0.5); pointer-events: none; }
+.em-plus {
+  position: absolute; right: -20px; top: -10px; width: 20px; height: 20px; padding: 0; display: grid; place-items: center; box-sizing: border-box;
+  border-radius: 5px; border: 1px solid rgb(255 255 255 / 0.22); background: #1b1f26; color: #c9ced6; font: 600 14px/1 'Inter', system-ui, sans-serif;
+  cursor: pointer; pointer-events: auto;
+}
+.em-plus:hover { background: #e9eef7; color: #0b0d10; border-color: #e9eef7; }
+.em-poignee { width: 11px !important; height: 11px !important; background: #1b1f26 !important; border: 1.5px solid #9aa3ae !important; }
+.em-poignee-echec { border-color: #ffb02e !important; }
+/* La case à remplir d'une boucle neuve. */
+.em-tuile-vide { border: 1.5px dashed rgb(255 255 255 / 0.4); background: rgb(255 255 255 / 0.02); color: #e9eef7; font-size: 30px; font-weight: 300; cursor: pointer; }
+.em-tuile-vide:hover { border-color: #e9eef7; background: rgb(255 255 255 / 0.06); }
+.em-tuile-vide .em-tuile-nom { color: #9aa3ae; font-weight: 500; }
+/* Les états sur la tuile : la bordure et un halo de la couleur de l'issue ; en cours, un halo blanc qui respire. */
+.em-tuile.em-etat-cours { border-color: #e9eef7; box-shadow: 0 0 22px rgb(233 238 247 / 0.35); animation: em-respire-tuile 1s ease-in-out infinite; }
+.em-tuile.em-etat-ok { border-color: #3dff8a; box-shadow: 0 0 16px rgb(61 255 138 / 0.25); }
+.em-tuile.em-etat-echec { border-color: #ffb02e; box-shadow: 0 0 16px rgb(255 176 46 / 0.3); }
+.em-tuile.em-etat-danger { border-color: #ff2d3a; box-shadow: 0 0 22px rgb(255 45 58 / 0.45); }
+@keyframes em-respire-tuile { 50% { box-shadow: 0 0 34px rgb(233 238 247 / 0.55); } }
+.em-tuile.em-veille { border-color: rgb(233 238 247 / 0.6); box-shadow: 0 0 14px rgb(233 238 247 / 0.15); animation: none; }
+@media (prefers-reduced-motion: reduce) { .em-tuile.em-etat-cours { animation-duration: 3s; } }
 
 /* Le prototype de l'éditeur : canevas, palette à droite ; menu au clic droit, réglages par-dessus la palette. */
-.em-prototype { position: relative; display: grid; grid-template-columns: 1fr 210px; height: 640px; border: 1px solid rgb(255 255 255 / 0.1); border-radius: 16px; overflow: hidden; background: #0b0d10; }
+.em-prototype { position: relative; display: grid; grid-template-columns: 1fr 210px; height: 680px; border: 1px solid rgb(255 255 255 / 0.1); border-radius: 16px; overflow: hidden; background: #0b0d10; }
 .em-palette { overflow-y: auto; padding: 12px 10px; border-left: 1px solid rgb(255 255 255 / 0.08); background: #0e1115; }
 .em-recherche { width: 100%; box-sizing: border-box; height: 34px; padding: 0 10px; border-radius: 9px; border: 1px solid rgb(255 255 255 / 0.12); background: #070809; color: #e9eef7; font: inherit; font-size: 0.8rem; }
 .em-palette-famille p { margin: 14px 4px 6px; font: 600 9px/1 ui-monospace, monospace; letter-spacing: 0.16em; }
@@ -1360,6 +1344,13 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .em-menu .em-menu-suppr, .em-menu .em-menu-suppr span { color: #ffb02e; }
 .em-menu hr { margin: 4px 6px; border: 0; border-top: 1px solid rgb(255 255 255 / 0.08); }
 @keyframes em-surgit { from { opacity: 0; transform: translateY(-4px) scale(0.98); } }
+.em-choisir {
+  position: absolute; z-index: 7; width: 240px; max-height: 330px; display: flex; flex-direction: column; gap: 6px; padding: 8px; box-sizing: border-box;
+  border-radius: 12px; border: 1px solid rgb(255 255 255 / 0.14); background: rgb(14 17 21 / 0.97); backdrop-filter: blur(10px);
+  box-shadow: 0 16px 40px rgb(0 0 0 / 0.5); animation: em-surgit 0.12s ease-out;
+}
+.em-choisir-liste { overflow-y: auto; min-height: 0; }
+.em-choisir .em-palette-item { width: 100%; border: 0; background: none; text-align: left; font-family: inherit; cursor: pointer; }
 .em-panneau { position: absolute; right: 10px; top: 62px; bottom: 10px; width: min(480px, calc(100% - 40px)); z-index: 5; display: flex; flex-direction: column; border: 1px solid rgb(255 255 255 / 0.12); border-radius: 14px; background: rgb(14 17 21 / 0.96); backdrop-filter: blur(10px); overflow: hidden; }
 .em-panneau-tete { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid rgb(255 255 255 / 0.08); box-shadow: inset 0 3px 0 var(--famille); }
 .em-panneau-tete p { margin: 0; font: 600 9px/1 ui-monospace, monospace; letter-spacing: 0.16em; color: #8a93a3; text-transform: uppercase; }
@@ -1438,15 +1429,14 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .em-grille-sorties { display: flex; flex-wrap: wrap; gap: 18px 28px; }
 .em-sortie-ex { display: flex; align-items: center; gap: 8px; font: 600 11px/1 ui-monospace, monospace; }
 .em-grille-etats { display: flex; flex-wrap: wrap; gap: 22px 18px; padding-top: 8px; }
-.em-grille-etats figure { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.em-grille-etats figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 0; }
 .em-grille-etats figcaption { font: 600 10px/1 ui-monospace, monospace; letter-spacing: 0.08em; color: #8a93a3; }
 .em-grille-ondes { display: flex; flex-wrap: wrap; gap: 18px 32px; }
 .em-onde-ex { display: flex; align-items: center; gap: 10px; font: 600 11px/1 ui-monospace, monospace; }
 .em-onde-ex svg { overflow: visible; }
 .em-galerie { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
 .em-galerie figure { margin: 0; display: flex; flex-direction: column; gap: 8px; }
-.em-galerie:has(.em-galerie-structure) { grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); }
-.em-galerie-structure { width: 100%; }
+.em-case { display: flex; justify-content: center; padding: 10px 60px 52px; }
 .em-galerie figcaption { color: #8a93a3; font-size: 0.78rem; line-height: 1.45; max-width: 250px; }
 @media (max-width: 900px) {
   .em-page { grid-template-columns: 1fr; }

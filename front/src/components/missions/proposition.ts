@@ -56,7 +56,7 @@ export const HISTOIRES: Histoire[] = [
   },
   {
     id: 'H6', persona: 'methodes', je_veux: 'ajouter des conditions et des boucles sans écrire de code', afin_de: 'traiter « tant qu’il reste des pièces », « si la prise échoue, réessaie »',
-    criteres: ['Si, Répéter, Pour chaque, Tant que, Réessayer, Attendre, Compter', 'Les boucles sont des cadres qui contiennent leurs étapes (blocs en C)', 'Toute boucle a une limite de tours'],
+    criteres: ['Si, Pour, Pour chaque, Tant que, Répéter, Attendre, Compter', 'Une boucle sort par « faire » à chaque tour et par « fini » à la fin ; le tour revient dans son entrée (le Loop Over Items de n8n)', 'Toute boucle a une limite de tours'],
     priorite: 'Doit',
   },
   {
@@ -102,7 +102,7 @@ export const EXIGENCES: Exigence[] = [
   { id: 'F1', groupe: 'Édition', priorite: 'Doit', texte: 'Canevas infini : déplacer, zoomer, mini-carte, aligner automatiquement.' },
   { id: 'F2', groupe: 'Édition', priorite: 'Doit', texte: 'Ajouter un nœud par la palette (familles + recherche) ou par « + » au bout d’une sortie, déjà relié.' },
   { id: 'F3', groupe: 'Édition', priorite: 'Doit', texte: 'Sorties nommées : réussi / échoué, oui / non, à chaque tour / ensuite. Une sortie non reliée termine la branche.' },
-  { id: 'F4', groupe: 'Édition', priorite: 'Doit', texte: 'Cadres de boucle qui contiennent leurs étapes ; glisser un nœud dans un cadre l’y range.' },
+  { id: 'F4', groupe: 'Édition', priorite: 'Doit', texte: 'Boucles et conditions en nœuds à sorties nommées (alors / sinon, faire / fini) ; une boucle neuve arrive avec sa case à remplir.' },
   { id: 'F5', groupe: 'Édition', priorite: 'Devrait', texte: 'Annuler / rétablir, copier / coller, dupliquer, désactiver un nœud, notes sur le canevas.' },
   { id: 'F6', groupe: 'Réglages', priorite: 'Doit', texte: 'Panneau de nœud à trois colonnes : entrées (tableau noir), réglages, sorties ; aide sur chaque réglage.' },
   { id: 'F7', groupe: 'Réglages', priorite: 'Doit', texte: 'Conditions composées de menus (pas de texte libre) : objet, capteur, variable, comparaison, valeur.' },
@@ -128,11 +128,11 @@ export const PRINCIPES: Principe[] = [
   { source: 'n8n', idee: 'Un nœud = une étape, reliée aux suivantes ; un déclencheur en tête, marqué d’un éclair.', chez_nous: 'Le canevas de la mission, ses déclencheurs (lancement, heure, signal).' },
   { source: 'n8n', idee: 'Le panneau de nœud : ce qui arrive à gauche, les réglages au centre, ce qui sort à droite.', chez_nous: 'Le panneau à trois colonnes, avec le tableau noir de la mission (l’objet pris, le côté…).' },
   { source: 'n8n', idee: 'IF (vrai / faux), Switch, Merge, Loop Over Items (boucle / fini), Wait, sous-workflows.', chez_nous: 'Si, Pour chaque, Répéter, Tant que, Attendre, Sous-mission.' },
-  { source: 'n8n', idee: 'Réglages d’erreur par nœud : Retry On Fail, On Error (arrêter, continuer, sortie d’erreur).', chez_nous: 'Toute étape a une sortie « échoué » ; le cadre « Réessayer » rejoue N fois.' },
+  { source: 'n8n', idee: 'Réglages d’erreur par nœud : Retry On Fail, On Error (arrêter, continuer, sortie d’erreur).', chez_nous: 'Un geste a un paramètre « essais » et un « si ça rate » : arrêter la mission, ou ouvrir sa sortie « échec ».' },
   { source: 'n8n', idee: 'Les exécutions : chaque run, son statut, ses données à chaque nœud.', chez_nous: 'L’historique rejouable à l’écran, verdict par nœud.' },
-  { source: 'Scratch', idee: 'La catégorie se lit à la couleur, le rôle à la forme : chapeau, pile, bloc en C, booléen hexagonal.', chez_nous: 'Familles colorées, formes de nœud, conditions en pastilles hexagonales.' },
+  { source: 'Scratch', idee: 'La catégorie se lit à la couleur, le rôle à la forme : chapeau, pile, bloc en C, booléen hexagonal.', chez_nous: 'Familles colorées (l’icône de la tuile) ; un déclencheur a le bord gauche arrondi, une fin le bord droit.' },
   { source: 'Scratch', idee: 'Les blocs se lisent comme des phrases avec des trous à remplir.', chez_nous: '« Répéter [3] fois », « Si [il reste une pièce] » : pas de syntaxe.' },
-  { source: 'Scratch', idee: 'Les boucles enveloppent leurs blocs (« repeat », « forever ») : pas de flèche de retour.', chez_nous: 'Les cadres de boucle contiennent leurs étapes.' },
+  { source: 'n8n', idee: 'Loop Over Items : une sortie « loop » vers le corps, une sortie « done » pour la suite ; le corps revient dans l’entrée.', chez_nous: 'Pour, pour chaque, tant que, répéter : sorties « faire » et « fini », le retour passe sous les nœuds.' },
 ];
 
 /** Ce que le relevé du cockpit réel (mpc_dev) a trouvé : les primitives et l'état des missions. */

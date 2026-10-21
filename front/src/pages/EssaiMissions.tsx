@@ -1,6 +1,6 @@
 import { FAMILLE, FAMILLES, ETATS, SORTIES, STATUTS, TONS, type Ton } from '../components/missions/charte';
 import { CATALOGUE } from '../components/missions/catalogue';
-import { CadreStructure, CarteNoeud } from '../components/missions/Noeud';
+import { CarteNoeud } from '../components/missions/Noeud';
 import { EXIGENCES, EXISTANT, HISTOIRES, PERSONAS, PRINCIPES, QUESTIONS } from '../components/missions/proposition';
 import { OndeExemple } from '../components/missions/Onde';
 import { Prototype } from '../components/missions/Prototype';
@@ -119,7 +119,7 @@ export function EssaiMissions() {
           <div className="em-grille-sorties">
             {(Object.entries(SORTIES) as [keyof typeof SORTIES, (typeof SORTIES)[keyof typeof SORTIES]][]).filter(([, s]) => s.libelle).map(([k, s]) => (
               <div key={k} className="em-sortie-ex">
-                <svg width="90" height="14" aria-hidden="true"><line x1="2" y1="7" x2="80" y2="7" stroke={s.couleur} strokeWidth="2" strokeDasharray={s.pointille ? '6 5' : undefined} /><path d="M80 2l8 5-8 5z" fill={s.couleur} /></svg>
+                <svg width="90" height="14" aria-hidden="true"><line x1="2" y1="7" x2="86" y2="7" stroke={s.couleur} strokeWidth="2" strokeDasharray={s.pointille ? '6 5' : undefined} /></svg>
                 <span style={{ color: s.couleur }}>{s.libelle}</span>
               </div>
             ))}
@@ -137,20 +137,18 @@ export function EssaiMissions() {
           <div className="em-grille-etats">
             {(Object.keys(ETATS) as (keyof typeof ETATS)[]).map((e) => (
               <figure key={e}>
-                <CarteNoeud type={CATALOGUE.find((t) => t.cle === 'prise_objet')!} valeurs={{ primitive: 'pièce' }} etat={e} />
+                <div className="em-case"><CarteNoeud type={CATALOGUE.find((t) => t.cle === 'prise_objet')!} valeurs={{ primitive: 'pièce' }} etat={e} /></div>
                 <figcaption>{ETATS[e].libelle}</figcaption>
               </figure>
             ))}
           </div>
           <h3 className="em-sous">Typographie et mesures</h3>
           <ul className="em-constats">
-            <li>Inter pour les phrases des nœuds (0,86 rem, gras) ; mono majuscules espacées pour les familles, sorties et états.</li>
-            <li>Un nœud tient sur une ligne : une icône, deux ou trois mots, ses réglages en pastilles. Son nom complet est dans l’info-bulle et dans ses réglages.</li>
-            <li>Une structure de logique se lit comme du pseudocode : une tête (SI … ALORS, POUR i ALLANT DE 1 À 4, TANT QUE … FAIRE), des barres entre ses sections (SINON, SI ÇA RATE ENCORE), une ligne de fin (FIN SI, FIN POUR, JUSQU’À …). Mots-clés en capitales, réglages en pastilles.</li>
-            <li>▸ marque où commencent les étapes d’une section ; une section finit à sa dernière étape, sans fil de retour. Le rail de gauche est le retour de la boucle : une onde le remonte à chaque nouveau tour.</li>
-            <li>Sorties : un signe à côté de la poignée (✓ réussi, ✕ échoué, oui / non), jamais d’étiquette sur les liens.</li>
-            <li>Poignées de 11 px (22 px de zone tactile), cibles d’au moins 44 px sur tablette ; grille de points de 24 px.</li>
-            <li>Une pastille = un réglage ; une pastille hexagonale = une condition (vrai / faux), comme les booléens de Scratch.</li>
+            <li>Comme n8n : un nœud est une tuile de 76 px et son icône ; dessous, son nom (Inter 12,5 px) et le résumé de ses réglages, en gris. Un déclencheur a le bord gauche arrondi, une fin le bord droit.</li>
+            <li>La logique est faite de nœuds, pas de cadres : « Si » sort par <b>alors</b> ou <b>sinon</b> ; une boucle (pour, pour chaque, tant que, répéter) sort par <b>faire</b> à chaque tour et par <b>fini</b> à la fin ; la dernière étape du tour revient dans son entrée, par un fil qui passe sous les nœuds.</li>
+            <li>Un geste n’a qu’une sortie ; « si ça rate » ouvre la sortie <b style={{ color: '#ffb02e' }}>échec</b>, en pointillé ambre. Ses essais sont un paramètre, écrit dans son résumé (« pièce · 2 essais »).</li>
+            <li>Une sortie libre porte un <b>+</b> : on clique, on choisit l’étape suivante. Une boucle neuve arrive avec sa case à remplir.</li>
+            <li>Poignées de 11 px (22 px de zone tactile), cibles d’au moins 44 px sur tablette ; grille de points de 20 px.</li>
           </ul>
         </section>
 
@@ -166,9 +164,7 @@ export function EssaiMissions() {
                 <div className="em-galerie">
                   {ts.map((t) => (
                     <figure key={t.cle}>
-                      {t.structure
-                        ? <div className="em-galerie-structure"><CadreStructure type={t} valeurs={{}} vides={t.structure.sections.map((x) => x.cle)} vide="ses étapes" /></div>
-                        : <CarteNoeud type={t} />}
+                      <div className="em-case"><CarteNoeud type={t} /></div>
                       <figcaption>
                         <span className={`em-statut em-statut-${t.statut}`} title={STATUTS[t.statut].aide}>{STATUTS[t.statut].libelle}</span>
                         {t.aide}
@@ -184,7 +180,7 @@ export function EssaiMissions() {
 
         <section id="prototype">
           <h2><span>08</span>Prototype</h2>
-          <p className="em-intro">« Vider la table dans le bac » : aller à la table ; pour chaque pièce, essayer deux fois de la prendre, et si ça rate encore appeler l’opérateur et passer à la suivante ; la poser, compter ; si le bac est plein, appeler l’opérateur ; à la fin, rentrer les bras et retourner à la base. « ▶ Simuler » joue une exécution : la première pièce passe, la seconde rate deux fois. Clic droit sur un nœud : ses actions ; double-clic : ses réglages ; la palette, à droite, se glisse sur le canevas.</p>
+          <p className="em-intro">« Vider la table dans le bac » : aller à la table ; pour chaque pièce, si le bac est plein appeler l’opérateur, puis prendre la pièce (deux essais), la poser, compter et revenir à la boucle ; une pièce imprenable appelle l’opérateur et la boucle passe à la suivante ; quand il n’en reste plus, rentrer les bras et aller à la base. « ▶ Simuler » joue une exécution : la première pièce passe, la seconde rate deux fois. Le « + » au bout d’une sortie ajoute l’étape suivante ; clic droit sur un nœud : ses actions ; double-clic : ses réglages, qui agissent ; la palette, à droite, se glisse sur le canevas.</p>
           <Prototype />
         </section>
 

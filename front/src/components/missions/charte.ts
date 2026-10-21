@@ -21,7 +21,7 @@ export const FAMILLES: Famille[] = [
   { cle: 'robot', nom: 'Gestes du robot', couleur: '#5b8cff', forme: 'action', role: 'les primitives enregistrées : prendre, déposer' },
   { cle: 'deplacement', nom: 'Déplacements', couleur: '#38bdf8', forme: 'action', role: 'rouler jusqu’à un poste, rentrer les bras' },
   { cle: 'perception', nom: 'Perception', couleur: '#a78bfa', forme: 'question', role: 'voir, compter, reconnaître : rend une valeur' },
-  { cle: 'logique', nom: 'Logique', couleur: '#e879f9', forme: 'cadre', role: 'SI … ALORS, POUR … ALLANT DE, TANT QUE : des structures qui se lisent comme du pseudocode' },
+  { cle: 'logique', nom: 'Logique', couleur: '#e879f9', forme: 'cadre', role: 'si, pour, pour chaque, tant que : des nœuds dont les sorties disent le chemin (alors / sinon, faire / fini)' },
   { cle: 'donnees', nom: 'Données', couleur: '#cbd5e1', forme: 'action', role: 'compteurs et variables' },
   { cle: 'temps', nom: 'Temps', couleur: '#7c8798', forme: 'action', role: 'attendre une durée, un signal' },
   { cle: 'operateur', nom: 'Opérateur', couleur: '#ffb02e', forme: 'action', role: 'demander une action humaine : c’est une attention' },
@@ -32,18 +32,18 @@ export const FAMILLE = Object.fromEntries(FAMILLES.map((f) => [f.cle, f])) as Re
 
 /** Les sorties d'un nœud et leur trait : le chemin normal plein, l'échec pointillé ambre, jamais rouge. */
 export const SORTIES = {
-  ok: { libelle: 'réussi', couleur: '#e9eef7', pointille: false },
-  echec: { libelle: 'échoué', couleur: '#ffb02e', pointille: true },
-  vrai: { libelle: 'oui', couleur: '#e9eef7', pointille: false },
-  faux: { libelle: 'non', couleur: '#8a93a3', pointille: true },
-  corps: { libelle: 'à chaque tour', couleur: '#e879f9', pointille: false },
-  alors: { libelle: 'alors', couleur: '#e879f9', pointille: false },
-  sinon: { libelle: 'sinon', couleur: '#e879f9', pointille: false },
-  fini: { libelle: 'ensuite', couleur: '#e9eef7', pointille: false },
-  suite: { libelle: '', couleur: '#e9eef7', pointille: false },
-  cas1: { libelle: 'cas 1', couleur: '#e9eef7', pointille: false },
-  cas2: { libelle: 'cas 2', couleur: '#e9eef7', pointille: false },
-  autre: { libelle: 'autre', couleur: '#8a93a3', pointille: true },
+  ok: { libelle: 'ok', couleur: '#9aa3ae', pointille: false },
+  echec: { libelle: 'échec', couleur: '#ffb02e', pointille: true },
+  vrai: { libelle: 'oui', couleur: '#9aa3ae', pointille: false },
+  faux: { libelle: 'non', couleur: '#9aa3ae', pointille: false },
+  alors: { libelle: 'alors', couleur: '#9aa3ae', pointille: false },
+  sinon: { libelle: 'sinon', couleur: '#9aa3ae', pointille: false },
+  faire: { libelle: 'faire', couleur: '#9aa3ae', pointille: false },
+  fini: { libelle: 'fini', couleur: '#9aa3ae', pointille: false },
+  suite: { libelle: '', couleur: '#9aa3ae', pointille: false },
+  cas1: { libelle: 'cas 1', couleur: '#9aa3ae', pointille: false },
+  cas2: { libelle: 'cas 2', couleur: '#9aa3ae', pointille: false },
+  autre: { libelle: 'autrement', couleur: '#9aa3ae', pointille: false },
 } as const;
 
 /** Ce que l'éditeur sait du nœud aujourd'hui, par rapport au robot : la proposition ne cache pas ce qui manque. */
