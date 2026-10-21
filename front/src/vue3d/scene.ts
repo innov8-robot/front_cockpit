@@ -10,7 +10,7 @@ import { creerEnvironnement, teinterMeubles, type Segmentation } from './environ
 import { creerHologramme } from './hologramme';
 import { CAMERA_TETE, creerNuages, type Nuages } from './nuages';
 import type { TrameImage, TrameNuage } from '../api/flux';
-import { creerNuagesReels, type NuagesReels } from './reel';
+import { creerCarteChassis, creerNuagesReels, type GrilleChassis, type NuagesReels } from './reel';
 import { allumerRobot, animerRobot, chargerRobot } from './robot';
 import { creerBandeSol, creerSol } from './sol';
 import { fixerObstacles, mettreAJourSonar, teinterSonar } from './sonar';
@@ -62,6 +62,9 @@ export interface Scene3D {
     nuage(t: TrameNuage): void;
     /** Pose le modèle aux angles mesurés (noms d'articulations de l'URDF). */
     articulations(valeurs: Record<string, number>): void;
+    /** La carte du châssis, puis la pose de la base dans cette carte. */
+    grille(g: GrilleChassis): void;
+    poserBase(pose: { x: number; y: number; yaw: number }): void;
   }>;
   /** Plonge dans l'écran de la caméra jusqu'à voir par l'œil du robot (true), ou en ressort (false). */
   plongerCamera(entrer: boolean): Promise<void>;
@@ -144,6 +147,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
     const bornes = new THREE.Box3().setFromObject(r);
     const zSol = bornes.isEmpty() ? 0 : bornes.min.y;
     monde.position.y = -zSol;
+    zSolReel = zSol;
     // Le sonar part du sol, au centre de l'anneau sous le robot.
     origineSonarLocale.set(0, 0, zSol + 0.02);
     scene.updateMatrixWorld(true);
@@ -187,9 +191,12 @@ export function monterScene(hote: HTMLElement): Scene3D {
   }
 
   let reels: NuagesReels | null = null;
+  let carteReelle: THREE.Object3D | null = null;
+  let zSolReel = 0;
   let posture: 'simulee' | 'mesuree' = 'simulee';
 
   function appliquerVisibilite(): void {
+    if (carteReelle) carteReelle.visible = visibles.carte;
     if (reels) {
       reels.camera.visible = visibles.camera;
       reels.lidar.visible = visibles.lidar;
@@ -351,6 +358,11 @@ export function monterScene(hote: HTMLElement): Scene3D {
       detections = null;
       // Le modèle suit désormais le robot : plus de respiration simulée.
       posture = 'mesuree';
+      const carte = creerCarteChassis();
+      // Le sol du modèle : la carte se pose dessus, sous les roues.
+      carte.groupe.position.z = zSolReel;
+      carteReelle = carte.groupe;
+      monde.add(carte.groupe);
       // Les deux nuages dans le repère du torse, comme la vue 3D viser : la hand-eye y porte la caméra.
       const torse = robot!.links.torso_link ?? robot!;
       torse.add(reels.camera, reels.lidar);
@@ -362,6 +374,8 @@ export function monterScene(hote: HTMLElement): Scene3D {
           (await reels!.image(t))?.close();
         },
         nuage: (t: TrameNuage) => reels!.nuage(t),
+        grille: (g: GrilleChassis) => carte.grille(g),
+        poserBase: (pose: { x: number; y: number; yaw: number }) => carte.poserBase(pose),
         articulations: (valeurs: Record<string, number>) => {
           for (const [nom, v] of Object.entries(valeurs)) robot!.setJointValue(nom, v);
         },

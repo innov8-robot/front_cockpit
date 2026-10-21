@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { api, enSimulation } from '../api/client';
 import { decoderImage, decoderNuage, ouvrirFlux } from '../api/flux';
 import { urlServeur } from '../api/mode';
+import type { GrilleChassis } from '../vue3d/reel';
 import type { EtatCapteurs, EtatCorps, Robot, Verdict } from '../api/types';
 import { BarreRobot } from '../components/BarreRobot';
 import { CALQUES } from '../components/calques';
@@ -153,6 +154,7 @@ export function Accueil() {
             precedente = nouvelle;
           }),
           ouvrirFlux(url, '/ws/lidar', (b) => reel.nuage(decoderNuage(b as ArrayBuffer))),
+          suivreCarte(url, reel),
           ouvrirFlux(url, '/ws/etat', (b) => {
             const m = JSON.parse(typeof b === 'string' ? b : new TextDecoder().decode(b));
             reel.articulations(m.articulations);
@@ -248,4 +250,18 @@ function useApercuCamera(): [string | null, (run: string | null) => void] {
     fetch('camera/apercu.json').then((r) => r.json()).then((m: { run: string }) => setRun(m.run)).catch(() => setRun(null));
   }, []);
   return [run, setRun];
+}
+
+/** Relit la carte du châssis (toutes les 10 s) et sa pose (deux fois par seconde) pour la scène 3D au réel. */
+function suivreCarte(url: string, reel: { grille(g: GrilleChassis): void; poserBase(p: { x: number; y: number; yaw: number }): void }) {
+  let vivant = true;
+  const lire = <T,>(chemin: string, faire: (v: T) => void) =>
+    fetch(`${url}${chemin}`).then((r) => (r.ok ? r.json() : null)).then((v) => vivant && v && faire(v)).catch(() => undefined);
+  const carte = () => lire<GrilleChassis>('/api/carte', (g) => reel.grille(g));
+  const pose = () => lire<{ pose: { x: number; y: number; yaw: number } }>('/api/chassis', (c) => reel.poserBase(c.pose));
+  carte();
+  pose();
+  const t1 = setInterval(carte, 10_000);
+  const t2 = setInterval(pose, 500);
+  return () => { vivant = false; clearInterval(t1); clearInterval(t2); };
 }

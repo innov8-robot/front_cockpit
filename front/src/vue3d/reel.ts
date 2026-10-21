@@ -88,3 +88,71 @@ export function creerNuagesReels() {
 }
 
 export type NuagesReels = ReturnType<typeof creerNuagesReels>;
+
+/** La grille du châssis, telle que la sert `/api/carte`. */
+export interface GrilleChassis {
+  x0: number;
+  y0: number;
+  res: number;
+  w: number;
+  h: number;
+  /** Les octets de la grille en base64 : 0 jamais vu, 1 à 127 libre, au-delà occupé. */
+  cellules: string;
+}
+
+const SEUIL_OCCUPE = 127;
+/** Comme `navigation.grille.grille_vers_nuage` (la vue 3D viser) : le sol à plat, chaque mur en colonnette. */
+const SOL_Z = 0.02;
+const MUR_Z = [0.2, 0.67, 1.13, 1.6];
+const PAS_SOL = 2;
+
+/**
+ * La carte du châssis en relief, dans le repère de la carte. `poserBase` la place sous le robot : le repère du
+ * modèle est celui de la base, que la pose du châssis situe dans la carte.
+ */
+export function creerCarteChassis() {
+  const groupe = new THREE.Group();
+  let points: THREE.Points | null = null;
+
+  function grille(g: GrilleChassis): void {
+    const octets = Uint8Array.from(atob(g.cellules), (c) => c.charCodeAt(0));
+    const xyz: number[] = [];
+    const rvb: number[] = [];
+    for (let j = 0; j < g.h; j++) {
+      for (let i = 0; i < g.w; i++) {
+        const v = octets[j * g.w + i];
+        const x = g.x0 + (i + 0.5) * g.res;
+        const y = g.y0 + (j + 0.5) * g.res;
+        if (v > SEUIL_OCCUPE) {
+          for (const z of MUR_Z) { xyz.push(x, y, z); rvb.push(0.85, 0.9, 1); }
+        } else if (v > 0 && i % PAS_SOL === 0 && j % PAS_SOL === 0) {
+          xyz.push(x, y, SOL_Z);
+          rvb.push(0.3, 0.38, 0.5);
+        }
+      }
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(xyz, 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(rvb, 3));
+    if (points) {
+      points.geometry.dispose();
+      points.geometry = geo;
+      return;
+    }
+    points = new THREE.Points(geo, new THREE.PointsMaterial({
+      size: 0.03, vertexColors: true, sizeAttenuation: true, transparent: true, opacity: 0.85, depthWrite: false,
+    }));
+    points.frustumCulled = false;
+    groupe.add(points);
+  }
+
+  /** Place la carte : la pose du châssis `(x, y, yaw)` dans la carte devient l'origine du modèle. */
+  function poserBase(pose: { x: number; y: number; yaw: number }): void {
+    groupe.rotation.set(0, 0, -pose.yaw);
+    const c = Math.cos(-pose.yaw);
+    const s = Math.sin(-pose.yaw);
+    groupe.position.set(-(c * pose.x - s * pose.y), -(s * pose.x + c * pose.y), groupe.position.z);
+  }
+
+  return { groupe, grille, poserBase };
+}
