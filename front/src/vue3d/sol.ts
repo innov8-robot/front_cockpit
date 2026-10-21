@@ -86,7 +86,7 @@ export function creerBandeSol(): THREE.Mesh {
       varying vec3 vMonde;
       ${GLSL_SONAR}
       void main() {
-        float s = sonar(vMonde) * 1.5;
+        float s = sonar(vMonde) * 0.83 * uSonarEclat;
         if (s < 0.01) discard;
         gl_FragColor = vec4(uSonarCouleur * s, 1.0);
       }`,

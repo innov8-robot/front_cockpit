@@ -17,11 +17,16 @@ const MAX_OBJETS = 8;
  * retenu : les nuages se fondent au maximum par canal, et l'impulsion du sonar doit pouvoir le dépasser.
  */
 const VIVANT = { couleur: '#ffffff', taille: 7, tailleMax: 4, opacite: 0.42, portee: 4 };
-/** L'éclat du front de l'impulsion sur les points, au-delà du blanc : il l'emporte et nourrit le halo. */
-const ECLAT_SONAR = 1.8;
 /** La carte mémorisée : un point par cube de `VOXEL_M` déjà vu, plus gros et presque transparent, partout. */
 const CARTE = { couleur: '#6f86ad', taille: 15, tailleMax: 8, opacite: 0.2, portee: 1000 };
 const VOXEL_M = 0.05;
+/** La hauteur (m) que couvre un dégradé par la hauteur, du sol à son dernier palier. */
+const HAUTEUR_RAMPE_M = 1.8;
+/** L'éclat de la carte mémorisée dans un dégradé : le même dégradé, éteint. */
+const ECLAT_MEMOIRE_RAMPE = 0.9;
+
+/** Une couleur, ou un dégradé par la hauteur de cinq paliers, du sol vers le haut. */
+export type Teinte = string | readonly string[];
 const CAPACITE_CARTE = 150_000;
 
 /** `portee` : au-delà de cette distance au robot (m), le nuage s'efface. */
@@ -40,6 +45,8 @@ function materiauCanal(rendu: Rendu, vie: number, canal: THREE.Vector3, decalage
     blendDst: THREE.OneFactor,
     uniforms: {
       uCouleur: { value: new THREE.Color(couleur).multiply(new THREE.Color(canal.x, canal.y, canal.z)) },
+      uDegrade: { value: 0 },
+      uRampe: { value: Array.from({ length: 5 }, () => new THREE.Color(couleur)) },
       uTaille: { value: taille },
       uTemps: { value: 0 },
       uVie: { value: vie },
@@ -59,6 +66,15 @@ function materiauCanal(rendu: Rendu, vie: number, canal: THREE.Vector3, decalage
       attribute float aObjet;
       uniform vec3 uCouleur;
       uniform vec3 uCanal;
+      uniform float uDegrade;
+      uniform vec3 uRampe[5];
+      // La couleur selon la hauteur au-dessus du sol (0 à HAUTEUR_RAMPE_M), en cinq paliers interpolés.
+      vec3 rampe(float h) {
+        float x = clamp(h, 0.0, 1.0) * 4.0;
+        vec3 c = uRampe[4];
+        for (int k = 0; k < 4; k++) if (x < float(k + 1)) { c = mix(uRampe[k], uRampe[k + 1], x - float(k)); break; }
+        return c;
+      }
       uniform vec3 uTeintes[${MAX_OBJETS}];
       uniform float uObjets;
       varying vec3 vCouleur;
@@ -81,12 +97,13 @@ function materiauCanal(rendu: Rendu, vie: number, canal: THREE.Vector3, decalage
         int k = int(aObjet + 0.5) - 1;
         bool objet = k >= 0;
         float teinte = objet ? uObjets : 0.0;
-        vCouleur = uCouleur;
-        for (int i = 0; i < ${MAX_OBJETS}; i++) if (objet && i == k) vCouleur = mix(uCouleur, uTeintes[i] * uCanal, teinte);
+        vec3 base = uDegrade > 0.5 ? rampe((modelMatrix * vec4(position, 1.0)).y / ${HAUTEUR_RAMPE_M.toFixed(2)}) * uCanal : uCouleur;
+        vCouleur = base;
+        for (int i = 0; i < ${MAX_OBJETS}; i++) if (objet && i == k) vCouleur = mix(base, uTeintes[i] * uCanal, teinte);
         vAlpha = min(1.0, vAlpha + 0.35 * teinte);
         // L'impulsion du sonar : le point qu'elle traverse s'allume en bleu, plus gros, le temps qu'elle passe.
         float s = min(1.0, sonar((modelMatrix * vec4(position, 1.0)).xyz) * 1.3);
-        vCouleur = mix(vCouleur, uSonarCouleur * uCanal * ${ECLAT_SONAR.toFixed(2)}, s);
+        vCouleur = mix(vCouleur, uSonarCouleur * uCanal * uSonarEclat, s);
         vAlpha = max(vAlpha, s * (1.0 - age));
         gl_PointSize = clamp(uTaille * uEchelle / -vue.z, 1.5, ${tailleMax.toFixed(1)}) * (1.0 + 0.4 * teinte + 0.5 * s);
         gl_Position = projectionMatrix * vue;
@@ -138,7 +155,7 @@ export interface Nuages {
   /** La part de la couleur de leur classe dans les points des objets déclarés, de 0 (aucune) à 1. */
   colorerObjets(niveau: number): void;
   /** Change les couleurs : la caméra et le lidar (ce qui est vu maintenant), la carte mémorisée. */
-  teinter(camera: string, lidar: string, memoire: string): void;
+  teinter(camera: Teinte, lidar: Teinte, memoire: Teinte): void;
   /** Le nombre de points de la caméra sur chaque objet déclaré, à sa dernière image : 0 = l'objet n'est pas vu. */
   pointsParObjet: Int32Array;
 }
@@ -261,10 +278,16 @@ export function creerNuages(tete: THREE.Vector3, lancer: Lancer, objets: ObjetDe
     origineLidar: origineLid,
     materiaux,
     pointsParObjet,
-    teinter(couleurCamera: string, couleurLidar: string, couleurMemoire: string) {
-      for (const [ms, c] of [[camera.materiaux, couleurCamera], [lidar.materiaux, couleurLidar],
-        [carte.materiaux, couleurMemoire]] as const) {
-        for (const m of ms) m.uniforms.uCouleur.value.set(c).multiply(m.uniforms.uCanal.value);
+    teinter(couleurCamera: Teinte, couleurLidar: Teinte, couleurMemoire: Teinte) {
+      const groupes = [[camera.materiaux, couleurCamera, 1], [lidar.materiaux, couleurLidar, 1],
+        [carte.materiaux, couleurMemoire, ECLAT_MEMOIRE_RAMPE]] as const;
+      for (const [ms, t, eclat] of groupes) {
+        for (const m of ms) {
+          const u = m.uniforms;
+          u.uDegrade.value = typeof t === 'string' ? 0 : 1;
+          if (typeof t === 'string') u.uCouleur.value.set(t).multiply(u.uCanal.value);
+          else t.forEach((c, i) => u.uRampe.value[i].set(c).multiplyScalar(eclat));
+        }
       }
     },
     colorerObjets(niveau: number) {

@@ -1156,7 +1156,7 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
   padding: 20px 20px 16px; border: 1px solid rgb(255 255 255 / 0.09); border-radius: 16px;
   background: rgb(10 12 15 / 0.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
 }
-.essai-da-panneau h1 { margin: 6px 0 16px; font-size: 1.35rem; }
+.essai-da-panneau h1 { margin: 6px 0 4px; font-size: 1.35rem; }
 .essai-da-themes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .essai-da-themes button {
   display: flex; align-items: center; gap: 9px; padding: 9px 10px; border-radius: 10px; cursor: pointer;
@@ -1168,7 +1168,9 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .essai-da-pastilles { display: inline-flex; }
 .essai-da-pastilles i { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid #0a0c0f; margin-left: -4px; }
 .essai-da-pastilles i:first-child { margin-left: 0; }
-.essai-da-idee { margin: 14px 0 18px; color: #9aa3ae; font-size: 0.85rem; line-height: 1.5; }
+.essai-da-idee { margin: 16px 0 6px; color: #c9ced6; font-size: 0.85rem; line-height: 1.5; }
+.essai-da-harmonie { margin: 0 0 6px; color: #9aa3ae; font-size: 0.8rem; line-height: 1.45; font-style: italic; }
+.essai-da-conflit { margin: 6px 0 0; padding: 7px 9px; border-radius: 8px; background: rgb(255 176 46 / 0.1); color: #ffcf7a; font-size: 0.78rem; line-height: 1.4; }
 .essai-da-titre { margin: 18px 0 8px; font: 600 9.5px/1 ui-monospace, monospace; letter-spacing: 0.18em; color: #8a93a3; }
 .essai-da-legende { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
 .essai-da-legende li { display: flex; gap: 11px; align-items: flex-start; }

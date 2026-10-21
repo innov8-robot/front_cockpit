@@ -8,6 +8,12 @@ const SILENCE_S = 0.6;
 const EVANESCENCE_M = 2.6;
 /** La couleur de l'impulsion. */
 export const BLEU_SONAR = new THREE.Color('#3d9bff');
+/**
+ * L'éclat du front sur les points, au-delà du blanc : il doit l'emporter sur les points vivants (fondus au maximum par
+ * canal). Un bleu sombre a besoin d'être poussé ; un blanc, non, sinon il éblouit.
+ */
+const ECLAT_MAX = 1.8;
+const LUMINANCE_CIBLE = 0.62;
 /** Le nombre d'obstacles dont l'impulsion tient compte pour ses ombres. */
 const MAX_OBSTACLES = 48;
 
@@ -21,6 +27,7 @@ export const SONAR = {
   uSonarRayon: { value: 0 },
   uSonarForce: { value: 0 },
   uSonarCouleur: { value: BLEU_SONAR },
+  uSonarEclat: { value: ECLAT_MAX },
   uObstaclesMin: { value: Array.from({ length: MAX_OBSTACLES }, () => new THREE.Vector3()) },
   uObstaclesMax: { value: Array.from({ length: MAX_OBSTACLES }, () => new THREE.Vector3()) },
   uNbObstacles: { value: 0 },
@@ -38,6 +45,7 @@ export const GLSL_SONAR = /* glsl */ `
   uniform float uSonarRayon;
   uniform float uSonarForce;
   uniform vec3 uSonarCouleur;
+  uniform float uSonarEclat;
   uniform vec3 uObstaclesMin[${MAX_OBSTACLES}];
   uniform vec3 uObstaclesMax[${MAX_OBSTACLES}];
   uniform int uNbObstacles;
@@ -87,7 +95,9 @@ export function mettreAJourSonar(t: number, origine: THREE.Vector3, oeil: THREE.
 
 /** Change la couleur de l'impulsion. */
 export function teinterSonar(couleur: string): void {
-  SONAR.uSonarCouleur.value.set(couleur);
+  const c = SONAR.uSonarCouleur.value.set(couleur);
+  const luminance = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+  SONAR.uSonarEclat.value = Math.min(ECLAT_MAX, Math.max(1, LUMINANCE_CIBLE / Math.max(luminance, 1e-3)));
 }
 
 /** Déclare les obstacles qui font de l'ombre à l'impulsion : leurs boîtes englobantes, dans le monde. */
@@ -126,7 +136,7 @@ export const MATERIAU_PEAU = new THREE.ShaderMaterial({
     void main() {
       float s = sonar(vMonde);
       if (s < 0.01) discard;
-      gl_FragColor = vec4(mix(uSonarCouleur, vec3(1.0), smoothstep(0.7, 1.2, s) * 0.5) * s * 1.3, 1.0);
+      gl_FragColor = vec4(mix(uSonarCouleur, vec3(1.0), smoothstep(0.7, 1.2, s) * 0.5) * s * 0.72 * uSonarEclat, 1.0);
     }`,
 });
 
