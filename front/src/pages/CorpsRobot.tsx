@@ -17,8 +17,10 @@ const DEBORD_IMU = 70;
 /** La hauteur prise par l'en-tête et les marges de l'overlay, et la plus grande figure (px). */
 const MARGE_VERTICALE = 200;
 const HAUTEUR_FIGURE_MAX = 640;
-/** Les marges de l'overlay de chaque côté : sous ce reste, la planche se replie en colonne. */
+/** Les marges de l'overlay de chaque côté (px). */
 const MARGE_HORIZONTALE = 100;
+/** Sous cette largeur (un téléphone), la planche se replie en colonne ; au-dessus, elle se réduit pour tenir. */
+const LARGEUR_REPLI = 700;
 /** Le dessin s'arrête aux roues, à 95 % de l'image : le reste est blanc. */
 const FIGURE_UTILE = 0.95;
 /** Le rapport largeur / hauteur de assets/robot_lines.png. */
@@ -92,7 +94,9 @@ export function CorpsRobot() {
   const lFigure = hFigure * RAPPORT_FIGURE;
   const x0 = LARGEUR_TABLEAU + ECART_FIGURE;
   const largeur = 2 * (LARGEUR_TABLEAU + ECART_FIGURE) + lFigure + DEBORD_IMU;
-  const compacte = fenetre.l < largeur + MARGE_HORIZONTALE;
+  const compacte = fenetre.l < LARGEUR_REPLI;
+  // Trop large pour l'écran (une tablette) : la même planche, réduite d'un bloc, plutôt qu'une autre mise en page.
+  const echelle = Math.min(1, (fenetre.l - MARGE_HORIZONTALE) / largeur);
   const point = (a: Ancre) => ({ x: x0 + (a.x / 100) * lFigure, y: (a.y / 100) * hFigure });
   const yTorse = torse ? point(droite.at(-1) ?? torse).y + 70 : 0;
   const hauteur = Math.max(hFigure * FIGURE_UTILE, yTorse + 34 + 2 * HAUTEUR_RANGEE + 12);
@@ -106,9 +110,10 @@ export function CorpsRobot() {
         <span className="discret nombre">{etat ? `relevé ${depuis(etat.date)}` : 'en attente du robot…'}</span>
       </div>
 
-      <div className={`corps-planche ${compacte ? 'compacte' : ''}`} style={compacte ? undefined : { width: largeur, height: hauteur }}>
+      <div className={`corps-planche ${compacte ? 'compacte' : ''}`}
+        style={compacte ? undefined : { width: largeur * echelle, height: hauteur * echelle }}>
         {!compacte && (
-          <>
+          <div className="corps-echelle" style={{ width: largeur, height: hauteur, transform: `scale(${echelle})` }}>
             <img className="corps-figure" src="robot/robot_lines.png" alt="" style={{ left: x0, width: lFigure, height: hFigure }} />
             <svg className="corps-traits" width={largeur} height={hauteur} aria-hidden="true">
               {gauche.map((a) => {
@@ -160,7 +165,7 @@ export function CorpsRobot() {
                 </>
               )}
             </section>
-          </>
+          </div>
         )}
 
         {compacte && (

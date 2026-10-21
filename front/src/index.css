@@ -1216,6 +1216,8 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .barre-mission-pause:hover { background: rgb(255 255 255 / 0.12); }
 .barre-mission-pause.reprendre { color: #062211; background: #3dff8a; border-color: #3dff8a; box-shadow: 0 0 18px rgb(61 255 138 / 0.35); }
 @media (max-width: 899px) { .graphe-direct-nom { max-width: 90px; } }
+/* La planche réduite d'un bloc (tablette) : le dessin, les traits et les tableaux gardent leurs positions. */
+.corps-echelle { position: relative; transform-origin: 0 0; }
 
 /* L'éditeur de missions (components/missions) : nœuds, poignées, états. Charte : components/missions/charte.ts. */
 .em-icone { display: grid; place-items: center; width: 26px; height: 26px; flex: none; border-radius: 7px; border: 1px solid; }
