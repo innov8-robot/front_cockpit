@@ -11,7 +11,7 @@ import { Icone } from './ui';
 /** Les écrans qui prennent toute la scène ; les autres s'ouvrent en panneau sur le côté. */
 const GRANDS = ['/missions/:id', '/primitives/nouvelle'];
 /** Ceux qui portent leur croix dans la ligne de leur titre : l'overlay n'en ajoute pas une seconde, mal alignée. */
-const AVEC_CROIX = ['/missions', '/missions/developpees'];
+const AVEC_CROIX = ['/missions', '/missions/developpees', '/missions/:id'];
 /** Ceux qui se taillent sur leur contenu, centrés. */
 const AJUSTES = ['/robot/corps'];
 

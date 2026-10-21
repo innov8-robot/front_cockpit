@@ -162,9 +162,11 @@ export function CarteNoeud({ type, valeurs = {}, etat, choisi, desactive, echec,
           {sorties.length > 1 && <span className={`em-sortie-nom em-sortie-${s} ${prise === s ? 'em-sortie-prise' : ''}`} style={{ top: hauteur(i) }}>{nomSortie(type, valeurs, s)}</span>}
         </Fragment>
       ))}
-      <div className="em-tuile-nom">{type.nom}</div>
-      {expr && <Expression texte={expr.texte} condition={expr.condition} verdict={verdict} />}
-      {resume && <div className={`em-tuile-resume ${expr ? 'em-tuile-sous-expr' : ''} ${direct ? 'em-tuile-direct' : ''} ${direct?.relance || alerte ? 'em-tuile-relance' : ''}`}>{resume}</div>}
+      <div className="em-tuile-legende">
+        <div className="em-tuile-nom">{type.nom}</div>
+        {expr && <Expression texte={expr.texte} condition={expr.condition} verdict={verdict} />}
+        {resume && <div className={`em-tuile-resume ${direct ? 'em-tuile-direct' : ''} ${direct?.relance || alerte ? 'em-tuile-relance' : ''}`}>{resume}</div>}
+      </div>
     </div>
   );
 }
@@ -206,7 +208,7 @@ export function NoeudVide({ id }: NodeProps<NoeudMission>) {
       <Handle type="target" position={Position.Left} className="em-poignee" />
       <span aria-hidden="true">+</span>
       <Handle type="source" position={Position.Right} id="suite" className="em-poignee" />
-      <div className="em-tuile-nom">Choisir l’étape</div>
+      <div className="em-tuile-legende"><div className="em-tuile-nom">Choisir l’étape</div></div>
     </button>
   );
 }

@@ -129,11 +129,26 @@ function placer(bouton: HTMLElement): CSSProperties {
   return innerHeight - r.bottom > PLACE_SOUS_MENU ? { top: r.bottom + 6, right: droite } : { bottom: innerHeight - r.top + 6, right: droite };
 }
 
+export interface OptionsMenu {
+  m: Mission;
+  enCours: boolean;
+  renommer(): void;
+  relire(): void;
+  /** Dans l'éditeur : pas d'« Ouvrir l'éditeur », et ce qu'on fait de la copie ou après la suppression. */
+  dansEditeur?: boolean;
+  apresDuplication?(copie: Mission): void;
+  apresSuppression?(): void;
+  /** Des réglages en plus, au-dessus de la suppression (les répétitions, dans l'éditeur). */
+  enPlus?: ReactNode;
+  /** La hauteur du bouton : 34 px dans une ligne, 36 px dans une barre. */
+  grand?: boolean;
+}
+
 /**
  * Le menu « ⋯ » d'une mission : renommer, dupliquer, supprimer (avec confirmation). Il s'ouvre au-dessus de tout,
  * hors de la liste qui défile et le couperait. Échap ou un appui ailleurs le ferme sans fermer l'écran des missions.
  */
-export function MenuMission({ m, enCours, renommer, relire }: { m: Mission; enCours: boolean; renommer(): void; relire(): void }) {
+export function MenuMission({ m, enCours, renommer, relire, dansEditeur, apresDuplication, apresSuppression, enPlus, grand }: OptionsMenu) {
   const [place, setPlace] = useState<CSSProperties | null>(null);
   const ouvert = place !== null;
   const [confirmer, setConfirmer] = useState(false);
@@ -151,29 +166,33 @@ export function MenuMission({ m, enCours, renommer, relire }: { m: Mission; enCo
     return () => { document.removeEventListener('pointerdown', dehors); window.removeEventListener('keydown', echap, true); };
   }, [ouvert]);
   function fermer() { setPlace(null); setConfirmer(false); }
+  const enregistree = m.id !== '';
   async function dupliquer() {
     fermer();
-    await api.enregistrerMission({ ...m, id: '', nom: `${m.nom} (copie)`, etat: 'brouillon' }).catch(() => undefined);
-    relire();
+    const copie = await api.enregistrerMission({ ...m, id: '', nom: `${m.nom} (copie)`, etat: 'brouillon' }).catch(() => null);
+    if (copie && apresDuplication) apresDuplication(copie);
+    else relire();
   }
   async function supprimer() {
     fermer();
     await api.supprimerMission(m.id).catch(() => undefined);
-    relire();
+    if (apresSuppression) apresSuppression();
+    else relire();
   }
   return (
     <span className="lm-plus" ref={boite}>
-      <button className="lm-bouton lm-carre-petit" aria-label={`Plus d’actions pour ${m.nom}`} aria-expanded={ouvert}
+      <button className={`lm-bouton lm-carre-petit ${grand ? 'lm-36' : ''}`} aria-label={`Plus d’actions pour ${m.nom || 'cette mission'}`} aria-expanded={ouvert}
         onClick={(e) => (ouvert ? fermer() : setPlace(placer(e.currentTarget)))}>
         <Trait d={TROIS_POINTS} taille={18} />
       </button>
       {place && createPortal(
         <div className="lm-menu" role="menu" ref={menu} style={place}>
-          <button role="menuitem" onClick={() => { fermer(); renommer(); }}><Trait d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4" />Renommer</button>
-          <button role="menuitem" onClick={dupliquer}><Trait d="M8 8h11v11H8zM5 15V5h10" />Dupliquer</button>
-          <Link role="menuitem" to={`/missions/${m.id}`}><Trait d="M4 20h16M6 16l9-9 3 3-9 9H6z" />Ouvrir l’éditeur</Link>
-          <hr />
-          {confirmer ? (
+          <button role="menuitem" disabled={enCours} onClick={() => { fermer(); renommer(); }}><Trait d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4" />Renommer</button>
+          {enregistree && <button role="menuitem" onClick={dupliquer}><Trait d="M8 8h11v11H8zM5 15V5h10" />Dupliquer</button>}
+          {!dansEditeur && <Link role="menuitem" to={`/missions/${m.id}`}><Trait d="M4 20h16M6 16l9-9 3 3-9 9H6z" />Ouvrir l’éditeur</Link>}
+          {enPlus}
+          {enregistree && <hr />}
+          {!enregistree ? null : confirmer ? (
             <div className="lm-menu-confirmer">
               <p>Supprimer « {m.nom} » ?</p>
               <span>

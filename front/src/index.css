@@ -1338,8 +1338,7 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .em-point-eteint { fill: rgb(201 206 214 / 0.14); }
 /* L'expression d'un nœud de logique, sous son nom : hexagonale pour une condition (bac plein ?), arrondie pour un compte. */
 .em-tuile-expr {
-  position: absolute; top: calc(100% + 26px); left: 50%; transform: translateX(-50%); max-width: 210px; padding: 1px; box-sizing: border-box;
-  border-radius: 999px; background: rgb(233 238 247 / 0.35); pointer-events: none; transition: background 0.3s;
+  max-width: 100%; margin-top: 2px; padding: 1px; box-sizing: border-box; border-radius: 999px; background: rgb(233 238 247 / 0.35); transition: background 0.3s;
 }
 .em-tuile-expr > span {
   display: flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: #14181e; white-space: nowrap;
@@ -1351,14 +1350,17 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .em-verdict-oui { background: #3dff8a; }
 .em-verdict-oui b { background: #3dff8a; }
 .em-verdict-non { background: rgb(233 238 247 / 0.6); }
-.em-tuile-resume.em-tuile-sous-expr { top: calc(100% + 52px); }
 .em-eclair { position: absolute; left: -20px; top: 50%; transform: translateY(-50%); fill: #e9eef7; filter: drop-shadow(0 0 4px rgb(233 238 247 / 0.6)); }
-.em-tuile-nom, .em-tuile-resume {
-  position: absolute; left: 50%; transform: translateX(-50%); width: 168px; text-align: center; pointer-events: none;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+/* La légende sous la tuile : le nom (deux lignes au plus), l'expression d'un nœud de logique, puis le résumé. */
+.em-tuile-legende {
+  position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%); width: 184px; display: flex; flex-direction: column;
+  align-items: center; gap: 3px; text-align: center; pointer-events: none;
 }
-.em-tuile-nom { top: calc(100% + 8px); font: 600 12.5px/1.2 'Inter', system-ui, sans-serif; color: #e9eef7; }
-.em-tuile-resume { top: calc(100% + 25px); font: 500 11px/1.2 'Inter', system-ui, sans-serif; color: #8a93a3; }
+.em-tuile-nom {
+  max-width: 100%; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+  font: 600 12.5px/1.25 'Inter', system-ui, sans-serif; color: #e9eef7;
+}
+.em-tuile-resume { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font: 500 11px/1.25 'Inter', system-ui, sans-serif; color: #8a93a3; }
 .em-tuile-direct { font: 700 11px/1.2 ui-monospace, monospace; color: #e9eef7; }
 .em-tuile-relance { color: #ffb02e; }
 .em-badge-bouge { position: absolute; left: 5px; bottom: 5px; display: grid; place-items: center; width: 16px; height: 16px; border-radius: 4px; color: var(--famille); background: color-mix(in srgb, var(--famille) 16%, transparent); }
@@ -1394,7 +1396,10 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 
 /* Le prototype de l'éditeur : canevas, palette à droite ; menu au clic droit, réglages par-dessus la palette. */
 .em-prototype { position: relative; display: grid; grid-template-columns: 1fr 210px; height: 680px; border: 1px solid rgb(255 255 255 / 0.1); border-radius: 16px; overflow: hidden; background: #0b0d10; }
-.em-palette { overflow-y: auto; padding: 12px 10px; border-left: 1px solid rgb(255 255 255 / 0.08); background: #0e1115; }
+.em-palette {
+  overflow-y: auto; padding: 12px 10px; border-left: 1px solid rgb(255 255 255 / 0.08); background: #0e1115;
+  scrollbar-width: thin; scrollbar-color: rgb(255 255 255 / 0.16) transparent;
+}
 .em-recherche { width: 100%; box-sizing: border-box; height: 34px; padding: 0 10px; border-radius: 9px; border: 1px solid rgb(255 255 255 / 0.12); background: #070809; color: #e9eef7; font: inherit; font-size: 0.8rem; }
 .em-palette-famille p { margin: 14px 4px 6px; font: 600 9px/1 ui-monospace, monospace; letter-spacing: 0.16em; }
 .em-palette-item { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 8px; font-size: 0.8rem; color: #c9ced6; cursor: grab; }
@@ -1755,6 +1760,8 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .lm-bouton:disabled { opacity: 0.4; cursor: not-allowed; }
 .lm-lancer { background: #e9eef7; border-color: #e9eef7; color: #0b0d10; }
 .lm-carre-petit { width: 34px; padding: 0; }
+.lm-36 { height: 36px; }
+.lm-carre-petit.lm-36 { width: 36px; }
 .lm-danger { background: #ff2d3a; border-color: #ff2d3a; color: #fff; }
 /* Le menu « ⋯ » des actions rapides, sous son bouton. */
 .lm-plus { position: relative; display: inline-flex; }
@@ -1843,3 +1850,26 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
   .lm-apercu-corps { grid-template-columns: 1fr; }
   .lm-apercu-liste { max-height: 160px; }
 }
+
+/* La barre de l'éditeur de missions : une seule rangée de 36 px, la croix comprise. */
+.me-barre { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-height: 36px; margin-bottom: 14px; }
+.me-retour {
+  display: inline-flex; align-items: center; gap: 4px; height: 36px; padding: 0 10px 0 4px; border-radius: 9px; color: #9aa3ae;
+  font: 600 0.84rem/1 'Inter', system-ui, sans-serif; text-decoration: none;
+}
+.me-retour:hover { color: #fff; background: rgb(255 255 255 / 0.05); }
+.me-separateur { width: 1px; height: 22px; background: rgb(255 255 255 / 0.12); }
+.me-nom {
+  field-sizing: content; width: auto; min-width: 140px; max-width: 42vw; height: 36px; min-height: 0; padding: 0 8px; box-sizing: border-box;
+  border-radius: 9px; border: 1px solid transparent; background: transparent; color: #fff; font: 700 1.2rem/1 'Inter', system-ui, sans-serif;
+}
+.me-nom:hover:not(:disabled), .me-nom:focus { border-color: rgb(255 255 255 / 0.2); background: #070809; outline: none; }
+.me-nom:disabled { opacity: 1; color: #fff; }
+.me-info { font: 500 0.8rem/1 'Inter', system-ui, sans-serif; color: #8a93a3; white-space: nowrap; }
+.me-alerte { color: #ffb02e; }
+.me-message { height: 28px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: 999px; font: 600 0.76rem/1 'Inter', system-ui, sans-serif; animation: em-surgit 0.15s ease-out; }
+.me-message-ok { color: #3dff8a; background: rgb(61 255 138 / 0.1); }
+.me-message-danger { color: #ff5a64; background: rgb(255 45 58 / 0.12); }
+.me-repetitions { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 6px 0 10px; color: #e9eef7; font: 500 0.84rem/1 'Inter', system-ui, sans-serif; }
+.me-repetitions span { flex: 1; }
+.me-repetitions b { min-width: 34px; text-align: center; font: 700 0.84rem/1 ui-monospace, monospace; }
