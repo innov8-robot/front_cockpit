@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { enSimulation } from '../api/client';
+import { urlServeur } from '../api/mode';
 
 interface Pose { x: number; y: number; yaw: number }
 
@@ -16,6 +18,10 @@ interface Carte {
 /** Les octets de la grille du châssis (docs/NAVIGATION.md §9) : 0 jamais vu, 1-127 libre, au-delà occupé. */
 const SEUIL_OCCUPE = 127;
 /** Le carré montre 2,5 m de côté, quelle que soit sa taille : le zoom est serré sur le robot. */
+/** Au réel, la carte du châssis et sa pose sont relues à ces périodes (ms). */
+const CARTE_MS = 10_000;
+const POSE_MS = 500;
+
 const METRES_PAR_COTE = 2.5;
 /** La place du robot dans le carré, en fraction du côté (depuis le coin haut gauche) : le centre de la partie
  * nette de la carte, un quart de disque de rayon ~0,85 côté pris dans le coin haut droit (4r/3π ≈ 0,36 côté). */
@@ -55,19 +61,38 @@ export function MiniCarte({ poste, plein, basculer }: { poste: string | null; pl
   const [carte, setCarte] = useState<Carte | null>(null);
   const [erreur, setErreur] = useState(false);
 
+  // La pose mesurée du châssis, au réel ; la boucle de dessin la relit à chaque image, sans refaire la grille.
+  const poseMesuree = useRef<Pose | null>(null);
+
   useEffect(() => {
-    fetch('carte/carte.json').then((r) => r.json()).then(setCarte).catch(() => setErreur(true));
+    if (enSimulation) {
+      fetch('carte/carte.json').then((r) => r.json()).then(setCarte).catch(() => setErreur(true));
+      return;
+    }
+    // Au réel, la carte que tient le châssis et sa pose, relues par le serveur du robot.
+    const url = urlServeur();
+    let vivant = true;
+    const lireCarte = () => fetch(`${url}/api/carte`).then((r) => (r.ok ? r.json() : null))
+      .then((c) => vivant && c && setCarte({ nom: 'châssis', postes: {}, ...c })).catch(() => undefined);
+    const lirePose = () => fetch(`${url}/api/chassis`).then((r) => (r.ok ? r.json() : null))
+      .then((c) => { if (vivant && c) poseMesuree.current = c.pose; }).catch(() => undefined);
+    lireCarte();
+    lirePose();
+    const tCarte = setInterval(lireCarte, CARTE_MS);
+    const tPose = setInterval(lirePose, POSE_MS);
+    return () => { vivant = false; clearInterval(tCarte); clearInterval(tPose); };
   }, []);
 
   useEffect(() => {
     const c = toile.current;
     if (!c || !carte) return;
     const grille = rendreGrille(carte);
-    const robot = (poste && carte.postes[poste]) || Object.values(carte.postes)[0] || { x: 0, y: 0, yaw: 0 };
+    const auPoste = (poste && carte.postes[poste]) || Object.values(carte.postes)[0] || { x: 0, y: 0, yaw: 0 };
     let image = 0;
     let k = pleinRef.current ? 1 : 0;
 
     const dessiner = (t: number) => {
+      const robot = poseMesuree.current ?? auPoste;
       const ratio = Math.min(devicePixelRatio, 2);
       const L = c.clientWidth;
       const H = c.clientHeight;
