@@ -119,5 +119,11 @@ export const THEMES: ThemeScene[] = [
   },
 ];
 
-/** Le thème de l'accueil tant qu'aucun n'est choisi : celui d'aujourd'hui. */
-export const THEME_PAR_DEFAUT = THEMES[1];
+/**
+ * Le thème de l'accueil. Pour en changer : remplacer cette clé par celle d'un thème de THEMES ci-dessus (« glace »,
+ * « phosphore », « viridis »…), après l'avoir essayé sur #/essai/da. Pour en créer un : ajouter une entrée à THEMES,
+ * elle apparaît d'elle-même sur la page d'essai. Voir README.md §Les couleurs de la scène.
+ */
+const THEME_ACCUEIL = 'spectre';
+
+export const THEME_PAR_DEFAUT = THEMES.find((t) => t.cle === THEME_ACCUEIL) ?? THEMES[0];
