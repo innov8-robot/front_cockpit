@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { enSimulation } from '../api/client';
 import { urlServeur } from '../api/mode';
+import { CHASSIS, carteChoisie, chargerCarte, choisirCarte, listerCartes, surChangementDeCarte } from '../api/cartes';
 
 interface Pose { x: number; y: number; yaw: number }
 
@@ -13,6 +14,7 @@ interface Carte {
   h: number;
   cellules: string;
   postes: Record<string, Pose>;
+  surLeChassis?: boolean;
 }
 
 /** Les octets de la grille du châssis (docs/NAVIGATION.md §9) : 0 jamais vu, 1-127 libre, au-delà occupé. */
@@ -60,6 +62,7 @@ export function MiniCarte({ poste, plein, basculer }: { poste: string | null; pl
   const toile = useRef<HTMLCanvasElement>(null);
   const [carte, setCarte] = useState<Carte | null>(null);
   const [erreur, setErreur] = useState(false);
+  const [enregistrees, setEnregistrees] = useState<string[]>([]);
 
   // La pose mesurée du châssis, au réel ; la boucle de dessin la relit à chaque image, sans refaire la grille.
   const poseMesuree = useRef<Pose | null>(null);
@@ -72,15 +75,16 @@ export function MiniCarte({ poste, plein, basculer }: { poste: string | null; pl
     // Au réel, la carte que tient le châssis et sa pose, relues par le serveur du robot.
     const url = urlServeur();
     let vivant = true;
-    const lireCarte = () => fetch(`${url}/api/carte`).then((r) => (r.ok ? r.json() : null))
-      .then((c) => vivant && c && setCarte({ nom: 'châssis', postes: {}, ...c })).catch(() => undefined);
+    const lireCarte = () => chargerCarte(url).then((c) => vivant && c && setCarte(c)).catch(() => undefined);
+    listerCartes(url).then((l) => vivant && setEnregistrees(l.cartes.map((c) => c.nom))).catch(() => undefined);
+    const arreter = surChangementDeCarte(lireCarte);
     const lirePose = () => fetch(`${url}/api/chassis`).then((r) => (r.ok ? r.json() : null))
       .then((c) => { if (vivant && c) poseMesuree.current = c.pose; }).catch(() => undefined);
     lireCarte();
     lirePose();
     const tCarte = setInterval(lireCarte, CARTE_MS);
     const tPose = setInterval(lirePose, POSE_MS);
-    return () => { vivant = false; clearInterval(tCarte); clearInterval(tPose); };
+    return () => { vivant = false; clearInterval(tCarte); clearInterval(tPose); arreter(); };
   }, []);
 
   useEffect(() => {
@@ -208,8 +212,22 @@ export function MiniCarte({ poste, plein, basculer }: { poste: string | null; pl
         <div className="hud-carte-legende">
           <span>CARTE · {carte.nom.toUpperCase()}</span>
           <span className="nombre">{poste ? `POSTE ${poste.toUpperCase()}` : ''}</span>
+          {carte.surLeChassis === false && (
+            <span className="hud-carte-alerte" title="La pose du châssis est dans une autre carte : le robot n'y est pas à sa place.">
+              ⚠ PAS LA CARTE DU CHÂSSIS
+            </span>
+          )}
           {!plein && <span className="hud-carte-indice">⤢ AGRANDIR</span>}
         </div>
+      )}
+      {plein && !enSimulation && (
+        <label className="hud-carte-choix" onClick={(e) => e.stopPropagation()}>CARTE
+          <select value={carteChoisie() ?? (carte?.nom === 'châssis' ? CHASSIS : carte?.nom ?? CHASSIS)}
+            onChange={(e) => choisirCarte(e.target.value)}>
+            <option value={CHASSIS}>Celle du châssis (en direct)</option>
+            {enregistrees.map((n) => <option key={n} value={n}>{n} (enregistrée)</option>)}
+          </select>
+        </label>
       )}
       {plein && (
         <button className="hud-plein-fermer" onClick={(e) => { e.stopPropagation(); basculer(false); }}>

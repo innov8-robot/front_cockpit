@@ -4,6 +4,7 @@ import { api, enSimulation } from '../api/client';
 import { decoderImage, decoderNuage, ouvrirFlux } from '../api/flux';
 import { urlServeur } from '../api/mode';
 import type { GrilleChassis } from '../vue3d/reel';
+import { chargerCarte, surChangementDeCarte } from '../api/cartes';
 import type { EtatCapteurs, EtatCorps, Robot, Verdict } from '../api/types';
 import { BarreRobot } from '../components/BarreRobot';
 import { CALQUES } from '../components/calques';
@@ -255,13 +256,13 @@ function useApercuCamera(): [string | null, (run: string | null) => void] {
 /** Relit la carte du châssis (toutes les 10 s) et sa pose (deux fois par seconde) pour la scène 3D au réel. */
 function suivreCarte(url: string, reel: { grille(g: GrilleChassis): void; poserBase(p: { x: number; y: number; yaw: number }): void }) {
   let vivant = true;
-  const lire = <T,>(chemin: string, faire: (v: T) => void) =>
-    fetch(`${url}${chemin}`).then((r) => (r.ok ? r.json() : null)).then((v) => vivant && v && faire(v)).catch(() => undefined);
-  const carte = () => lire<GrilleChassis>('/api/carte', (g) => reel.grille(g));
-  const pose = () => lire<{ pose: { x: number; y: number; yaw: number } }>('/api/chassis', (c) => reel.poserBase(c.pose));
+  const carte = () => chargerCarte(url).then((g) => vivant && g && reel.grille(g)).catch(() => undefined);
+  const pose = () => fetch(`${url}/api/chassis`).then((r) => (r.ok ? r.json() : null))
+    .then((c) => vivant && c && reel.poserBase(c.pose)).catch(() => undefined);
   carte();
   pose();
   const t1 = setInterval(carte, 10_000);
   const t2 = setInterval(pose, 500);
-  return () => { vivant = false; clearInterval(t1); clearInterval(t2); };
+  const arreter = surChangementDeCarte(carte);
+  return () => { vivant = false; clearInterval(t1); clearInterval(t2); arreter(); };
 }
