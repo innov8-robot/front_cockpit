@@ -1255,9 +1255,12 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .em-tuile.em-forme-fin { border-radius: 10px 38px 38px 10px; }
 .em-tuile-icone { color: var(--famille); filter: drop-shadow(0 0 4px color-mix(in srgb, var(--famille) 45%, transparent)); }
 /* Les icônes en points (components/missions/points.ts) : la matrice du logo de démarrage, allumée par l'icône. */
-.em-points { color: var(--famille); overflow: visible; filter: drop-shadow(0 0 2.5px color-mix(in srgb, var(--famille) 70%, transparent)); }
+/* La matrice couvre la tuile, rognée à sa forme ; les points de l'icône s'allument au centre, avec leur lueur. */
+.em-tuile-matrice { position: absolute; inset: 2px; border-radius: inherit; overflow: hidden; pointer-events: none; }
+.em-points { display: block; width: 100%; height: 100%; color: var(--famille); }
+.em-points-allumes { filter: drop-shadow(0 0 0.3px currentColor) drop-shadow(0 0 1.2px color-mix(in srgb, var(--famille) 70%, transparent)); }
 .em-point { fill: currentColor; }
-.em-point-eteint { fill: rgb(201 206 214 / 0.13); }
+.em-point-eteint { fill: rgb(201 206 214 / 0.14); }
 /* L'expression d'un nœud de logique, sous son nom : hexagonale pour une condition (bac plein ?), arrondie pour un compte. */
 .em-tuile-expr {
   position: absolute; top: calc(100% + 26px); left: 50%; transform: translateX(-50%); max-width: 210px; padding: 1px; box-sizing: border-box;

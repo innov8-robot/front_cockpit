@@ -1,5 +1,5 @@
 import { Handle, Position, useNodeConnections, type Node, type NodeProps } from '@xyflow/react';
-import { Fragment, useContext, type MouseEvent, type ReactNode } from 'react';
+import { Fragment, useContext, useId, type MouseEvent, type ReactNode } from 'react';
 import { Actions } from './actions';
 import { ApparenceContexte, teinte } from './apparence';
 import { ETATS, FAMILLE, SORTIES, type EtatNoeud, type Sortie } from './charte';
@@ -47,13 +47,29 @@ export function BadgeEtat({ etat }: { etat?: EtatNoeud }) {
   return <span className="em-badge-etat" title={e.libelle} aria-label={e.libelle}>{e.icone}</span>;
 }
 
-/** Une icône en points, comme la matrice du logo de démarrage : les points allumés dessinent l'icône, les autres veillent. */
-export function IconePoints({ d, taille = 42 }: { d: string; taille?: number }) {
+/** La matrice d'une tuile, en points par côté : l'icône (12 × 12) en occupe le centre. */
+const MATRICE = 20;
+
+/**
+ * Une icône en points, comme la matrice du logo de démarrage : des points éteints couvrent toute la tuile, ceux de
+ * l'icône s'allument en son centre.
+ */
+export function IconePoints({ d, cadre = MATRICE }: { d: string; cadre?: number }) {
+  const motif = `em-matrice-${useId().replace(/:/g, '')}`;
+  const decalage = (cadre - GRILLE) / 2;
   return (
-    <svg className="em-points" width={taille} height={taille} viewBox={`0 0 ${GRILLE} ${GRILLE}`} aria-hidden="true">
-      {points(d).map((allume, k) => (
-        <circle key={k} cx={(k % GRILLE) + 0.5} cy={Math.floor(k / GRILLE) + 0.5} r={allume ? 0.36 : 0.14} className={allume ? 'em-point' : 'em-point-eteint'} />
-      ))}
+    <svg className="em-points" viewBox={`0 0 ${cadre} ${cadre}`} aria-hidden="true">
+      <defs>
+        <pattern id={motif} width="1" height="1" patternUnits="userSpaceOnUse">
+          <circle cx="0.5" cy="0.5" r="0.14" className="em-point-eteint" />
+        </pattern>
+      </defs>
+      <rect width={cadre} height={cadre} fill={`url(#${motif})`} />
+      <g className="em-points-allumes">
+        {points(d).map((allume, k) => allume && (
+          <circle key={k} cx={decalage + (k % GRILLE) + 0.5} cy={decalage + Math.floor(k / GRILLE) + 0.5} r="0.36" className="em-point" />
+        ))}
+      </g>
     </svg>
   );
 }
@@ -126,7 +142,7 @@ export function CarteNoeud({ type, valeurs = {}, etat, choisi, desactive, echec,
       {type.famille === 'declencheur' && (
         <svg className="em-eclair" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path d={ICONES.eclair} /></svg>
       )}
-      {apparence.icones === 'points' ? <IconePoints d={d} /> : (
+      {apparence.icones === 'points' ? <div className="em-tuile-matrice"><IconePoints d={d} /></div> : (
         <svg className="em-tuile-icone" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"
           strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>
       )}

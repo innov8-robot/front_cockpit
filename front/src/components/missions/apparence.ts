@@ -10,7 +10,7 @@ export type Couleurs = 'spectre' | 'familles';
 
 export interface Apparence { icones: Icones; couleurs: Couleurs }
 
-export const APPARENCE_PAR_DEFAUT: Apparence = { icones: 'points', couleurs: 'spectre' };
+export const APPARENCE_PAR_DEFAUT: Apparence = { icones: 'points', couleurs: 'familles' };
 
 /** Spectre : tout en gris, la lumière pour ce qui fait agir le robot, l'ambre pour ce qui demande quelqu'un. */
 const SPECTRE: Record<string, string> = {
