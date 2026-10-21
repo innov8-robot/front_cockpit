@@ -3,13 +3,13 @@ import {
   type Connection,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { useContext, useEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent } from 'react';
+import { Fragment, useContext, useEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent } from 'react';
 import { ANCRAGES, TYPES_PRIMITIVE, depuis } from '../../api/libelles';
 import type { Execution, LienMission, NoeudMission, Primitive, TypePrimitive } from '../../api/types';
 import { Actions, type ActionsCanevas, type Point } from '../missions/actions';
 import { ApparenceContexte, teinte } from '../missions/apparence';
 import { FAMILLE, type EtatLien, type Sortie } from '../missions/charte';
-import { CATALOGUE } from '../missions/catalogue';
+import { CATALOGUE, type TypeNoeud } from '../missions/catalogue';
 import { LienPulse } from '../missions/Lien';
 import { lien, tonDe, type LienCanevas } from '../missions/liens';
 import { IconeNoeud, NoeudCarte, type NoeudMission as NoeudCanevas } from '../missions/Noeud';
@@ -114,11 +114,14 @@ function Choisir({ x, y, primitives, choisir }: { x: number; y: number; primitiv
   );
 }
 
-/** Le panneau d'une primitive : ce qu'elle est, son historique, et ce que fait la mission si elle rate. */
-function Panneau({ primitive, echec, modifiable, changerEchec, fermer }: {
-  primitive: Primitive | undefined; echec: boolean; modifiable: boolean; changerEchec(v: boolean): void; fermer(): void;
+/**
+ * Le panneau d'un nœud : une primitive (ce qu'elle est, son historique) ou un nœud du catalogue (ses réglages), et ce
+ * que fait la mission s'il rate, quand il peut rater.
+ */
+function Panneau({ t, valeurs, primitive, echec, modifiable, changerEchec, fermer }: {
+  t: TypeNoeud; valeurs: Record<string, string | number>; primitive: Primitive | undefined; echec: boolean; modifiable: boolean;
+  changerEchec(v: boolean): void; fermer(): void;
 }) {
-  const t = typePrimitive(primitive);
   const couleur = teinte(t.famille, useContext(ApparenceContexte).apparence.couleurs);
   const ligne = (titre: string, valeur: string | null | undefined) => valeur ? <li><span>{titre}</span>{valeur}</li> : null;
   return (
@@ -130,29 +133,36 @@ function Panneau({ primitive, echec, modifiable, changerEchec, fermer }: {
       </header>
       <div className="em-panneau-colonnes">
         <section>
-          <p className="em-panneau-titre">LA PRIMITIVE</p>
+          <p className="em-panneau-titre">{primitive ? 'LA PRIMITIVE' : 'LE NŒUD'}</p>
           <ul className="em-fiche">
             {ligne('Objet', primitive?.objet)}
             {ligne('Ancrage', primitive?.ancrage ? ANCRAGES[primitive.ancrage] : null)}
             {ligne('Poste', primitive?.poste)}
             {ligne('Vitesse', primitive ? `×${primitive.vitesse.toFixed(2)}` : null)}
+            {!primitive && t.reglages.map((r) => (
+              <Fragment key={r.cle}>{ligne(r.libelle, `${valeurs[r.cle] ?? r.defaut ?? '…'}${r.unite ? ` ${r.unite}` : ''}`)}</Fragment>
+            ))}
           </ul>
-          <p className="em-panneau-titre em-panneau-statut">SI ÇA RATE</p>
-          <label className="em-reglage">
-            <select value={echec ? 'sortie' : 'arreter'} disabled={!modifiable} onChange={(e) => changerEchec(e.target.value === 'sortie')}>
-              <option value="arreter">arrêter la mission</option>
-              <option value="sortie">suivre la sortie « échec »</option>
-            </select>
-          </label>
+          {t.sorties.includes('echec') && <>
+            <p className="em-panneau-titre em-panneau-statut">SI ÇA RATE</p>
+            <label className="em-reglage">
+              <select value={echec ? 'sortie' : 'arreter'} disabled={!modifiable} onChange={(e) => changerEchec(e.target.value === 'sortie')}>
+                <option value="arreter">arrêter la mission</option>
+                <option value="sortie">suivre la sortie « échec »</option>
+              </select>
+            </label>
+          </>}
         </section>
-        <section>
-          <p className="em-panneau-titre">HISTORIQUE</p>
-          <ul className="em-fiche">
-            {ligne('Réussite', primitive?.tauxReussite != null ? `${Math.round(primitive.tauxReussite * 100)} %` : 'jamais jouée')}
-            {ligne('Exécutions', primitive ? String(primitive.executions) : null)}
-            {ligne('Créée par', primitive ? `${primitive.creePar}, ${depuis(primitive.creeLe)}` : null)}
-          </ul>
-        </section>
+        {primitive && (
+          <section>
+            <p className="em-panneau-titre">HISTORIQUE</p>
+            <ul className="em-fiche">
+              {ligne('Réussite', primitive.tauxReussite != null ? `${Math.round(primitive.tauxReussite * 100)} %` : 'jamais jouée')}
+              {ligne('Exécutions', String(primitive.executions))}
+              {ligne('Créée par', `${primitive.creePar}, ${depuis(primitive.creeLe)}`)}
+            </ul>
+          </section>
+        )}
       </div>
       <p className="em-panneau-aide">{t.aide}</p>
     </aside>
@@ -298,11 +308,13 @@ function Canevas({ noeuds, liens, primitives, modifiable, execution, trace, onCh
           <div className="em-menu" style={{ left: menu.x, top: menu.y }} role="menu" onClick={(e) => e.stopPropagation()}>
             <p>{noeudMenu.data.type.nom}</p>
             <button role="menuitem" className="em-menu-principal" onClick={() => { setReglages(menu.id); setMenu(null); }}><span aria-hidden="true">⚙</span>Fiche et réglages</button>
-            <button role="menuitem" onClick={() => {
-              const p = parId.get(String(noeudMenu.data.valeurs.primitive));
-              if (p) ajouter(p, undefined, 'ok', { x: noeudMenu.position.x + 30, y: noeudMenu.position.y + RANGEE });
-              setMenu(null);
-            }}><span aria-hidden="true">⧉</span>Dupliquer</button>
+            {parId.has(String(noeudMenu.data.valeurs.primitive)) && (
+              <button role="menuitem" onClick={() => {
+                const p = parId.get(String(noeudMenu.data.valeurs.primitive));
+                if (p) ajouter(p, undefined, 'ok', { x: noeudMenu.position.x + 30, y: noeudMenu.position.y + RANGEE });
+                setMenu(null);
+              }}><span aria-hidden="true">⧉</span>Dupliquer</button>
+            )}
             <hr />
             <button role="menuitem" className="em-menu-suppr" onClick={() => {
               setNodes((ns) => ns.filter((n) => n.id !== menu.id));
@@ -315,7 +327,8 @@ function Canevas({ noeuds, liens, primitives, modifiable, execution, trace, onCh
           <Choisir x={choix.x} y={choix.y} primitives={primitives} choisir={(p) => { ajouter(p, choix.id, choix.sortie); setChoix(null); }} />
         )}
         {noeudReglages && (
-          <Panneau primitive={parId.get(String(noeudReglages.data.valeurs.primitive))} echec={!!noeudReglages.data.echec} modifiable={modifiable}
+          <Panneau t={noeudReglages.data.type} valeurs={noeudReglages.data.valeurs} primitive={parId.get(String(noeudReglages.data.valeurs.primitive))}
+            echec={!!noeudReglages.data.echec} modifiable={modifiable}
             changerEchec={(v) => changerEchec(noeudReglages.id, v)} fermer={() => setReglages(null)} />
         )}
       </div>

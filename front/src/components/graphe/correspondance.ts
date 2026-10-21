@@ -1,12 +1,12 @@
 /**
- * Le pont entre la mission de l'API (des primitives reliées par « réussi » / « échoué ») et le canevas de l'éditeur de
- * missions : une primitive devient une tuile du catalogue, une mission devient des nœuds et des liens, et l'exécution
- * en cours devient l'état de chacun.
+ * Le pont entre la mission de l'API (des primitives et des nœuds du catalogue — logique, opérateur, fin — reliés par
+ * leurs sorties) et le canevas de l'éditeur de missions : un nœud devient une tuile du catalogue, une mission devient
+ * des nœuds et des liens, et l'exécution en cours devient l'état de chacun.
  */
 import { TYPES_PRIMITIVE } from '../../api/libelles';
-import type { Execution, LienMission, NoeudMission, Primitive, TypePrimitive } from '../../api/types';
+import type { Execution, LienMission, NoeudMission, Primitive, Sortie as SortieMission, TypePrimitive } from '../../api/types';
 import type { EtatLien, EtatNoeud, Sortie } from '../missions/charte';
-import { typeNoeud, type TypeNoeud } from '../missions/catalogue';
+import { CATALOGUE, resumer, typeNoeud, type TypeNoeud } from '../missions/catalogue';
 import { lien, type LienCanevas } from '../missions/liens';
 import type { Direct, NoeudMission as NoeudCanevas } from '../missions/Noeud';
 
@@ -32,6 +32,31 @@ export function typePrimitive(p: Primitive | undefined): TypeNoeud {
   };
 }
 
+/** Le départ d'une mission : ni primitive, ni nœud du catalogue. */
+export const estDepart = (n: NoeudMission) => n.primitiveId === null && !n.type;
+
+/** Le type d'un nœud de mission : sa primitive, son nœud du catalogue, ou le déclencheur du départ. */
+export function typeDuNoeud(n: NoeudMission, parId: Map<string, Primitive>): TypeNoeud {
+  if (n.type) return CATALOGUE.find((t) => t.cle === n.type) ?? typePrimitive(undefined);
+  return n.primitiveId === null ? typeNoeud('au_lancement') : typePrimitive(parId.get(n.primitiveId));
+}
+
+/**
+ * Le nom d'un nœud de mission : celui de sa primitive, ou son type et son résumé (« Si · bac plein ? ») ; un appel à
+ * l'opérateur dit seulement ce qu'on lui demande (« Opérateur · Videz le bac »).
+ */
+export function nomDuNoeud(n: NoeudMission, parId: Map<string, Primitive>): string {
+  if (n.primitiveId) return parId.get(n.primitiveId)?.nom ?? 'Primitive supprimée';
+  if (!n.type) return 'Lancement';
+  const t = typeDuNoeud(n, parId);
+  const r = resumer(t, n.valeurs);
+  const titre = t.famille === 'operateur' ? 'Opérateur' : t.nom;
+  return r ? `${titre} · ${r}` : titre;
+}
+
+/** Les sorties que l'API connaît ; les autres, et la « suite » du départ, redeviennent « réussi ». */
+const SORTIES_API: SortieMission[] = ['ok', 'echec', 'suite', 'alors', 'sinon', 'faire', 'fini'];
+
 /**
  * La poignée d'une sortie sur le canevas. L'API relie le départ par « ok » ; sa tuile, un déclencheur, n'a qu'une
  * sortie, « suite » : sans cette traduction, React Flow ne trouve pas la poignée et le lien ne se dessine pas.
@@ -56,10 +81,10 @@ export function versCanevas(noeuds: NoeudMission[], liens: LienMission[], parId:
   const avecEchec = new Set(liens.filter((l) => l.sortie === 'echec').map((l) => l.de));
   return {
     nodes: noeuds.map((n) => ({
-      id: n.id, type: 'carte', position: { x: n.x, y: n.y }, deletable: n.primitiveId !== null,
+      id: n.id, type: 'carte', position: { x: n.x, y: n.y }, deletable: !estDepart(n),
       data: {
-        type: n.primitiveId === null ? typeNoeud('au_lancement') : typePrimitive(parId.get(n.primitiveId)),
-        valeurs: n.primitiveId ? ({ primitive: n.primitiveId } as Record<string, string>) : {}, echec: avecEchec.has(n.id),
+        type: typeDuNoeud(n, parId),
+        valeurs: n.type ? n.valeurs ?? {} : n.primitiveId ? { primitive: n.primitiveId } : {}, echec: avecEchec.has(n.id),
       },
     })),
     edges: liens.map((l) => lien(l.id, l.de, poignee(l.de, l.sortie), l.vers)),
@@ -69,11 +94,17 @@ export function versCanevas(noeuds: NoeudMission[], liens: LienMission[], parId:
 /** La mission de l'API pour les nœuds et les liens du canevas. */
 export function versMission(nodes: NoeudCanevas[], edges: LienCanevas[]): { noeuds: NoeudMission[]; liens: LienMission[] } {
   return {
-    noeuds: nodes.map((n) => ({
-      id: n.id, primitiveId: n.id === 'depart' ? null : String(n.data.valeurs.primitive ?? '') || null,
-      x: Math.round(n.position.x), y: Math.round(n.position.y),
-    })),
-    liens: edges.map((e) => ({ id: e.id, de: e.source, sortie: e.data?.sortie === 'echec' ? 'echec' : 'ok', vers: e.target })),
+    noeuds: nodes.map((n): NoeudMission => {
+      const ici = { id: n.id, x: Math.round(n.position.x), y: Math.round(n.position.y) };
+      const primitive = String(n.data.valeurs.primitive ?? '');
+      if (n.id === 'depart') return { ...ici, primitiveId: null };
+      return primitive ? { ...ici, primitiveId: primitive } : { ...ici, primitiveId: null, type: n.data.type.cle, valeurs: n.data.valeurs };
+    }),
+    liens: edges.map((e) => {
+      const s = e.data?.sortie as SortieMission | undefined;
+      const sortie = s && SORTIES_API.includes(s) && e.source !== 'depart' ? s : 'ok';
+      return { id: e.id, de: e.source, sortie, vers: e.target };
+    }),
   };
 }
 

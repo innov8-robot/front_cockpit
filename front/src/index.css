@@ -2078,7 +2078,7 @@ a.bl-nom:hover { text-decoration: underline; text-underline-offset: 3px; }
 .bf-arrive { animation: bf-arrivee 0.45s cubic-bezier(0.3, 1.5, 0.5, 1); }
 @keyframes bf-arrivee { from { transform: scale(0.72); } }
 .bf-etiquette {
-  position: absolute; transform: translateX(-50%); max-width: 240px; padding: 3px 8px; border-radius: 7px; box-sizing: border-box;
+  position: absolute; transform: translateX(-50%); max-width: 280px; padding: 3px 8px; border-radius: 7px; box-sizing: border-box;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: rgb(10 13 17 / 0.9);
   font: 650 13px/1.15 'Inter', system-ui, sans-serif; color: #fff; animation: bf-etiquette 0.35s ease-out;
 }

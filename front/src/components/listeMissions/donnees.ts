@@ -1,16 +1,18 @@
 /**
- * Ce que les listes de missions montrent, calculé une fois depuis l'API : pour chaque mission, sa chaîne de primitives,
+ * Ce que les listes de missions montrent, calculé une fois depuis l'API : pour chaque mission, son chemin principal,
  * ses derniers runs, son taux de réussite et sa durée moyenne ; et la mission en cours, relue chaque seconde.
  */
 import { useEffect, useMemo, useState } from 'react';
 import { api, robotUnique } from '../../api/client';
-import type { EtatMission, Execution, Mission, Primitive, Robot, Run } from '../../api/types';
+import type { EtatMission, Execution, Mission, Primitive, Robot, Run, Sortie } from '../../api/types';
+import { nomDuNoeud, typeDuNoeud } from '../graphe/correspondance';
+import type { TypeNoeud } from '../missions/catalogue';
 
 /** Le résumé d'une mission pour une liste. */
 export interface Resume {
   mission: Mission;
-  /** Les primitives de la chaîne « réussi » depuis le départ, dans l'ordre (null : primitive supprimée). */
-  chaine: { noeud: string; primitive: Primitive | null }[];
+  /** Les nœuds du chemin principal depuis le départ, dans l'ordre, avec leur type et leur nom. */
+  chaine: { noeud: string; type: TypeNoeud; nom: string }[];
   /** Le nombre de primitives qui ont une sortie « échec » reliée. */
   echecs: number;
   /** Les derniers runs, du plus ancien au plus récent. */
@@ -22,17 +24,23 @@ export interface Resume {
 
 const NB_RUNS = 8;
 
-/** La chaîne « réussi » d'une mission : du départ, on suit la sortie « ok » jusqu'au bout. */
+/** Les sorties du chemin principal, dans l'ordre où on les suit : réussi, puis dans une boucle et quand rien n'arrive. */
+const PRINCIPALES: Sortie[] = ['ok', 'suite', 'faire', 'sinon'];
+
+/**
+ * Le chemin principal d'une mission : du départ, on suit « réussi » (ou la suite d'une boucle, la branche « sinon »
+ * d'une condition) jusqu'au bout ou jusqu'à repasser par un nœud vu.
+ */
 function chaine(m: Mission, parId: Map<string, Primitive>): Resume['chaine'] {
   const vus: string[] = ['depart'];
   for (;;) {
-    const suite = m.liens.find((l) => l.de === vus.at(-1) && l.sortie === 'ok');
+    const suite = PRINCIPALES.map((s) => m.liens.find((l) => l.de === vus.at(-1) && l.sortie === s)).find(Boolean);
     if (!suite || vus.includes(suite.vers)) break;
     vus.push(suite.vers);
   }
-  return vus.slice(1).map((id) => {
+  return vus.slice(1).flatMap((id) => {
     const n = m.noeuds.find((x) => x.id === id);
-    return { noeud: id, primitive: n?.primitiveId ? parId.get(n.primitiveId) ?? null : null };
+    return n ? [{ noeud: id, type: typeDuNoeud(n, parId), nom: nomDuNoeud(n, parId) }] : [];
   });
 }
 

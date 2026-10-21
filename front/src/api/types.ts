@@ -47,16 +47,24 @@ export interface Primitive {
 
 export type EtatMission = 'brouillon' | 'prete' | 'en_cours' | 'terminee' | 'echouee';
 
-/** Un nœud du graphe de mission ; `primitiveId` est null pour le départ. */
+/**
+ * Un nœud du graphe de mission : une primitive (`primitiveId`) ; un nœud du catalogue qui n'en est pas une — logique,
+ * appel à l'opérateur, fin — (`type`, sa clé au catalogue, et ses `valeurs`) ; ou le départ, ni l'un ni l'autre.
+ */
 export interface NoeudMission {
   id: string;
   primitiveId: string | null;
+  type?: string;
+  valeurs?: Record<string, string | number>;
   x: number;
   y: number;
 }
 
-/** La sortie d'un nœud : ce qu'on fait quand la primitive a réussi, ou quand elle a échoué. */
-export type Sortie = 'ok' | 'echec';
+/**
+ * La sortie d'un nœud : ce qu'on fait quand il a réussi ou échoué ; un nœud de logique a les siennes (« suite » d'un
+ * compteur, « alors » / « sinon » d'une condition, « faire » / « fini » d'une boucle).
+ */
+export type Sortie = 'ok' | 'echec' | 'suite' | 'alors' | 'sinon' | 'faire' | 'fini';
 
 export interface LienMission {
   id: string;
@@ -141,7 +149,7 @@ export interface EtatCapteurs {
 /** Une étape jouée dans le tour en cours : la sortie de l'étape d'avant qui y a mené, et son issue. */
 export interface EtapeJouee {
   noeud: string;
-  par: 'ok' | 'echec';
+  par: Sortie;
   issue: 'reussi' | 'echoue' | 'cours';
 }
 

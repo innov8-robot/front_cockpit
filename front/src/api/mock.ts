@@ -1,7 +1,7 @@
 import type { Api } from './client';
-import type { Cote, EtatCapteurs, EtatCorps, Execution, GesteRobot, Mission, Primitive, Robot, Run } from './types';
+import type { AlerteMission, Cote, EtatCapteurs, EtatCorps, Execution, GesteRobot, Mission, Primitive, Robot, Run, Sortie } from './types';
 
-const CLE = 'mpc.front.simulation.v5';
+const CLE = 'mpc.front.simulation.v6';
 const LATENCE_MS = 120;
 /** La durée simulée d'un geste : le retour en posture de travail, l'ouverture ou la fermeture d'une pince. */
 const DUREE_HOME_MS = 2600;
@@ -18,8 +18,10 @@ interface Magasin {
   execution?: { robotId: string; missionId: string; debut: number; pause: number; pauseDepuis: number | null } | null;
 }
 
-/** Une primitive simulée dure ce temps (ms). */
+/** Une primitive simulée dure ce temps (ms) ; une décision de logique, le temps d'un coup d'œil ; un appel, celui d'un humain. */
 const DUREE_ETAPE_MS = 5000;
+const DUREE_LOGIQUE_MS = 1500;
+const DUREE_APPEL_MS = 6000;
 
 const ilYA = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
 
@@ -62,6 +64,12 @@ function graine(): Magasin {
         objet: null, ancrage: null, poste: null, vitesse: 1, creeLe: ilYA(60 * 24 * 12),
         creePar: 'Thomas', tauxReussite: null, executions: 0,
       },
+      {
+        id: 'p6', nom: 'Retour à la base', type: 'deplacer',
+        description: 'La base roule jusqu’au poste « base », bras rentrés.',
+        objet: null, ancrage: null, poste: 'base', vitesse: 1, creeLe: ilYA(60 * 24 * 12),
+        creePar: 'Thomas', tauxReussite: 1, executions: 24,
+      },
     ],
     missions: [
       {
@@ -94,6 +102,41 @@ function graine(): Magasin {
         ],
         robotId: 'r1', repetitions: 1, etat: 'brouillon', modifieeLe: ilYA(60 * 20),
       },
+      {
+        id: 'm3', nom: 'Vider la table, en boucle',
+        description: 'Pour chaque pièce sur la table : si le bac est plein, l’opérateur le vide ; prendre la pièce, la déposer, compter. Une pièce imprenable appelle l’opérateur. Puis rentrer les bras et retourner à la base.',
+        noeuds: [
+          { id: 'depart', primitiveId: null, x: 0, y: 200 },
+          { id: 'b1', primitiveId: 'p4', x: 240, y: 200 },
+          { id: 'b2', primitiveId: null, type: 'pour_chaque', valeurs: { objet: 'pièce', zone: 'la table' }, x: 480, y: 200 },
+          { id: 'b3', primitiveId: null, type: 'si', valeurs: { condition: 'bac plein' }, x: 720, y: 212 },
+          { id: 'b4', primitiveId: null, type: 'demander', valeurs: { message: 'Videz le bac' }, x: 960, y: 80 },
+          { id: 'b5', primitiveId: 'p1', x: 1200, y: 212 },
+          { id: 'b6', primitiveId: 'p2', x: 1440, y: 200 },
+          { id: 'b7', primitiveId: null, type: 'compteur', valeurs: { variable: 'déposées', pas: 1 }, x: 1680, y: 200 },
+          { id: 'b8', primitiveId: null, type: 'demander', valeurs: { message: 'Retirez la pièce' }, x: 1440, y: 392 },
+          { id: 'b9', primitiveId: 'p5', x: 720, y: -76 },
+          { id: 'b10', primitiveId: 'p6', x: 960, y: -76 },
+          { id: 'b11', primitiveId: null, type: 'terminer', valeurs: { verdict: 'réussie' }, x: 1200, y: -76 },
+        ],
+        liens: [
+          { id: 'k1', de: 'depart', sortie: 'ok', vers: 'b1' },
+          { id: 'k2', de: 'b1', sortie: 'ok', vers: 'b2' },
+          { id: 'k3', de: 'b2', sortie: 'faire', vers: 'b3' },
+          { id: 'k4', de: 'b3', sortie: 'alors', vers: 'b4' },
+          { id: 'k5', de: 'b4', sortie: 'ok', vers: 'b5' },
+          { id: 'k6', de: 'b3', sortie: 'sinon', vers: 'b5' },
+          { id: 'k7', de: 'b5', sortie: 'ok', vers: 'b6' },
+          { id: 'k8', de: 'b6', sortie: 'ok', vers: 'b7' },
+          { id: 'k9', de: 'b7', sortie: 'suite', vers: 'b2' },
+          { id: 'k10', de: 'b5', sortie: 'echec', vers: 'b8' },
+          { id: 'k11', de: 'b8', sortie: 'ok', vers: 'b2' },
+          { id: 'k12', de: 'b2', sortie: 'fini', vers: 'b9' },
+          { id: 'k13', de: 'b9', sortie: 'ok', vers: 'b10' },
+          { id: 'k14', de: 'b10', sortie: 'ok', vers: 'b11' },
+        ],
+        robotId: 'r1', repetitions: 1, etat: 'prete', modifieeLe: ilYA(30),
+      },
     ],
     runs: [
       { id: 'u1', missionId: 'm1', robotId: 'r1', debut: ilYA(14), dureeS: 38, issue: 'reussi', cause: null },
@@ -110,6 +153,7 @@ function graine(): Magasin {
       { id: 'u13', missionId: 'm1', robotId: 'r1', debut: ilYA(60 * 74), dureeS: 21, issue: 'interrompu', cause: 'Arrêtée par l’opérateur' },
       { id: 'u5', missionId: 'm2', robotId: 'r1', debut: ilYA(60 * 30), dureeS: 12, issue: 'interrompu', cause: 'Arrêt d’urgence' },
       { id: 'u14', missionId: 'm2', robotId: 'r1', debut: ilYA(60 * 48), dureeS: 26, issue: 'reussi', cause: null },
+      { id: 'u15', missionId: 'm3', robotId: 'r1', debut: ilYA(60 * 3), dureeS: 74, issue: 'reussi', cause: null },
     ],
   };
 }
@@ -211,38 +255,75 @@ const commande = <T>(f: () => Promise<T>): Promise<T> => {
   }
 };
 
-/** Le chemin joué : du départ, on suit la sortie « réussi » jusqu'au bout (la simulation réussit tout). */
-function chemin(m: Mission): string[] {
-  const vus = ['depart'];
-  for (;;) {
-    const suite = m.liens.find((l) => l.de === vus.at(-1) && l.sortie === 'ok');
-    if (!suite || vus.includes(suite.vers)) return vus;
-    vus.push(suite.vers);
-  }
-}
-
 /** Une étape du parcours simulé d'un tour : son nœud, la sortie de l'étape d'avant qui y mène, et si elle rate. */
-interface PasSimule { noeud: string; par: 'ok' | 'echec'; rate: boolean }
+interface PasSimule { noeud: string; par: Sortie; rate: boolean }
+
+/** Les nœuds de boucle : « faire » tant qu'il reste des pièces, puis « fini ». */
+const BOUCLES = ['pour_chaque', 'pour', 'repeter', 'tant_que'];
+/** Combien de pièces une boucle simulée trouve sur la table. */
+const PIECES = 3;
+/** Au-delà, un tour simulé s'arrête : une mission qui tournerait en rond sans fin. */
+const ETAPES_MAX = 60;
+
+const aUneBoucle = (m: Mission) => m.noeuds.some((n) => n.type && BOUCLES.includes(n.type));
 
 /**
- * Le parcours d'un tour simulé : la chaîne « réussi », sauf au deuxième tour, où la première prise qui a une sortie
- * « échec » rate et la mission suit sa branche échec — de quoi voir la barre de lecture prendre une autre branche.
+ * La règle d'un nœud simulé à sa `visite`-ième fois dans le tour : une boucle fait « faire » trois fois puis « fini » ;
+ * une condition est vraie à la deuxième pièce ; une prise rattrapée par une sortie « échec » rate à la dernière pièce
+ * d'une boucle, ou au deuxième tour d'une mission sans boucle. Le reste réussit par « ok » ou « suite ».
  */
+function regle(m: Mission, id: string, visite: number, tour: number): { sortie?: Sortie; rate: boolean } {
+  const n = m.noeuds.find((x) => x.id === id);
+  if (n?.type && BOUCLES.includes(n.type)) return { sortie: visite <= PIECES ? 'faire' : 'fini', rate: false };
+  if (n?.type === 'si') return { sortie: visite === 2 ? 'alors' : 'sinon', rate: false };
+  const prise = magasin.primitives.find((p) => p.id === n?.primitiveId)?.type === 'prise_objet';
+  const rattrapee = m.liens.some((l) => l.de === id && l.sortie === 'echec');
+  return { rate: prise && rattrapee && (aUneBoucle(m) ? visite === PIECES : tour === 2 && visite === 1) };
+}
+
+/** Le parcours d'un tour simulé, nœud par nœud, selon leurs règles : de quoi voir la barre de lecture tout suivre. */
 function parcours(m: Mission, tour: number): PasSimule[] {
   const pas: PasSimule[] = [];
-  const vus = new Set(['depart']);
+  const visites = new Map<string, number>();
+  const boucle = aUneBoucle(m);
   let de = 'depart';
-  let sortie: 'ok' | 'echec' = 'ok';
-  for (;;) {
+  let sortie: Sortie | undefined = 'ok';
+  while (sortie && pas.length < ETAPES_MAX) {
     const vers = m.liens.find((l) => l.de === de && l.sortie === sortie)?.vers;
-    if (!vers || vus.has(vers)) return pas;
-    vus.add(vers);
-    const type = magasin.primitives.find((p) => p.id === m.noeuds.find((n) => n.id === vers)?.primitiveId)?.type;
-    const rate = tour === 2 && !pas.some((p) => p.rate) && type === 'prise_objet' && m.liens.some((l) => l.de === vers && l.sortie === 'echec');
-    pas.push({ noeud: vers, par: sortie, rate });
+    if (!vers || (!boucle && visites.has(vers))) return pas;
+    const visite = (visites.get(vers) ?? 0) + 1;
+    visites.set(vers, visite);
+    const r = regle(m, vers, visite, tour);
+    pas.push({ noeud: vers, par: sortie, rate: r.rate });
     de = vers;
-    sortie = rate ? 'echec' : 'ok';
+    sortie = r.rate ? 'echec' : r.sortie ?? m.liens.find((l) => l.de === vers && (l.sortie === 'ok' || l.sortie === 'suite'))?.sortie;
   }
+  return pas;
+}
+
+/** La durée d'une étape simulée (ms). */
+function dureeMs(m: Mission, id: string): number {
+  const type = m.noeuds.find((n) => n.id === id)?.type;
+  return !type ? DUREE_ETAPE_MS : type === 'demander' ? DUREE_APPEL_MS : DUREE_LOGIQUE_MS;
+}
+
+/** Le nom d'un nœud simulé, pour une alerte. */
+function nomNoeud(m: Mission, id: string): string {
+  const n = m.noeuds.find((x) => x.id === id);
+  return magasin.primitives.find((p) => p.id === n?.primitiveId)?.nom ?? n?.type ?? id;
+}
+
+/**
+ * L'alerte de l'étape en cours : celle d'avant a raté et une branche l'a rattrapée, ou la mission attend l'opérateur.
+ */
+function alerteDe(m: Mission, avant: PasSimule | undefined, ici: string): AlerteMission | null {
+  const n = m.noeuds.find((x) => x.id === ici);
+  const appel = n?.type === 'demander' ? String(n.valeurs?.message ?? 'une intervention').toLowerCase() : null;
+  if (avant?.rate) {
+    const suite = appel ? `La mission appelle l’opérateur : ${appel}.` : 'La mission prend sa branche échec.';
+    return { niveau: 'attention', texte: `« ${nomNoeud(m, avant.noeud)} » a raté : aucune prise atteignable. ${suite}` };
+  }
+  return appel ? { niveau: 'attention', texte: `La mission attend l’opérateur : ${appel}.` } : null;
 }
 
 /** Le temps joué par la mission simulée, pauses retirées (ms). */
@@ -265,7 +346,8 @@ function hachage(texte: string): number {
 function detailler(u: Run): Run {
   const m = magasin.missions.find((x) => x.id === u.missionId);
   if (u.etapes || u.dureeS === 0 || !m) return u;
-  const c = chemin(m).slice(1);
+  const tour = parcours(m, 1);
+  const c = tour.map((y) => y.noeud);
   if (!c.length) return u;
   const typeDe = (id: string) => magasin.primitives.find((p) => p.id === m.noeuds.find((n) => n.id === id)?.primitiveId)?.type;
   const rate = u.issue === 'echoue' ? c.findIndex((id) => typeDe(id) === (/bac/i.test(u.cause ?? '') ? 'depose' : 'prise_objet')) : -1;
@@ -277,8 +359,9 @@ function detailler(u: Run): Run {
   let debutS = 0;
   const etapes = ids.map((noeud, i) => {
     const dureeS = (u.dureeS * poids[i]) / total;
-    const issue = i === fin ? u.issue : 'reussi';
-    const etape = { noeud, debutS, dureeS, issue, cause: i === fin ? u.cause : null };
+    const rattrapee = i !== fin && tour[i]?.rate;
+    const issue = i === fin ? u.issue : rattrapee ? 'echoue' : 'reussi';
+    const etape = { noeud, debutS, dureeS, issue, cause: i === fin ? u.cause : rattrapee ? 'Aucune prise atteignable' : null };
     debutS += dureeS;
     return etape;
   });
@@ -286,8 +369,8 @@ function detailler(u: Run): Run {
 }
 
 /**
- * Fait avancer la mission simulée jusqu'à maintenant : chaque étape dure DUREE_ETAPE_MS, les tours s'enchaînent ; à
- * la fin de la dernière répétition, elle se termine.
+ * Fait avancer la mission simulée jusqu'à maintenant : chaque étape dure le temps de son genre, les tours
+ * s'enchaînent ; à la fin de la dernière répétition, elle se termine.
  */
 function avancer(): Execution | null {
   const x = magasin.execution;
@@ -299,15 +382,19 @@ function avancer(): Execution | null {
     return null;
   }
   const joue = tempsJoue(x);
-  const tours = Array.from({ length: m.repetitions }, (_, k) => parcours(m, k + 1));
-  let i = Math.floor(joue / DUREE_ETAPE_MS);
+  let reste = joue;
   let tour = 0;
-  while (tour < tours.length && i >= Math.max(1, tours[tour].length)) {
-    i -= Math.max(1, tours[tour].length);
-    tour += 1;
+  let i = 0;
+  let p: PasSimule[] = [];
+  cherche: for (; tour < m.repetitions; tour++) {
+    p = parcours(m, tour + 1);
+    for (i = 0; i < p.length; i++) {
+      const d = dureeMs(m, p[i].noeud);
+      if (reste < d) break cherche;
+      reste -= d;
+    }
   }
-  const p = tours[tour] ?? [];
-  if (!p.length) {
+  if (tour >= m.repetitions || !p.length) {
     const run = magasin.runs.find((u) => u.robotId === r.id && u.missionId === m.id && u.dureeS === 0);
     if (run) run.dureeS = Math.max(1, Math.round(joue / 1000));
     m.etat = 'terminee';
@@ -318,21 +405,24 @@ function avancer(): Execution | null {
     return null;
   }
   const ici = p[i].noeud;
-  const vus = new Set(['depart', ...p.slice(0, i + 1).map((y) => y.noeud)]);
   const prevus: string[] = [];
-  for (let n = m.liens.find((l) => l.de === ici && l.sortie === 'ok')?.vers; n && !vus.has(n); n = m.liens.find((l) => l.de === n && l.sortie === 'ok')?.vers) {
+  const vus = new Set([ici]);
+  for (let de = ici; ;) {
+    const type = m.noeuds.find((n) => n.id === de)?.type;
+    if (de !== ici && type && (BOUCLES.includes(type) || type === 'si')) break;
+    const n = m.liens.find((l) => l.de === de && (l.sortie === 'ok' || l.sortie === 'suite'))?.vers;
+    if (!n || vus.has(n)) break;
     prevus.push(n);
     vus.add(n);
+    de = n;
   }
-  const ratee = p.findIndex((y) => y.rate);
-  const nom = magasin.primitives.find((q) => q.id === m.noeuds.find((n) => n.id === p[ratee]?.noeud)?.primitiveId)?.nom;
-  const avancement = (joue % DUREE_ETAPE_MS) / DUREE_ETAPE_MS;
+  const avancement = reste / dureeMs(m, ici);
   return {
     missionId: m.id, chemin: ['depart', ...p.slice(0, i + 1).map((y) => y.noeud), ...prevus], etape: i + 1, avancement,
     repetition: tour + 1, repetitions: m.repetitions, enPause: x.pauseDepuis !== null, dureeS: joue / 1000,
     joues: p.slice(0, i + 1).map((y, k) => ({ noeud: y.noeud, par: y.par, issue: k < i ? (y.rate ? 'echoue' : 'reussi') : 'cours' })),
-    dureeEtapeS: (avancement * DUREE_ETAPE_MS) / 1000,
-    alerte: ratee >= 0 && ratee < i ? { niveau: 'attention', texte: `« ${nom} » a raté : aucune prise atteignable. La mission prend sa branche échec.` } : null,
+    dureeEtapeS: reste / 1000,
+    alerte: alerteDe(m, p[i - 1], ici),
   };
 }
 

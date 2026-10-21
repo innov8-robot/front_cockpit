@@ -4,9 +4,9 @@ import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
 import { ETATS_MISSION, ISSUES_RUN, depuis } from '../../api/libelles';
 import type { EtatMission, Execution, Mission, Primitive } from '../../api/types';
-import { typePrimitive } from '../graphe/correspondance';
+import { estDepart, nomDuNoeud, typeDuNoeud } from '../graphe/correspondance';
 import { teinte } from '../missions/apparence';
-import { ICONES } from '../missions/catalogue';
+import { ICONES, type TypeNoeud } from '../missions/catalogue';
 import { chrono, COULEUR_ETAT, type Resume } from './donnees';
 
 /** L'état d'une mission : un point de sa couleur (qui respire en cours) et son nom. */
@@ -18,33 +18,34 @@ export function PointEtat({ etat, texte = true }: { etat: EtatMission; texte?: b
   );
 }
 
-/** Une petite tuile de primitive, de la couleur de sa famille, avec son icône. */
-function Tuile({ primitive, etat }: { primitive: Primitive | null; etat?: 'fait' | 'cours' }) {
-  const t = typePrimitive(primitive ?? undefined);
+/** Une petite tuile de nœud, de la couleur de sa famille, avec son icône. */
+function Tuile({ t, nom, etat }: { t: TypeNoeud; nom: string; etat?: 'fait' | 'cours' }) {
   return (
-    <span className={`lm-tuile ${etat ? `lm-tuile-${etat}` : ''}`} style={{ ['--famille' as string]: teinte(t.famille, 'familles') }} title={t.nom}>
+    <span className={`lm-tuile ${etat ? `lm-tuile-${etat}` : ''}`} style={{ ['--famille' as string]: teinte(t.famille, 'familles') }} title={nom}>
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"
         strokeLinejoin="round" aria-hidden="true"><path d={ICONES[t.icone] ?? ICONES.note} /></svg>
     </span>
   );
 }
 
-/** La chaîne d'une mission en tuiles, du lancement au bout ; pendant une exécution, le chemin joué et l'étape en cours. */
+/** La chaîne d'une mission en tuiles, du lancement au bout ; pendant une exécution, ce qui est fait et l'étape en cours. */
 export function MiniChaine({ r, execution }: { r: Resume; execution: Execution | null }) {
   const enCours = execution?.missionId === r.mission.id ? execution : null;
+  const courant = enCours?.chemin[enCours.etape];
+  const faits = new Set(enCours ? enCours.joues?.filter((j) => j.issue !== 'cours').map((j) => j.noeud) ?? enCours.chemin.slice(1, enCours.etape) : []);
   return (
-    <span className="lm-chaine" aria-label={`${r.chaine.length} primitives`}>
+    <span className="lm-chaine" aria-label={`${r.chaine.length} étapes`}>
       <span className="lm-tuile lm-tuile-depart" title="Au lancement">
         <svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d={ICONES.eclair} fill="currentColor" /></svg>
       </span>
-      {r.chaine.map((c, i) => (
+      {r.chaine.map((c) => (
         <span key={c.noeud} className="lm-maillon">
           <span className="lm-fil" />
-          <Tuile primitive={c.primitive} etat={enCours ? (i + 1 < enCours.etape ? 'fait' : i + 1 === enCours.etape ? 'cours' : undefined) : undefined} />
+          <Tuile t={c.type} nom={c.nom} etat={c.noeud === courant ? 'cours' : faits.has(c.noeud) ? 'fait' : undefined} />
         </span>
       ))}
       {r.echecs > 0 && <span className="lm-echecs" title={`${r.echecs} primitive${r.echecs > 1 ? 's' : ''} avec une sortie « échec »`}>↘ {r.echecs}</span>}
-      {r.chaine.length === 0 && <span className="lm-vide">aucune primitive</span>}
+      {r.chaine.length === 0 && <span className="lm-vide">aucune étape</span>}
     </span>
   );
 }
@@ -81,13 +82,13 @@ export function Chiffres({ r }: { r: Resume }) {
  */
 export function Progression({ r, primitives, execution, pause }: { r: Resume; primitives: Primitive[]; execution: Execution; pause(): void }) {
   const noeud = r.mission.noeuds.find((n) => n.id === execution.chemin[execution.etape]);
-  const primitive = primitives.find((p) => p.id === noeud?.primitiveId);
+  const nom = noeud && nomDuNoeud(noeud, new Map(primitives.map((p) => [p.id, p])));
   const total = Math.max(1, execution.chemin.length - 1);
   return (
     <div className="lm-progression">
       <span className="lm-progression-texte">
         <b>{execution.enPause ? 'En pause' : `Étape ${execution.etape}/${total}`}</b>
-        {primitive && <span>{primitive.nom}</span>}
+        {nom && <span>{nom}</span>}
         <span className="lm-chrono">{chrono(execution.dureeS)}{execution.repetitions > 1 && ` · tour ${execution.repetition}/${execution.repetitions}`}</span>
       </span>
       <button className="lm-bouton" onClick={pause} aria-label={execution.enPause ? 'Reprendre' : 'Mettre en pause'}>{execution.enPause ? '▶' : '❚❚'}</button>
@@ -261,10 +262,9 @@ export function MiniGraphe({ m, primitives, execution, largeur = 300, hauteur = 
       })}
       {m.noeuds.map((n) => {
         const p = pos(n.id);
-        const t = n.primitiveId === null ? null : typePrimitive(parId.get(n.primitiveId));
-        const couleur = t ? teinte(t.famille, 'familles') : '#e9eef7';
+        const couleur = estDepart(n) ? '#e9eef7' : teinte(typeDuNoeud(n, parId).famille, 'familles');
         return (
-          <rect key={n.id} x={p.x} y={p.y} width={cote} height={cote} rx={n.primitiveId === null ? cote / 2 : 3}
+          <rect key={n.id} x={p.x} y={p.y} width={cote} height={cote} rx={estDepart(n) ? cote / 2 : 3}
             className={n.id === enCours ? 'lm-graphe-cours' : ''} style={{ fill: `${couleur}26`, stroke: couleur }} />
         );
       })}

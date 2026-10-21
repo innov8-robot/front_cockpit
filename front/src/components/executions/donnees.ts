@@ -4,7 +4,7 @@
  */
 import type { IssueRun, Mission, Primitive, Run } from '../../api/types';
 import type { EtatNoeud } from '../missions/charte';
-import type { Trace } from '../graphe/correspondance';
+import { nomDuNoeud, type Trace } from '../graphe/correspondance';
 
 export const duree = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.round(s % 60)).padStart(2, '0')}`;
 
@@ -49,10 +49,10 @@ export function traceDe(r: Run, m: Mission): Trace {
   return trace;
 }
 
-/** Le nom d'une étape : celui de la primitive de son nœud. */
+/** Le nom d'une étape : celui de la primitive de son nœud, ou de son nœud du catalogue. */
 export function nomEtape(m: Mission, primitives: Primitive[], noeud: string): string {
-  const id = m.noeuds.find((n) => n.id === noeud)?.primitiveId;
-  return primitives.find((p) => p.id === id)?.nom ?? 'Primitive supprimée';
+  const n = m.noeuds.find((x) => x.id === noeud);
+  return n ? nomDuNoeud(n, new Map(primitives.map((p) => [p.id, p]))) : 'Étape supprimée';
 }
 
 /** Ce qu'une étape a donné sur une série de runs. */

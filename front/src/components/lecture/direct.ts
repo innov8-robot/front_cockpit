@@ -4,23 +4,18 @@
  */
 import type { Execution, Mission, Primitive, Run } from '../../api/types';
 import { duree } from '../executions/donnees';
-import { poignee, typePrimitive } from '../graphe/correspondance';
-import { typeNoeud } from '../missions/catalogue';
+import { nomDuNoeud, poignee, typeDuNoeud } from '../graphe/correspondance';
 import { MESSAGE_URGENCE, prevus, type GrapheLecture, type Lecture, type PasLecture } from './lecture';
 
 /**
  * Le graphe d'une mission de l'API : le départ devient le déclencheur « au lancement » (sa sortie « réussi » devient
- * « suite », comme sur le canevas), chaque primitive sa tuile.
+ * « suite », comme sur le canevas), chaque primitive ou nœud du catalogue sa tuile.
  */
 export function grapheDe(m: Mission, primitives: Primitive[]): GrapheLecture {
+  const parId = new Map(primitives.map((p) => [p.id, p]));
   return {
     id: m.id, nom: m.nom,
-    noeuds: m.noeuds.map((n) => {
-      const p = primitives.find((x) => x.id === n.primitiveId);
-      return n.primitiveId === null
-        ? { id: n.id, x: n.x, y: n.y, type: typeNoeud('au_lancement'), nom: 'Lancement' }
-        : { id: n.id, x: n.x, y: n.y, type: typePrimitive(p), nom: p?.nom ?? 'Primitive supprimée' };
-    }),
+    noeuds: m.noeuds.map((n) => ({ id: n.id, x: n.x, y: n.y, type: typeDuNoeud(n, parId), nom: nomDuNoeud(n, parId) })),
     liens: m.liens.map((l) => ({ id: l.id, de: l.de, sortie: poignee(l.de, l.sortie), vers: l.vers })),
   };
 }

@@ -76,6 +76,15 @@ des sorties libres, la palette à droite ; la logique y est annoncée, grisée, 
 une mission, il lit `Execution` : le chemin joué, l'étape en cours avec son avancement, l'onde qui y mène, le tour.
 `components/graphe/correspondance.ts` fait le pont entre la mission de l'API et le canevas.
 
+**La logique dans le contrat.** Un nœud de mission peut être une primitive (`primitiveId`), un nœud du catalogue qui
+n'en est pas une — boucle, condition, compteur, appel à l'opérateur, fin — (`type`, sa clé au catalogue, et ses
+`valeurs`), ou le départ ; ses sorties vont au-delà de réussi / échoué (`suite`, `alors` / `sinon`, `faire` / `fini`).
+L'éditeur les dessine et les relit sans rien perdre (sa fiche montre leurs réglages), la liste, les exécutions et la
+barre de lecture aussi ; on ne les ajoute pas encore depuis la palette. La simulation sert « Vider la table, en
+boucle », la mission du prototype : pour chaque pièce, si le bac est plein l'opérateur le vide, prendre (la troisième
+rate et appelle l'opérateur), déposer, compter ; puis rentrer, retour à la base, terminer. Le back du robot devra
+accepter ces nœuds pour les jouer.
+
 ## Les onglets de l'éditeur : Éditeur · Exécutions · Analyse
 
 Comme n8n, l'écran d'une mission (`#/missions/:id`) a trois onglets au centre de sa barre, gardés dans l'adresse
