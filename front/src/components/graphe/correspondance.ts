@@ -5,10 +5,10 @@
  */
 import { TYPES_PRIMITIVE } from '../../api/libelles';
 import type { Execution, LienMission, NoeudMission, Primitive, TypePrimitive } from '../../api/types';
-import type { EtatNoeud, Sortie } from '../missions/charte';
+import type { EtatLien, EtatNoeud, Sortie } from '../missions/charte';
 import { typeNoeud, type TypeNoeud } from '../missions/catalogue';
 import { lien, type LienCanevas } from '../missions/liens';
-import type { NoeudMission as NoeudCanevas } from '../missions/Noeud';
+import type { Direct, NoeudMission as NoeudCanevas } from '../missions/Noeud';
 
 const FAMILLE: Record<TypePrimitive, string> = {
   prise_objet: 'robot', prise_boite: 'robot', depose: 'robot', deplacer: 'deplacement', rentrer: 'deplacement',
@@ -87,4 +87,11 @@ export function etatsExecution(x: Execution, edges: LienCanevas[]) {
     if (l) liens.set(l.id, i === x.etape ? 'actif' : 'parcouru');
   }
   return { noeuds, liens };
+}
+
+/** L'état d'un run sur le canevas : chaque nœud et chaque lien, et ce que chaque tuile affiche sous son nom. */
+export interface Trace {
+  noeuds: Map<string, EtatNoeud>;
+  liens: Map<string, EtatLien>;
+  directs: Map<string, Direct>;
 }

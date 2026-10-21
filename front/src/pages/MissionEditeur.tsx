@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api, robotUnique } from '../api/client';
 import { nbPrimitives } from '../api/libelles';
-import type { EtatMission, Execution, LienMission, Mission, NoeudMission } from '../api/types';
+import type { EtatMission, Execution, LienMission, Mission, NoeudMission, Run } from '../api/types';
+import { OngletAnalyse } from '../components/executions/OngletAnalyse';
+import { OngletExecutions } from '../components/executions/OngletExecutions';
 import { EditeurMission } from '../components/graphe/EditeurMission';
 import { MenuMission, PointEtat, Trait } from '../components/listeMissions/Pieces';
 import { Chargement, Erreur, Vide } from '../components/ui';
@@ -12,6 +14,28 @@ const vierge = (): Mission => ({
   id: '', nom: '', description: '', robotId: null, repetitions: 1, etat: 'brouillon', modifieeLe: '',
   noeuds: [{ id: 'depart', primitiveId: null, x: 0, y: 80 }], liens: [],
 });
+
+/** Les onglets de l'éditeur, comme ceux de n8n : le canevas, les runs passés, ce qu'ils disent de la mission. */
+const ONGLETS = [
+  { cle: 'editeur', libelle: 'Éditeur' },
+  { cle: 'executions', libelle: 'Exécutions' },
+  { cle: 'analyse', libelle: 'Analyse' },
+] as const;
+type Onglet = (typeof ONGLETS)[number]['cle'];
+
+/** Les runs de la mission, relus chaque seconde pendant une mission, sinon toutes les cinq. */
+function useRuns(missionId: string | undefined, enDirect: boolean): Run[] {
+  const [runs, setRuns] = useState<Run[]>([]);
+  useEffect(() => {
+    if (!missionId) return;
+    let vivant = true;
+    const lire = () => api.runs({ missionId }).then((r) => vivant && setRuns(r)).catch(() => undefined);
+    lire();
+    const t = setInterval(lire, enDirect ? 1000 : 5000);
+    return () => { vivant = false; clearInterval(t); };
+  }, [missionId, enDirect]);
+  return missionId ? runs : [];
+}
 
 /** Un message de la barre (enregistrée, lancée, une erreur) s'efface seul après ce temps. */
 const MESSAGE_MS = 3000;
@@ -68,6 +92,10 @@ export function MissionEditeur() {
   const [message, setMessage] = useState<{ ton: 'ok' | 'danger'; texte: string } | null>(null);
   const champNom = useRef<HTMLInputElement>(null);
   const execution = useExecution(robot.donnee?.id, m?.id ?? '', m?.etat === 'en_cours', source.recharger);
+  const [recherche, setRecherche] = useSearchParams();
+  const onglet: Onglet = nouvelle ? 'editeur' : (ONGLETS.find((o) => o.cle === recherche.get('onglet'))?.cle ?? 'editeur');
+  const runs = useRuns(nouvelle ? undefined : id, m?.etat === 'en_cours');
+  const ouvrir = (o: Onglet) => setRecherche(o === 'editeur' ? {} : { onglet: o }, { replace: true });
 
   useEffect(() => { if (source.donnee) setM(source.donnee); }, [source.donnee]);
   useEffect(() => {
@@ -129,6 +157,17 @@ export function MissionEditeur() {
           {enCours && ' · lecture seule'}
         </span>
         <span className="lm-espace" />
+        <span className="lm-filtres me-onglets" role="tablist" aria-label="Vues de la mission">
+          {ONGLETS.map((o) => (
+            <button key={o.cle} role="tab" aria-selected={onglet === o.cle} className={onglet === o.cle ? 'actif' : ''}
+              disabled={nouvelle && o.cle !== 'editeur'} title={nouvelle && o.cle !== 'editeur' ? 'Enregistrez la mission d’abord' : undefined}
+              onClick={() => ouvrir(o.cle)}>
+              {o.libelle}{o.cle === 'executions' && runs.filter((r) => r.dureeS > 0).length > 0 && <b>{runs.filter((r) => r.dureeS > 0).length}</b>}
+              {o.cle === 'executions' && execution && <i className="me-onglet-direct" aria-label="mission en cours" />}
+            </button>
+          ))}
+        </span>
+        <span className="lm-espace" />
         {message && <span className={`me-message me-message-${message.ton}`} role="status">{message.texte}</span>}
         <MenuMission m={m} enCours={enCours} grand dansEditeur relire={source.recharger}
           renommer={() => champNom.current?.focus()}
@@ -144,9 +183,15 @@ export function MissionEditeur() {
       </div>
 
       {source.erreur && <Erreur message={source.erreur} />}
-      <EditeurMission key={`${m.id || 'nouvelle'}-${enCours}`} noeuds={m.noeuds} liens={m.liens} primitives={primitives.donnee}
-        modifiable={!enCours} execution={execution}
-        onChange={(noeuds: NoeudMission[], liens: LienMission[]) => maj({ noeuds, liens })} />
+      {onglet === 'executions' ? (
+        <OngletExecutions m={m} primitives={primitives.donnee} runs={runs} execution={execution} voirEditeur={() => ouvrir('editeur')} />
+      ) : onglet === 'analyse' ? (
+        <OngletAnalyse m={m} primitives={primitives.donnee} runs={runs} />
+      ) : (
+        <EditeurMission key={`${m.id || 'nouvelle'}-${enCours}`} noeuds={m.noeuds} liens={m.liens} primitives={primitives.donnee}
+          modifiable={!enCours} execution={execution}
+          onChange={(noeuds: NoeudMission[], liens: LienMission[]) => maj({ noeuds, liens })} />
+      )}
     </div>
   );
 }

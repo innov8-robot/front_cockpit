@@ -79,6 +79,15 @@ export interface Mission {
 
 export type IssueRun = 'reussi' | 'echoue' | 'interrompu';
 
+/** Une étape jouée pendant un run : son nœud, quand elle a commencé et combien de temps elle a pris (s), son issue. */
+export interface EtapeRun {
+  noeud: string;
+  debutS: number;
+  dureeS: number;
+  issue: IssueRun;
+  cause: string | null;
+}
+
 export interface Run {
   id: string;
   missionId: string;
@@ -87,6 +96,8 @@ export interface Run {
   dureeS: number;
   issue: IssueRun;
   cause: string | null;
+  /** Le détail par étape, dans l'ordre joué ; absent tant que le back ne le sert pas. */
+  etapes?: EtapeRun[];
 }
 
 export interface NouvellePrimitive {

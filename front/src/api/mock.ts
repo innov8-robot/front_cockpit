@@ -1,7 +1,7 @@
 import type { Api } from './client';
 import type { Cote, EtatCapteurs, EtatCorps, Execution, GesteRobot, Mission, Primitive, Robot, Run } from './types';
 
-const CLE = 'mpc.front.simulation.v4';
+const CLE = 'mpc.front.simulation.v5';
 const LATENCE_MS = 120;
 /** La durée simulée d'un geste : le retour en posture de travail, l'ouverture ou la fermeture d'une pince. */
 const DUREE_HOME_MS = 2600;
@@ -100,7 +100,16 @@ function graine(): Magasin {
       { id: 'u2', missionId: 'm1', robotId: 'r1', debut: ilYA(16), dureeS: 51, issue: 'echoue', cause: 'Aucune prise atteignable' },
       { id: 'u3', missionId: 'm1', robotId: 'r1', debut: ilYA(19), dureeS: 36, issue: 'reussi', cause: null },
       { id: 'u4', missionId: 'm1', robotId: 'r1', debut: ilYA(60 * 5), dureeS: 41, issue: 'reussi', cause: null },
+      { id: 'u6', missionId: 'm1', robotId: 'r1', debut: ilYA(60 * 6), dureeS: 44, issue: 'echoue', cause: 'Pièce glissée pendant la levée' },
+      { id: 'u7', missionId: 'm1', robotId: 'r1', debut: ilYA(60 * 7), dureeS: 39, issue: 'reussi', cause: null },
+      { id: 'u8', missionId: 'm1', robotId: 'r1', debut: ilYA(60 * 26), dureeS: 47, issue: 'reussi', cause: null },
+      { id: 'u9', missionId: 'm1', robotId: 'r1', debut: ilYA(60 * 27), dureeS: 58, issue: 'echoue', cause: 'Aucune prise atteignable' },
+      { id: 'u10', missionId: 'm1', robotId: 'r1', debut: ilYA(60 * 28), dureeS: 40, issue: 'reussi', cause: null },
+      { id: 'u11', missionId: 'm1', robotId: 'r1', debut: ilYA(60 * 50), dureeS: 33, issue: 'echoue', cause: 'Bac B introuvable' },
+      { id: 'u12', missionId: 'm1', robotId: 'r1', debut: ilYA(60 * 51), dureeS: 42, issue: 'reussi', cause: null },
+      { id: 'u13', missionId: 'm1', robotId: 'r1', debut: ilYA(60 * 74), dureeS: 21, issue: 'interrompu', cause: 'Arrêtée par l’opérateur' },
       { id: 'u5', missionId: 'm2', robotId: 'r1', debut: ilYA(60 * 30), dureeS: 12, issue: 'interrompu', cause: 'Arrêt d’urgence' },
+      { id: 'u14', missionId: 'm2', robotId: 'r1', debut: ilYA(60 * 48), dureeS: 26, issue: 'reussi', cause: null },
     ],
   };
 }
@@ -210,6 +219,41 @@ function chemin(m: Mission): string[] {
     if (!suite || vus.includes(suite.vers)) return vus;
     vus.push(suite.vers);
   }
+}
+
+/** Un nombre entre 0 et 1 tiré d'un texte, toujours le même pour le même texte. */
+function hachage(texte: string): number {
+  let h = 2166136261;
+  for (const c of texte) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  return (h >>> 0) / 2 ** 32;
+}
+
+/**
+ * Le détail par étape d'un run simulé, tiré de sa mission : la chaîne « réussi » jouée jusqu'à l'étape qui a raté
+ * (la prise, ou la dépose si la cause parle du bac), puis la sortie « échec » de cette étape si elle est reliée.
+ * Les durées se partagent celle du run.
+ */
+function detailler(u: Run): Run {
+  const m = magasin.missions.find((x) => x.id === u.missionId);
+  if (u.etapes || u.dureeS === 0 || !m) return u;
+  const c = chemin(m).slice(1);
+  if (!c.length) return u;
+  const typeDe = (id: string) => magasin.primitives.find((p) => p.id === m.noeuds.find((n) => n.id === id)?.primitiveId)?.type;
+  const rate = u.issue === 'echoue' ? c.findIndex((id) => typeDe(id) === (/bac/i.test(u.cause ?? '') ? 'depose' : 'prise_objet')) : -1;
+  const fin = u.issue === 'reussi' ? c.length - 1 : u.issue === 'echoue' ? (rate >= 0 ? rate : c.length - 1) : Math.floor((c.length - 1) / 2);
+  const secours = u.issue === 'echoue' ? m.liens.find((l) => l.de === c[fin] && l.sortie === 'echec')?.vers : undefined;
+  const ids = [...c.slice(0, fin + 1), ...(secours ? [secours] : [])];
+  const poids = ids.map((id, i) => 0.6 + hachage(`${u.id}:${id}:${i}`));
+  const total = poids.reduce((a, b) => a + b, 0);
+  let debutS = 0;
+  const etapes = ids.map((noeud, i) => {
+    const dureeS = (u.dureeS * poids[i]) / total;
+    const issue = i === fin ? u.issue : 'reussi';
+    const etape = { noeud, debutS, dureeS, issue, cause: i === fin ? u.cause : null };
+    debutS += dureeS;
+    return etape;
+  });
+  return { ...u, etapes };
 }
 
 /** Fait avancer la mission simulée jusqu'à maintenant ; à la dernière répétition, elle se termine. */
@@ -371,7 +415,7 @@ export const apiSimulee: Api = {
 
   runs: (filtre) =>
     plusTard(
-      magasin.runs.filter(
+      magasin.runs.map(detailler).filter(
         (u) => (!filtre?.robotId || u.robotId === filtre.robotId) && (!filtre?.missionId || u.missionId === filtre.missionId),
       ),
     ),

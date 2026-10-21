@@ -13,7 +13,7 @@ import { CATALOGUE } from '../missions/catalogue';
 import { LienPulse } from '../missions/Lien';
 import { lien, tonDe, type LienCanevas } from '../missions/liens';
 import { IconeNoeud, NoeudCarte, type NoeudMission as NoeudCanevas } from '../missions/Noeud';
-import { atteignables, etatsExecution, poignee, typePrimitive, versCanevas, versMission } from './correspondance';
+import { atteignables, etatsExecution, poignee, typePrimitive, versCanevas, versMission, type Trace } from './correspondance';
 
 const TYPES_NOEUDS = { carte: NoeudCarte };
 const TYPES_LIENS = { pulse: LienPulse };
@@ -32,6 +32,8 @@ interface Props {
   modifiable: boolean;
   /** La mission en cours sur le robot, si c'est celle-ci : l'éditeur montre où elle en est. */
   execution: Execution | null;
+  /** Un run passé rejoué sur le canevas (onglet Exécutions) : il prime sur l'exécution en direct. */
+  trace?: Trace | null;
   onChange(noeuds: NoeudMission[], liens: LienMission[]): void;
 }
 
@@ -160,7 +162,7 @@ function Panneau({ primitive, echec, modifiable, changerEchec, fermer }: {
 interface Menu { x: number; y: number; id: string }
 interface Choix { x: number; y: number; id: string; sortie: Sortie }
 
-function Canevas({ noeuds, liens, primitives, modifiable, execution, onChange }: Props) {
+function Canevas({ noeuds, liens, primitives, modifiable, execution, trace, onChange }: Props) {
   const flot = useReactFlow();
   const { couleurs } = useContext(ApparenceContexte).apparence;
   const parId = useMemo(() => new Map(primitives.map((p) => [p.id, p])), [primitives]);
@@ -189,19 +191,19 @@ function Canevas({ noeuds, liens, primitives, modifiable, execution, onChange }:
 
   // Ce qu'on montre sans le stocker : le marquage « non relié », la lecture seule, et l'état d'une exécution.
   const relies = useMemo(() => atteignables(edges), [edges]);
-  const etats = useMemo(() => (execution ? etatsExecution(execution, edges) : null), [execution, edges]);
+  const etats = useMemo(() => trace ?? (execution ? etatsExecution(execution, edges) : null), [trace, execution, edges]);
   const affiches = useMemo(() => nodes.map((n) => {
     const courant = etats?.noeuds.get(n.id) === 'cours';
     return {
       ...n, draggable: modifiable,
       data: {
         ...n.data, figee: !modifiable, alerte: relies.has(n.id) ? undefined : 'non relié au départ',
-        etat: etats ? etats.noeuds.get(n.id) ?? 'attente' : undefined,
-        direct: courant && execution ? { texte: `${Math.round(execution.avancement * 100)} %` }
+        etat: etats ? etats.noeuds.get(n.id) ?? (trace ? 'saute' : 'attente') : undefined,
+        direct: trace ? trace.directs.get(n.id) : courant && execution ? { texte: `${Math.round(execution.avancement * 100)} %` }
           : n.id === 'depart' && execution && execution.repetitions > 1 ? { texte: `tour ${execution.repetition}/${execution.repetitions}` } : undefined,
       },
     };
-  }), [nodes, relies, etats, execution, modifiable]);
+  }), [nodes, relies, etats, execution, modifiable, trace]);
   const liensAffiches = useMemo<LienCanevas[]>(() => edges.map((e) => ({
     ...e, data: { ...e.data!, etat: (etats?.liens.get(e.id) ?? 'aucun') as EtatLien, ton: tonDe(e.data!.sortie) },
   })), [edges, etats]);

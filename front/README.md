@@ -76,6 +76,15 @@ des sorties libres, la palette à droite ; la logique y est annoncée, grisée, 
 une mission, il lit `Execution` : le chemin joué, l'étape en cours avec son avancement, l'onde qui y mène, le tour.
 `components/graphe/correspondance.ts` fait le pont entre la mission de l'API et le canevas.
 
+## Les onglets de l'éditeur : Éditeur · Exécutions · Analyse
+
+Comme n8n, l'écran d'une mission (`#/missions/:id`) a trois onglets au centre de sa barre, gardés dans l'adresse
+(`?onglet=executions`) : l'**éditeur** ; les **exécutions** (à gauche les runs, à droite le run choisi rejoué sur le
+canevas — étapes jouées, celle qui a échoué et sa cause — et sa frise d'étapes sur l'axe du temps ; la mission en
+cours en tête, en direct) ; l'**analyse** (sur une période : réussite, réussite et durée par étape avec l'étape la plus
+fragile, causes d'échec, durée des derniers runs). Le détail par étape vient de `Run.etapes` (`api/types.ts`), que la
+simulation sert ; le back du robot devra le servir aussi. Code : `components/executions/`.
+
 ## La liste des missions : trois propositions
 
 **`#/essai/liste-missions`**, sur les données de l'API : A · liste vivante (le panneau de côté : chaque ligne montre

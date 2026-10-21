@@ -1873,3 +1873,123 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .me-repetitions { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 6px 0 10px; color: #e9eef7; font: 500 0.84rem/1 'Inter', system-ui, sans-serif; }
 .me-repetitions span { flex: 1; }
 .me-repetitions b { min-width: 34px; text-align: center; font: 700 0.84rem/1 ui-monospace, monospace; }
+
+/* Les onglets de l'éditeur de missions (Éditeur · Exécutions · Analyse), au centre de sa barre. */
+.me-onglets button { position: relative; gap: 7px; }
+.me-onglets button:disabled { opacity: 0.4; cursor: not-allowed; }
+.me-onglets b { font: 700 10px/1 ui-monospace, monospace; opacity: 0.7; }
+.me-onglet-direct { width: 7px; height: 7px; border-radius: 50%; background: #e9eef7; box-shadow: 0 0 8px #e9eef7; animation: lm-respire 1s ease-in-out infinite; }
+
+/* L'issue d'un run : son icône dans sa couleur, et son nom ; la couleur ne parle jamais seule. */
+.ex-issue { display: inline-flex; align-items: center; gap: 7px; font: 600 0.8rem/1 'Inter', system-ui, sans-serif; color: #e9eef7; white-space: nowrap; }
+.ex-issue i { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; font: 800 10px/1 ui-monospace, monospace; font-style: normal; color: #0b0d10; }
+.ex-issue-reussi i { background: #3dff8a; }
+.ex-issue-echoue i { background: #ffb02e; }
+.ex-issue-interrompu i { background: #5b636e; color: #e9eef7; font-size: 8px; }
+.ex-barre-reussi { background: #3dff8a; }
+.ex-barre-echoue { background: #ffb02e; }
+.ex-barre-interrompu { background: #5b636e; }
+.ex-rien { margin: 12px 0; color: #8a93a3; font-size: 0.86rem; }
+.ex-titre { margin: 18px 0 10px; font: 600 9.5px/1 ui-monospace, monospace; letter-spacing: 0.16em; text-transform: uppercase; color: #8a93a3; }
+
+/* L'onglet Exécutions : la liste des runs à gauche, le run choisi à droite. */
+.ex-onglet { flex: 1; min-height: 0; display: grid; grid-template-columns: 300px 1fr; gap: 16px; }
+.ex-liste { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.ex-filtres { align-self: flex-start; }
+.ex-filtres .ex-issue i { width: 15px; height: 15px; font-size: 9px; }
+.ex-liste ul { list-style: none; margin: 0; padding: 0 4px 0 0; overflow-y: auto; min-height: 0; scrollbar-width: thin; scrollbar-color: rgb(255 255 255 / 0.16) transparent; }
+.ex-run {
+  display: grid; gap: 6px; width: 100%; margin-bottom: 6px; padding: 11px 12px; box-sizing: border-box; border-radius: 11px; text-align: left;
+  border: 1px solid rgb(255 255 255 / 0.07); background: rgb(255 255 255 / 0.02); color: #e9eef7; font: inherit; cursor: pointer;
+}
+.ex-run:hover { border-color: rgb(255 255 255 / 0.16); }
+.ex-run.actif { border-color: rgb(233 238 247 / 0.5); background: rgb(255 255 255 / 0.06); }
+.ex-run-haut { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ex-run-duree { font: 600 0.78rem/1 ui-monospace, monospace; color: #c9ced6; font-variant-numeric: tabular-nums; }
+.ex-run-bas { font-size: 0.76rem; color: #8a93a3; }
+.ex-run-cause { font-size: 0.78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ex-cause-echoue { color: #ffcf7a; }
+.ex-cause-interrompu { color: #9aa3ae; }
+.ex-direct { display: inline-flex; align-items: center; gap: 7px; font: 700 0.8rem/1 'Inter', system-ui, sans-serif; color: #fff; }
+.ex-direct i { width: 8px; height: 8px; border-radius: 50%; background: #e9eef7; box-shadow: 0 0 8px #e9eef7; animation: lm-respire 1s ease-in-out infinite; }
+.ex-run-direct { border-color: rgb(233 238 247 / 0.3); }
+.ex-detail { display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgb(255 255 255 / 0.16) transparent; }
+.ex-detail-tete { display: flex; align-items: center; gap: 12px; min-height: 34px; margin-bottom: 10px; }
+.ex-detail-info { font: 500 0.82rem/1 'Inter', system-ui, sans-serif; color: #9aa3ae; }
+.ex-cause-bandeau { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; padding: 10px 12px; border-radius: 10px; font-size: 0.86rem; }
+.ex-cause-bandeau b { display: inline-grid; place-items: center; flex: none; width: 20px; height: 20px; border-radius: 50%; font: 800 11px/1 ui-monospace, monospace; color: #0b0d10; }
+.ex-cause-bandeau.ex-cause-echoue { background: rgb(255 176 46 / 0.1); border: 1px solid rgb(255 176 46 / 0.3); }
+.ex-cause-bandeau.ex-cause-echoue b { background: #ffb02e; }
+.ex-cause-bandeau.ex-cause-interrompu { background: rgb(255 255 255 / 0.04); border: 1px solid rgb(255 255 255 / 0.1); }
+.ex-cause-bandeau.ex-cause-interrompu b { background: #5b636e; color: #e9eef7; }
+.ex-canevas { display: flex; flex: none; height: clamp(240px, 42vh, 420px); }
+/* La frise d'un run : une ligne par étape, la barre sur l'axe du temps (traits fins, bouts arrondis, grille discrète). */
+.ex-frise { position: relative; display: grid; gap: 2px; padding-bottom: 4px; }
+.ex-frise-ligne { display: grid; grid-template-columns: 22px minmax(120px, 220px) 1fr 54px; align-items: center; gap: 10px; min-height: 30px; }
+.ex-frise-ligne .ex-issue i { width: 16px; height: 16px; }
+.ex-frise-nom { font-size: 0.82rem; color: #e9eef7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ex-frise-duree { font: 600 0.78rem/1 ui-monospace, monospace; color: #c9ced6; text-align: right; font-variant-numeric: tabular-nums; }
+.ex-piste { position: relative; height: 30px; }
+.ex-graduation { position: absolute; top: 0; bottom: 0; width: 1px; background: rgb(255 255 255 / 0.06); }
+.ex-barre { position: absolute; top: 9px; height: 12px; border-radius: 4px; cursor: default; outline: none; transition: filter 0.15s; }
+.ex-barre:hover, .ex-barre:focus-visible { box-shadow: 0 0 0 2px #0b0d10, 0 0 0 3px rgb(233 238 247 / 0.7); }
+.ex-axe { min-height: 18px; }
+.ex-axe .ex-piste { height: 18px; }
+.ex-axe small { position: absolute; top: 2px; transform: translateX(-50%); font: 500 10px/1 ui-monospace, monospace; color: #6b7380; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ex-axe small:first-child { transform: none; }
+.ex-axe small:last-child:not(:first-child) { transform: translateX(-100%); }
+.ex-infobulle {
+  position: absolute; z-index: 5; display: grid; gap: 3px; min-width: 150px; max-width: 260px; padding: 9px 11px; border-radius: 10px; pointer-events: none;
+  background: #0e1115; border: 1px solid rgb(255 255 255 / 0.16); box-shadow: 0 10px 30px rgb(0 0 0 / 0.5); font-size: 0.76rem; color: #9aa3ae;
+}
+.ex-infobulle b { font: 700 0.95rem/1.1 'Inter', system-ui, sans-serif; color: #fff; }
+.ex-infobulle-cause { color: #ffcf7a; }
+
+/* L'onglet Analyse : la période d'abord, les chiffres, puis par étape, les causes et les durées. */
+.an-onglet { flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px; scrollbar-width: thin; scrollbar-color: rgb(255 255 255 / 0.16) transparent; }
+.an-filtres { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; font: 600 9.5px/1 ui-monospace, monospace; letter-spacing: 0.16em; text-transform: uppercase; color: #8a93a3; }
+.an-tuiles { display: grid; grid-template-columns: 1.3fr 1fr 1fr 1.4fr; gap: 10px; }
+.an-tuile { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border-radius: 12px; border: 1px solid rgb(255 255 255 / 0.08); background: rgb(255 255 255 / 0.02); min-width: 0; }
+.an-tuile span { font-size: 0.8rem; color: #9aa3ae; }
+.an-tuile b { font: 650 1.6rem/1.1 'Inter', system-ui, sans-serif; color: #fff; }
+.an-tuile small { font-size: 0.76rem; color: #8a93a3; }
+.an-tuile-heros b { font-size: 3rem; letter-spacing: -0.02em; }
+.an-tuile-texte { font-size: 1rem !important; line-height: 1.3 !important; color: #ffcf7a !important; }
+.an-table { display: grid; border-radius: 12px; border: 1px solid rgb(255 255 255 / 0.08); overflow: hidden; }
+.an-ligne { display: grid; grid-template-columns: minmax(180px, 1.2fr) 1fr 1fr 60px; align-items: center; gap: 16px; padding: 10px 14px; border-top: 1px solid rgb(255 255 255 / 0.06); font-size: 0.84rem; color: #e9eef7; }
+.an-ligne:first-child { border-top: 0; }
+.an-ligne-tete { font: 600 9.5px/1 ui-monospace, monospace; letter-spacing: 0.14em; text-transform: uppercase; color: #8a93a3; background: rgb(255 255 255 / 0.02); }
+.an-ligne-fragile { background: rgb(255 176 46 / 0.05); }
+.an-etape { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.an-etape em { display: inline-flex; align-items: center; gap: 5px; font: 600 0.72rem/1 'Inter', system-ui, sans-serif; font-style: normal; color: #ffcf7a; }
+.an-etape em i { display: inline-grid; place-items: center; width: 14px; height: 14px; border-radius: 50%; font: 800 9px/1 ui-monospace, monospace; font-style: normal; color: #0b0d10; background: #ffb02e; }
+.an-mesure { display: grid; grid-template-columns: 1fr 52px; align-items: center; gap: 10px; }
+.an-mesure b, .an-cause b { font: 600 0.8rem/1 ui-monospace, monospace; color: #e9eef7; text-align: right; font-variant-numeric: tabular-nums; }
+.an-piste { display: block; height: 10px; border-radius: 4px; background: rgb(255 255 255 / 0.06); overflow: hidden; }
+.an-piste i { display: block; height: 100%; border-radius: 0 4px 4px 0; background: #c9ced6; }
+.an-piste i.an-fragile, .an-piste i.ex-barre-echoue { background: #ffb02e; }
+.an-piste i.ex-barre-interrompu { background: #5b636e; }
+.an-joues { font: 500 0.8rem/1 ui-monospace, monospace; color: #8a93a3; text-align: right; }
+.an-deux { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.an-causes { display: grid; gap: 8px; }
+.an-cause { display: grid; grid-template-columns: 18px minmax(120px, 1fr) 1fr 34px 90px; align-items: center; gap: 10px; font-size: 0.82rem; color: #e9eef7; }
+.an-cause .ex-issue i { width: 16px; height: 16px; }
+.an-cause-nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.an-cause small { color: #8a93a3; text-align: right; font-size: 0.74rem; }
+.an-durees { position: relative; }
+.an-legende { display: flex; gap: 16px; margin-bottom: 10px; }
+.an-legende .ex-issue { font-size: 0.74rem; color: #9aa3ae; }
+.an-legende .ex-issue i { width: 14px; height: 14px; font-size: 8px; }
+.an-trace { position: relative; height: 160px; margin-left: 36px; }
+.an-grille { position: absolute; left: 0; right: 0; height: 1px; background: rgb(255 255 255 / 0.06); }
+.an-grille small { position: absolute; right: calc(100% + 8px); top: -6px; font: 500 10px/1 ui-monospace, monospace; color: #6b7380; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.an-colonnes { position: absolute; inset: 0; display: flex; align-items: flex-end; gap: 2px; }
+.an-cible { flex: 1; max-width: 24px; height: 100%; display: flex; align-items: flex-end; justify-content: center; outline: none; cursor: default; }
+.an-colonne { display: block; width: 100%; max-width: 20px; border-radius: 4px 4px 0 0; transition: filter 0.15s; }
+.an-cible:hover .an-colonne, .an-cible:focus-visible .an-colonne { box-shadow: 0 0 0 2px #0b0d10, 0 0 0 3px rgb(233 238 247 / 0.7); }
+@media (max-width: 1100px) {
+  .ex-onglet { grid-template-columns: 1fr; }
+  .ex-liste ul { max-height: 220px; }
+  .an-tuiles { grid-template-columns: 1fr 1fr; }
+  .an-deux { grid-template-columns: 1fr; }
+}
