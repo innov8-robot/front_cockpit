@@ -119,6 +119,13 @@ export function creerHologramme(rendu: THREE.WebGLRenderer, scene: THREE.Scene, 
     oeil,
     /** Le repère de la caméra (regarde vers -z) : le nuage réel de la caméra s'y accroche. */
     vraie,
+    /** Revient à la scène filmée depuis la caméra (le monde, nuages compris), à la place d'une image. */
+    afficherMonde() {
+      const ancienne = materiau.uniforms.uImage.value as THREE.Texture;
+      if (ancienne !== cible.texture) ancienne.dispose();
+      materiau.uniforms.uImage.value = cible.texture;
+      photo = false;
+    },
     /** Montre une image du vrai flux sur l'écran, à la place de la scène filmée. */
     afficherImage(bitmap: ImageBitmap) {
       const ancienne = materiau.uniforms.uImage.value as THREE.Texture;

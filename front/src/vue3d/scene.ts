@@ -346,11 +346,12 @@ export function monterScene(hote: HTMLElement): Scene3D {
       // Les deux nuages dans le repère du torse, comme la vue 3D viser : la hand-eye y porte la caméra.
       const torse = robot!.links.torso_link ?? robot!;
       torse.add(reels.camera, reels.lidar);
+      // L'écran de la tête filme le monde reconstruit (le nuage RGBD y est déjà), pas l'image brute.
+      hologramme!.afficherMonde();
       appliquerVisibilite();
       return {
         image: async (t: TrameImage) => {
-          const bitmap = await reels!.image(t);
-          if (bitmap) hologramme!.afficherImage(bitmap);
+          (await reels!.image(t))?.close();
         },
         nuage: (t: TrameNuage) => reels!.nuage(t),
       };
