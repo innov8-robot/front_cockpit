@@ -1,10 +1,11 @@
 import {
-  Background, BackgroundVariant, Controls, MiniMap, ReactFlow, ReactFlowProvider, useEdgesState, useNodesState, useReactFlow,
-  type Connection,
+  Background, BackgroundVariant, Controls, MiniMap, ReactFlow, ReactFlowProvider, useEdgesState, useNodesInitialized, useNodesState,
+  useReactFlow, type Connection,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Fragment, useContext, useEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent } from 'react';
 import { ANCRAGES, TYPES_PRIMITIVE, depuis } from '../../api/libelles';
+import { duree } from '../executions/donnees';
 import type { Execution, LienMission, NoeudMission, Primitive, TypePrimitive } from '../../api/types';
 import { Actions, type ActionsCanevas, type Point } from '../missions/actions';
 import { ApparenceContexte, teinte } from '../missions/apparence';
@@ -34,6 +35,8 @@ interface Props {
   execution: Execution | null;
   /** Un run passé rejoué sur le canevas (onglet Exécutions) : il prime sur l'exécution en direct. */
   trace?: Trace | null;
+  /** Le nœud à montrer : la vue se centre dessus et il est mis en avant (un clic dans la barre de lecture). */
+  focus?: string | null;
   onChange(noeuds: NoeudMission[], liens: LienMission[]): void;
 }
 
@@ -172,7 +175,7 @@ function Panneau({ t, valeurs, primitive, echec, modifiable, changerEchec, ferme
 interface Menu { x: number; y: number; id: string }
 interface Choix { x: number; y: number; id: string; sortie: Sortie }
 
-function Canevas({ noeuds, liens, primitives, modifiable, execution, trace, onChange }: Props) {
+function Canevas({ noeuds, liens, primitives, modifiable, execution, trace, focus, onChange }: Props) {
   const flot = useReactFlow();
   const { couleurs } = useContext(ApparenceContexte).apparence;
   const parId = useMemo(() => new Map(primitives.map((p) => [p.id, p])), [primitives]);
@@ -199,21 +202,32 @@ function Canevas({ noeuds, liens, primitives, modifiable, execution, trace, onCh
     return () => window.removeEventListener('keydown', echap, true);
   }, [ouvert]);
 
+  // Le nœud demandé (un clic dans la barre de lecture) : la vue s'y centre une fois les tuiles mesurées.
+  const mesures = useNodesInitialized();
+  useEffect(() => {
+    if (!focus || !mesures) return;
+    const n = flot.getInternalNode(focus);
+    if (!n) return;
+    const p = n.internals.positionAbsolute;
+    const t = setTimeout(() => void flot.setCenter(p.x + (n.measured.width ?? 76) / 2, p.y + 38, { zoom: 1, duration: 600 }), 120);
+    return () => clearTimeout(t);
+  }, [focus, mesures, flot]);
+
   // Ce qu'on montre sans le stocker : le marquage « non relié », la lecture seule, et l'état d'une exécution.
   const relies = useMemo(() => atteignables(edges), [edges]);
   const etats = useMemo(() => trace ?? (execution ? etatsExecution(execution, edges) : null), [trace, execution, edges]);
   const affiches = useMemo(() => nodes.map((n) => {
     const courant = etats?.noeuds.get(n.id) === 'cours';
     return {
-      ...n, draggable: modifiable,
+      ...n, draggable: modifiable, selected: focus ? n.id === focus : n.selected,
       data: {
         ...n.data, figee: !modifiable, alerte: relies.has(n.id) ? undefined : 'non relié au départ',
         etat: etats ? etats.noeuds.get(n.id) ?? (trace ? 'saute' : 'attente') : undefined,
-        direct: trace ? trace.directs.get(n.id) : courant && execution ? { texte: `${Math.round(execution.avancement * 100)} %` }
+        direct: trace ? trace.directs.get(n.id) : courant && execution ? (execution.dureeEtapeS !== undefined ? { texte: duree(execution.dureeEtapeS) } : undefined)
           : n.id === 'depart' && execution && execution.repetitions > 1 ? { texte: `tour ${execution.repetition}/${execution.repetitions}` } : undefined,
       },
     };
-  }), [nodes, relies, etats, execution, modifiable, trace]);
+  }), [nodes, relies, etats, execution, modifiable, trace, focus]);
   const liensAffiches = useMemo<LienCanevas[]>(() => edges.map((e) => ({
     ...e, data: { ...e.data!, etat: (etats?.liens.get(e.id) ?? 'aucun') as EtatLien, ton: tonDe(e.data!.sortie) },
   })), [edges, etats]);

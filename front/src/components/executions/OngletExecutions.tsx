@@ -1,4 +1,5 @@
 import { useMemo, useState, type PointerEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { EtapeRun, Execution, IssueRun, Mission, Primitive, Run } from '../../api/types';
 import { depuis } from '../../api/libelles';
 import { EditeurMission } from '../graphe/EditeurMission';
@@ -80,9 +81,11 @@ interface Proprietes {
 
 /**
  * L'onglet Exécutions, comme celui de n8n : à gauche les runs de la mission, du plus récent au plus ancien, avec leur
- * issue, leur durée et leur cause ; à droite le run choisi, rejoué sur le canevas, et sa frise d'étapes.
+ * issue, leur durée et leur cause ; à droite le run choisi, rejoué sur le canevas, et sa frise d'étapes. Le nœud nommé
+ * dans l'adresse (`?noeud=`, un clic dans la barre de lecture) est centré et mis en avant.
  */
 export function OngletExecutions({ m, primitives, runs, execution, voirEditeur }: Proprietes) {
+  const focus = useSearchParams()[0].get('noeud');
   const [filtre, setFiltre] = useState<IssueRun | null>(null);
   const [choisi, setChoisi] = useState<string | null>(null);
   const finis = useMemo(() => runs.filter((r) => r.dureeS > 0).sort((a, b) => b.debut.localeCompare(a.debut)), [runs]);
@@ -138,7 +141,7 @@ export function OngletExecutions({ m, primitives, runs, execution, voirEditeur }
             </header>
             <div className="ex-canevas">
               <EditeurMission key={`direct-${m.id}`} noeuds={m.noeuds} liens={m.liens} primitives={primitives} modifiable={false}
-                execution={enDirect} onChange={() => undefined} />
+                execution={enDirect} focus={focus} onChange={() => undefined} />
             </div>
           </>
         ) : run ? (
@@ -160,7 +163,7 @@ export function OngletExecutions({ m, primitives, runs, execution, voirEditeur }
             )}
             <div className="ex-canevas">
               <EditeurMission key={`run-${run.id}`} noeuds={m.noeuds} liens={m.liens} primitives={primitives} modifiable={false}
-                execution={null} trace={trace} onChange={() => undefined} />
+                execution={null} trace={trace} focus={focus} onChange={() => undefined} />
             </div>
             <h3 className="ex-titre">Les étapes</h3>
             <Frise run={run} m={m} primitives={primitives} />

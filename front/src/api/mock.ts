@@ -168,6 +168,23 @@ function charger(): Magasin {
   }
   // Un geste interrompu par le rechargement de la page ne se terminera jamais : aucun n'est en cours au départ.
   for (const r of m.robots) r.geste = null;
+  // L'accueil s'ouvre sans rien de lancé : une mission qui jouait au rechargement s'arrête, et son run, jamais fini, s'efface
+  // (sa durée compterait le temps où la page était fermée).
+  if (m.execution) {
+    const mission = m.missions.find((y) => y.id === m.execution?.missionId);
+    if (mission?.etat === 'en_cours') mission.etat = 'prete';
+    m.runs = m.runs.filter((u) => u.dureeS > 0);
+    m.execution = null;
+    for (const r of m.robots) {
+      if (r.etat === 'en_mission') r.etat = 'disponible';
+      r.missionCourante = null;
+    }
+    try {
+      localStorage.setItem(CLE, JSON.stringify(m));
+    } catch {
+      // Stockage indisponible : l'état ne vit que pendant la session.
+    }
+  }
   return m;
 }
 

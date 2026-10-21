@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { nbPrimitives } from '../api/libelles';
 import type { Execution, Mission, Primitive, Robot, Run } from '../api/types';
@@ -20,7 +20,8 @@ const dernierRun = (runs: Run[]) => runs.filter((u) => u.dureeS > 0).sort((a, b)
 /**
  * La barre de mission, en haut de l'accueil. Au repos : choisir une mission prête et la lancer ; un robot qui n'est pas
  * disponible ne lance rien, et la barre dit pourquoi. Pendant une mission : le fil (components/lecture), son graphe
- * parcouru étape par étape. À la fin : son issue, un halo vert qui s'efface seul, ou rouge jusqu'à l'acquittement.
+ * parcouru étape par étape ; un clic ouvre son exécution sur l'étape touchée. À la fin : son issue, un halo vert qui
+ * s'efface seul, ou rouge jusqu'à l'acquittement. Elle s'efface quand l'éditeur d'une mission est ouvert.
  */
 export function BarreMission({ robot }: { robot: Robot }) {
   const [missions, setMissions] = useState<Mission[]>([]);
@@ -32,6 +33,10 @@ export function BarreMission({ robot }: { robot: Robot }) {
   const [erreur, setErreur] = useState<string | null>(null);
   const [masquee, setMasquee] = useState<string | null>(null);
   const derniere = useRef<Execution | null>(null);
+  const naviguer = useNavigate();
+  const { pathname } = useLocation();
+  /** L'éditeur d'une mission la montre déjà : la barre s'efface tant qu'il est ouvert. */
+  const editeurOuvert = /^\/missions\/(?!developpees$)[^/]+$/.test(pathname);
 
   useEffect(() => {
     api.primitives().then(setPrimitives).catch(() => undefined);
@@ -85,13 +90,14 @@ export function BarreMission({ robot }: { robot: Robot }) {
     }
   }
 
+  if (editeurOuvert) return null;
   const courante = execution && missions.find((m) => m.id === execution.missionId);
   if (execution && courante) {
     const l = lectureDirecte(courante, primitives, execution, urgence);
     const message = erreur ? { niveau: 'attention' as const, texte: erreur } : l.message?.texte === masquee ? null : l.message;
     return (
       <div className="barre-mission-fil">
-        <BarreFil l={{ ...l, message }} lien={`/missions/${courante.id}?onglet=executions`}
+        <BarreFil l={{ ...l, message }} ouvrir={(noeud) => naviguer(`/missions/${courante.id}?onglet=executions${noeud ? `&noeud=${noeud}` : ''}`)}
           pause={() => !enCours && agir(api.pauseMission(robot.id, !execution.enPause))}
           acquitter={() => { setErreur(null); setMasquee(l.message?.texte ?? null); }} />
       </div>
@@ -103,7 +109,8 @@ export function BarreMission({ robot }: { robot: Robot }) {
   if (finale) {
     return (
       <div className="barre-mission-fil">
-        <BarreFil l={finale} lien={`/missions/${finale.mission.id}?onglet=executions`} pause={() => undefined} acquitter={() => setFin(null)} />
+        <BarreFil l={finale} ouvrir={() => naviguer(`/missions/${finale.mission.id}?onglet=executions`)} pause={() => undefined}
+          acquitter={() => setFin(null)} />
       </div>
     );
   }

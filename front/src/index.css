@@ -1156,6 +1156,10 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .avec-barre:has(.barre-mission-fil) .overlay-cote, .avec-barre:has(.barre-mission-fil) .overlay-grand { top: calc(118px + env(safe-area-inset-top)); }
 @media (max-width: 1499px) { .accueil:has(.barre-mission-fil) .hud-calques { top: calc(118px + env(safe-area-inset-top)); } }
 @media (max-width: 599px) { .barre-mission-fil { width: calc(100% - 24px); } }
+/* Le nœud ouvert depuis la barre de lecture, dans un canevas en lecture : un anneau blanc, quel que soit son état. */
+.em-editeur-lecture .react-flow__node.selected .em-tuile { outline: 2px solid #e9eef7; outline-offset: 5px; }
+/* L'éditeur d'une mission la montre déjà en direct : la barre s'efface, l'éditeur prend sa place en haut. */
+.avec-barre:has(.page-graphe) .overlay-grand { top: calc(16px + env(safe-area-inset-top)); }
 /* Le rail des écrans est à gauche, centré en hauteur, sous les calques : le coin haut droit est à la carte. */
 .hud-rail { right: auto; left: 20px; top: 50%; transform: translateY(-50%); }
 .hud-rail-lien.active::before { left: auto; right: -8px; }
@@ -2028,7 +2032,12 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 /* L'état : blanc qui vit, gris suspendu, vert réussi, ambre attention, rouge danger ; toujours avec son signe. */
 .bl-identite { flex: none; width: 200px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .bl-nom { font: 650 14px/1.15 'Inter', system-ui, sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: inherit; text-decoration: none; }
-a.bl-nom:hover { text-decoration: underline; text-underline-offset: 3px; }
+button.bl-nom { display: block; max-width: 100%; padding: 0; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; }
+button.bl-nom:hover { text-decoration: underline; text-underline-offset: 3px; }
+/* La barre mène à l'exécution : la main au survol, et l'étape touchée s'éclaire. */
+.bl-cliquable { cursor: pointer; }
+.bl-cliquable:hover { border-color: rgb(255 255 255 / 0.2); }
+.bl-cliquable .bf-noeud .bl-tuile:hover { border-color: #fff; box-shadow: 0 0 14px rgb(233 238 247 / 0.45); }
 .bl-etat { display: flex; align-items: center; gap: 7px; font: 600 9.5px/1 ui-monospace, monospace; letter-spacing: 0.15em; text-transform: uppercase; color: #c9ced6; white-space: nowrap; }
 .bl-etat i { flex: none; width: 7px; height: 7px; border-radius: 50%; background: #e9eef7; box-shadow: 0 0 8px rgb(233 238 247 / 0.8); animation: indice-pulse 1.2s ease-in-out infinite; }
 .bl-etat b { flex: none; width: 9px; font: 800 10px/1 ui-monospace, monospace; letter-spacing: 0; text-align: center; }

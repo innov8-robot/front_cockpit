@@ -1,5 +1,4 @@
 import type { CSSProperties } from 'react';
-import { Link } from 'react-router-dom';
 import { duree } from '../executions/donnees';
 import { teinte } from '../missions/apparence';
 import { ICONES } from '../missions/catalogue';
@@ -82,8 +81,11 @@ function Tuile({ n }: { n: NoeudFil }) {
  *
  * Quand une étape finit, une étincelle part sur le fil qu'a pris la mission — vert pour « réussi », ambre pour
  * « échec » — et la caméra la suit dans tous les sens jusqu'à l'étape suivante, qui s'ouvre à son arrivée.
+ *
+ * Avec `ouvrir`, la barre mène à l'exécution : un clic sur une étape du fil l'ouvre sur cette étape, un clic ailleurs
+ * sur l'étape en cours.
  */
-export function BarreFil({ l, pause, acquitter, lien }: { l: Lecture; pause(): void; acquitter(): void; lien?: string }) {
+export function BarreFil({ l, pause, acquitter, ouvrir }: { l: Lecture; pause(): void; acquitter(): void; ouvrir?(noeud: string | null): void }) {
   const t = trajet(l);
   const { vue, monde, etincelle, arrivee } = useTravelling(t.cle, t.cible, t.lien, ANCRE);
   const arrive = arrivee === t.cle;
@@ -95,10 +97,12 @@ export function BarreFil({ l, pause, acquitter, lien }: { l: Lecture; pause(): v
   const halo = l.message?.niveau === 'erreur' ? 'erreur' : enPause ? 'pause' : l.message?.niveau ?? null;
   return (
     <div className="bl-pile">
-      <div className={`bl-barre bl-etat-${l.etat} ${halo ? `bl-halo-${halo}` : ''}`} role="toolbar" aria-label={`Mission ${l.mission.nom}`}>
+      <div className={`bl-barre bl-etat-${l.etat} ${halo ? `bl-halo-${halo}` : ''} ${ouvrir ? 'bl-cliquable' : ''}`} role="toolbar"
+        aria-label={`Mission ${l.mission.nom}`} onClick={ouvrir && (() => ouvrir(t.noeud))}>
         <div className="bl-identite">
-          {lien ? <Link className="bl-nom" to={lien} title={`Ouvrir ${l.mission.nom}`}>{l.mission.nom}</Link>
-            : <strong className="bl-nom" title={l.mission.nom}>{l.mission.nom}</strong>}
+          {ouvrir ? (
+            <button className="bl-nom" title="Voir l’exécution" onClick={(ev) => { ev.stopPropagation(); ouvrir(t.noeud); }}>{l.mission.nom}</button>
+          ) : <strong className="bl-nom" title={l.mission.nom}>{l.mission.nom}</strong>}
           <small className="bl-etat">
             {e.signe ? <b aria-hidden="true">{e.signe}</b> : <i aria-hidden="true" />}
             {e.libelle}{l.tours > 1 && <span className="bl-etat-tour"> · tour {l.tour}/{l.tours}</span>}
@@ -126,7 +130,7 @@ export function BarreFil({ l, pause, acquitter, lien }: { l: Lecture; pause(): v
               </svg>
               {f.noeuds.map((n) => (
                 <div key={n.id} className={`bf-noeud ${n === ouvert ? 'bf-arrive' : ''}`} style={{ left: n.x, top: n.y }}
-                  title={n.nom}>
+                  title={n.nom} onClick={ouvrir && ((ev) => { ev.stopPropagation(); ouvrir(n.id); })}>
                   <Tuile n={n} />
                 </div>
               ))}
@@ -143,7 +147,8 @@ export function BarreFil({ l, pause, acquitter, lien }: { l: Lecture; pause(): v
           <b>{duree(l.dureeS)}</b>
           <small>{l.etat === 'erreur' ? 'arrêtée' : fini ? 'au total' : l.dureeEtapeS !== null ? `étape ${duree(l.dureeEtapeS)}` : ''}</small>
         </div>
-        <button className={`bl-bouton ${enPause ? 'bl-principal' : ''}`} disabled={fini || l.etat === 'urgence'} onClick={pause}
+        <button className={`bl-bouton ${enPause ? 'bl-principal' : ''}`} disabled={fini || l.etat === 'urgence'}
+          onClick={(ev) => { ev.stopPropagation(); pause(); }}
           aria-label={enPause ? 'Reprendre la mission' : 'Mettre la mission en pause'}
           title={l.etat === 'urgence' ? 'Réarmez l’arrêt d’urgence d’abord' : undefined}>
           {enPause || fini ? <IconeLecture /> : <IconePause />}
