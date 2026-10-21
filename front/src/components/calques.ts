@@ -9,7 +9,7 @@ export interface DescriptionCalque {
   couleur: string;
 }
 
-/** Les calques de l'accueil, dans l'ordre des filtres. Les couleurs sont celles de la scène (vue3d/). */
+/** Les calques de l'accueil, dans l'ordre des filtres ; la grille n'en est pas un, elle est toujours là. Les couleurs sont celles de la scène (vue3d/). */
 export const CALQUES: DescriptionCalque[] = [
   { cle: 'robot', libelle: 'Robot', detail: 'G1-D', couleur: '#e9f0ff' },
   { cle: 'atelier', libelle: 'Atelier', detail: 'simulé', couleur: '#8793a8' },
@@ -17,5 +17,4 @@ export const CALQUES: DescriptionCalque[] = [
   { cle: 'lidar', libelle: 'Lidar', detail: '360° · 200 k pts/s', couleur: '#ffffff' },
   { cle: 'carte', libelle: 'Carte', detail: 'mémorisée · 5 cm', couleur: '#8fa6c8' },
   { cle: 'objets', libelle: 'Objets', detail: 'déclarés', couleur: 'conic-gradient(#3dd6ff 0 25%, #ffb02e 0 50%, #3dff8a 0 75%, #c77dff 0)' },
-  { cle: 'sol', libelle: 'Grille', detail: '1 m', couleur: '#cfd6e4' },
 ];

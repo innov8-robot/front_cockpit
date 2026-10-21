@@ -583,15 +583,16 @@ input[type='radio'] { width: auto; min-height: 0; }
 @keyframes intro-sortie { 40% { opacity: 1; filter: brightness(1.6); } 100% { opacity: 0; filter: brightness(0.5); } }
 @media (prefers-reduced-motion: reduce) { .intro-bloc { animation-duration: 0.01s; } .intro-cadre rect { animation-duration: 0.2s; } }
 
-/* La carte 2D du châssis, ancrée dans le coin bas gauche : opaque dans le coin, fondue en arc vers la scène. */
+/* La carte 2D du châssis, ancrée dans le coin haut droit : opaque dans le coin, fondue en arc vers la scène. */
 .hud-carte {
-  --cote: 420px;
-  left: 0; bottom: 0; width: var(--cote); height: var(--cote); pointer-events: none;
+  /* Proportionnelle à l'écran : 420 px sur un grand écran, un quart de la largeur sur une tablette. */
+  --cote: clamp(200px, min(24vw, 44vh), 420px);
+  right: 0; top: 0; width: var(--cote); height: var(--cote); pointer-events: none;
 }
 /* La zone cliquable : un cercle invisible dans le coin, là où la carte se voit. Le dessin, lui, n'est pas
    découpé (une découpe tranchait net la fin du fondu). */
 .hud-carte-zone {
-  position: absolute; left: calc(var(--cote) * -0.75); bottom: calc(var(--cote) * -0.75);
+  position: absolute; right: calc(var(--cote) * -0.75); top: calc(var(--cote) * -0.75);
   width: calc(var(--cote) * 1.5); height: calc(var(--cote) * 1.5); border-radius: 50%;
   pointer-events: auto; cursor: zoom-in;
 }
@@ -604,29 +605,28 @@ input[type='radio'] { width: auto; min-height: 0; }
 @keyframes indice-pulse { 50% { opacity: 0.45; } }
 /* En plein écran : toute la fenêtre, l'arc si grand qu'il ne fond plus rien. */
 .hud-carte.plein { --cote: 170vmax; width: 100vw; height: 100dvh; z-index: 8; pointer-events: auto; }
-.hud-carte.plein .hud-carte-legende { left: 28px; bottom: 26px; font-size: 11px; }
+.hud-carte.plein .hud-carte-legende { right: auto; left: 28px; top: auto; bottom: 26px; text-align: left; font-size: 11px; }
 /* Le fond tient plus loin dans l'arc que la carte : la scène ne transparaît jamais derrière elle.
-   Les deux arcs s'achèvent sur les bords haut et droit (rayon = côté) : aucun bord du carré ne se voit. */
+   Les deux arcs s'achèvent sur les bords bas et gauche (rayon = côté) : aucun bord du carré ne se voit. */
 .hud-carte::before {
   /* La couleur du sol de la vue 3D telle qu'elle sort à l'écran (grille, brouillard et vignette compris). */
   content: ''; position: absolute; inset: 0; background: #1d2126;
-  -webkit-mask-image: radial-gradient(circle var(--cote) at 0% 100%, #000 80%, transparent 100%);
-  mask-image: radial-gradient(circle var(--cote) at 0% 100%, #000 80%, transparent 100%);
+  -webkit-mask-image: radial-gradient(circle var(--cote) at 100% 0%, #000 80%, transparent 100%);
+  mask-image: radial-gradient(circle var(--cote) at 100% 0%, #000 80%, transparent 100%);
 }
 .hud-carte canvas {
   position: relative; width: 100%; height: 100%; display: block;
-  -webkit-mask-image: radial-gradient(circle var(--cote) at 0% 100%, #000 72%, transparent 100%);
-  mask-image: radial-gradient(circle var(--cote) at 0% 100%, #000 72%, transparent 100%);
+  -webkit-mask-image: radial-gradient(circle var(--cote) at 100% 0%, #000 72%, transparent 100%);
+  mask-image: radial-gradient(circle var(--cote) at 100% 0%, #000 72%, transparent 100%);
 }
 .hud-carte-legende {
-  position: absolute; left: calc(20px + env(safe-area-inset-left)); bottom: calc(16px + env(safe-area-inset-bottom));
-  display: flex; flex-direction: column; gap: 3px;
+  position: absolute; right: calc(20px + env(safe-area-inset-right)); top: calc(16px + env(safe-area-inset-top));
+  display: flex; flex-direction: column; gap: 3px; text-align: right;
   font-family: ui-monospace, monospace; font-size: 9px; letter-spacing: 0.18em; color: #8a93a3;
 }
-@media (max-width: 1099px) { .hud-carte { --cote: 320px; } }
 @media (max-width: 699px) {
-  .hud-carte { --cote: 230px; bottom: calc(84px + env(safe-area-inset-bottom)); }
-  .hud-carte-legende { bottom: 10px; font-size: 7.5px; }
+  .hud-carte { --cote: 190px; }
+  .hud-carte-legende { top: 10px; font-size: 7.5px; }
 }
 
 /* Le réticule CAO, à la souris seulement (Reticule.tsx) : croix de visée, deux lignes, badge de télémétrie. */
@@ -1029,3 +1029,120 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
   background: radial-gradient(ellipse at 70% 60%, rgb(80 120 170 / 0.16), transparent 70%);
 }
 @media (max-width: 700px) { .essai-calques-grille { padding: 16px; } }
+/* Le point de santé d'un calque (Filtres.tsx) : vert, rouge clignotant, gris. */
+.hud-verdict {
+  display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 7px; vertical-align: middle;
+  background: #6b7480;
+}
+.verdict-ok { background: #3dff8a; box-shadow: 0 0 8px rgb(61 255 138 / 0.8); }
+.verdict-pb { background: #ff2d3a; box-shadow: 0 0 9px #ff2d3a; animation: corps-alarme 0.8s steps(2) infinite; }
+
+/* L'overlay qui épouse son contenu (la planche du corps), centré dans la scène. */
+.overlay-ajuste {
+  left: 50%; top: calc(50% + 20px); transform: translate(-50%, -50%);
+  max-width: calc(100vw - 48px); max-height: calc(100dvh - 88px);
+}
+.overlay-ajuste .overlay-corps { padding: 18px 26px 22px; }
+.overlay-ajuste .page-corps { height: auto; }
+.overlay-ajuste .corps-planche:not(.compacte) { flex: none; min-height: 0; overflow: hidden; }
+.overlay-ajuste:has(.compacte) { width: min(760px, calc(100vw - 48px)); }
+@media (max-width: 699px) {
+  .overlay-ajuste { inset: 0; transform: none; width: auto; max-width: none; max-height: none; border-radius: 0; border: none; }
+  .overlay-ajuste .overlay-corps { padding: 56px 16px calc(24px + env(safe-area-inset-bottom)); }
+}
+
+/* Un calque toujours montré (le robot) : pas d'interrupteur, une mention à la place. */
+.filtres-fixe { display: flex; align-items: center; gap: 10px; cursor: default; }
+.filtres-toujours { margin-left: auto; font: 10px/1 ui-monospace, monospace; letter-spacing: 0.1em; color: #6b7480; text-transform: uppercase; }
+
+/* L'accueil épuré : la barre du robot en haut, les calques en haut à gauche, le rail des écrans à droite,
+   la barre de mission en bas. Plus de titre, de menu ni de jauges. */
+.hud-calques { top: calc(16px + env(safe-area-inset-top)); }
+
+.hud-rail {
+  position: absolute; z-index: 1; right: 20px; top: 50%; transform: translateY(-50%);
+  display: flex; flex-direction: column; gap: 10px; padding: 10px 8px; border-radius: 20px;
+  background: rgb(10 13 17 / 0.62); border: 1px solid rgb(255 255 255 / 0.08); backdrop-filter: blur(14px);
+}
+.hud-rail-lien {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; width: 72px; padding: 12px 4px 10px;
+  border-radius: 14px; color: #8a93a3; text-decoration: none; transition: color 0.2s, background 0.2s;
+}
+.hud-rail-lien:hover { color: #e9eef7; background: rgb(255 255 255 / 0.05); }
+.hud-rail-lien.active { color: #fff; background: rgb(255 45 58 / 0.12); }
+.hud-rail-lien.active::before {
+  content: ''; position: absolute; left: -8px; top: 22%; bottom: 22%; width: 2px; border-radius: 2px;
+  background: #ff2d3a; box-shadow: 0 0 10px #ff2d3a;
+}
+.hud-rail-icone {
+  width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px;
+  border: 1px solid rgb(255 255 255 / 0.1); background: rgb(255 255 255 / 0.03);
+}
+.hud-rail-lien.active .hud-rail-icone { border-color: rgb(255 45 58 / 0.5); box-shadow: 0 0 14px rgb(255 45 58 / 0.25); }
+.hud-rail-nom { font: 600 10px/1 ui-monospace, monospace; letter-spacing: 0.12em; text-transform: uppercase; }
+
+.barre-mission {
+  position: absolute; z-index: 5; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  display: flex; align-items: center; gap: 12px; max-width: calc(100% - 32px); padding: 8px 8px 8px 18px; border-radius: 18px;
+  background: rgb(10 13 17 / 0.78); border: 1px solid rgb(255 255 255 / 0.09); box-shadow: 0 14px 44px rgb(0 0 0 / 0.55);
+  backdrop-filter: blur(14px); color: #e9eef7; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.barre-mission-textes { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.barre-mission-textes small { font-size: 9px; letter-spacing: 0.18em; color: #8a93a3; }
+.barre-mission-textes strong { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+.barre-mission select {
+  min-height: 0; width: auto; max-width: 280px; padding: 4px 26px 4px 0; border: none; background: transparent;
+  color: #e9eef7; font: 600 13px/1.2 ui-monospace, monospace; cursor: pointer;
+}
+.barre-mission select option { background: #12151a; }
+.barre-mission-vide { color: #8fb4ff; font-size: 12px; }
+.barre-mission-ouvrir {
+  padding: 9px 12px; border-radius: 10px; border: 1px solid rgb(255 255 255 / 0.1); color: #8a93a3;
+  font: 600 10px/1 ui-monospace, monospace; letter-spacing: 0.14em; text-decoration: none;
+}
+.barre-mission-ouvrir:hover { color: #e9eef7; border-color: rgb(255 255 255 / 0.25); }
+.barre-mission-lancer, .barre-mission-stop {
+  display: flex; align-items: center; gap: 8px; height: 42px; padding: 0 22px; border-radius: 12px; cursor: pointer;
+  font: 700 12px/1 ui-monospace, monospace; letter-spacing: 0.18em; border: 1px solid;
+}
+.barre-mission-lancer { color: #062211; background: #3dff8a; border-color: #3dff8a; box-shadow: 0 0 18px rgb(61 255 138 / 0.35); }
+.barre-mission-lancer:disabled { color: #5b636e; background: transparent; border-color: rgb(255 255 255 / 0.12); box-shadow: none; cursor: not-allowed; }
+.barre-mission-stop { color: #fff; background: rgb(255 45 58 / 0.18); border-color: #ff2d3a; }
+.barre-mission-stop:hover { background: rgb(255 45 58 / 0.32); }
+.barre-mission-voyant { width: 9px; height: 9px; border-radius: 50%; background: #3dff8a; box-shadow: 0 0 10px #3dff8a; animation: corps-alarme 1.2s steps(2) infinite; }
+.barre-mission-chrono { font-size: 18px; font-weight: 700; letter-spacing: 0.06em; }
+.barre-mission-detail { font-size: 10px; color: #8a93a3; letter-spacing: 0.08em; }
+.barre-mission-erreur { font-size: 10px; color: #ff5a64; letter-spacing: 0.06em; max-width: 220px; }
+.accueil .barre-mission, .accueil .hud-rail { opacity: 0; transition: opacity 0.8s ease 0.15s; }
+.accueil-demarre .barre-mission, .accueil-demarre .hud-rail { opacity: 1; transition-delay: 2.4s; }
+.hud-pret .barre-mission, .hud-pret .hud-rail { transition-delay: 0s !important; }
+.accueil[class*='plein-'] .barre-mission, .accueil[class*='plein-'] .hud-rail { opacity: 0 !important; pointer-events: none; }
+/* Les écrans ouverts laissent la barre du robot en haut et la barre de mission en bas. */
+.avec-barre .overlay-cote, .avec-barre .overlay-grand { top: calc(84px + env(safe-area-inset-top)); bottom: calc(88px + env(safe-area-inset-bottom)); }
+.avec-barre .overlay-cote { right: 24px; }
+
+@media (max-width: 899px) {
+  .hud-calques { top: calc(78px + env(safe-area-inset-top)); left: 12px; }
+  .hud-rail { left: 8px; padding: 6px; }
+  .hud-rail-lien { width: 56px; }
+  .hud-rail-nom { font-size: 8px; }
+  .barre-mission-detail { display: none; }
+}
+@media (max-width: 599px) {
+  .barre-mission { left: 12px; right: 12px; transform: none; max-width: none; }
+  .barre-mission-ouvrir { display: none; }
+}
+/* Sous 1500 px, la barre de mission en haut ne laisse plus la place aux calques à côté d'elle : ils passent dessous. */
+@media (max-width: 1499px) { .hud-calques { top: calc(84px + env(safe-area-inset-top)); } }
+/* La barre du robot est en bas, toujours (l'E-STOP reste sous la main) : en vue caméra et en carte pleine,
+   les mentions du bas remontent au-dessus d'elle. */
+.avec-barre .vue-camera-rec, .avec-barre .vue-camera-source { bottom: calc(104px + env(safe-area-inset-bottom)); }
+.avec-barre .vue-camera-coins { bottom: 86px; }
+.avec-barre .hud-carte.plein .hud-carte-legende { bottom: calc(104px + env(safe-area-inset-bottom)); }
+
+/* La barre de mission passe en haut, la barre du robot en bas ; le rail se range sous la mini-carte du coin
+   haut droit. */
+.barre-mission { top: calc(16px + env(safe-area-inset-top)); bottom: auto; }
+/* Le rail des écrans est à gauche, centré en hauteur, sous les calques : le coin haut droit est à la carte. */
+.hud-rail { right: auto; left: 20px; top: 50%; transform: translateY(-50%); }
+.hud-rail-lien.active::before { left: auto; right: -8px; }

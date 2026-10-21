@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { Verdict } from '../api/types';
 import type { Calque } from '../vue3d/scene';
 import type { DescriptionCalque } from './calques';
 import { IconeAtelier, IconeCamera, IconeCarte, IconeCorps, IconeGrille, IconeLidar, IconeObjets } from './IconesRobot';
@@ -8,11 +9,23 @@ export interface ProprietesFiltres {
   calques: DescriptionCalque[];
   actifs: Record<Calque, boolean>;
   basculer(cle: Calque): void;
+  /** La santé de chaque calque (point vert, rouge ou gris), et sa raison au survol. */
+  verdicts?: Partial<Record<Calque, { verdict: Verdict; raison: string }>>;
+  /** Les calques toujours montrés : leur ligne n'a pas d'interrupteur. */
+  fixes?: Calque[];
 }
+
+const TITRES_VERDICT: Record<Verdict, string> = { ok: 'tout va bien', pb: 'problème', inconnu: 'pas de nouvelles' };
 
 const ICONES: Record<Calque, typeof IconeCorps> = {
   robot: IconeCorps, atelier: IconeAtelier, camera: IconeCamera, lidar: IconeLidar, carte: IconeCarte, objets: IconeObjets,
   sol: IconeGrille,
+};
+
+/** Le pire verdict des calques : un seul rouge suffit à rougir la tête, repliée. */
+const pire = (p: ProprietesFiltres): Verdict | null => {
+  const v = Object.values(p.verdicts ?? {}).map((x) => x!.verdict);
+  return v.includes('pb') ? 'pb' : v.includes('inconnu') ? 'inconnu' : v.length ? 'ok' : null;
 };
 
 const compte = ({ calques, actifs }: ProprietesFiltres) => `${calques.filter((c) => actifs[c.cle]).length}/${calques.length}`;
@@ -36,12 +49,24 @@ export function FiltresRail(p: ProprietesFiltres) {
 }
 
 /** Une ligne d'interrupteur : l'icône du calque, son nom et son détail, l'interrupteur. */
-function LigneInterrupteur({ c, actif, basculer }: { c: DescriptionCalque; actif: boolean; basculer(cle: Calque): void }) {
+function LigneInterrupteur({ c, actif, basculer, sante, fixe }: {
+  c: DescriptionCalque; actif: boolean; basculer(cle: Calque): void;
+  sante?: { verdict: Verdict; raison: string }; fixe?: boolean;
+}) {
   const Icone = ICONES[c.cle];
+  const titre = sante ? `${c.libelle} : ${TITRES_VERDICT[sante.verdict]}${sante.raison ? ` (${sante.raison})` : ''}` : undefined;
+  const textes = (
+    <span className="filtres-textes">
+      <span>{sante && <span className={`hud-verdict verdict-${sante.verdict}`} />}{c.libelle}</span><small>{c.detail}</small>
+    </span>
+  );
+  if (fixe) {
+    return <div className="actif filtres-fixe" title={titre}><Icone />{textes}<span className="filtres-toujours">toujours</span></div>;
+  }
   return (
-    <button role="switch" aria-checked={actif} className={actif ? 'actif' : ''} onClick={() => basculer(c.cle)}>
+    <button role="switch" aria-checked={actif} className={actif ? 'actif' : ''} onClick={() => basculer(c.cle)} title={titre}>
       <Icone />
-      <span className="filtres-textes"><span>{c.libelle}</span><small>{c.detail}</small></span>
+      {textes}
       <span className="filtres-interrupteur" aria-hidden="true"><i /></span>
     </button>
   );
@@ -56,12 +81,17 @@ export function FiltresCalques(p: ProprietesFiltres & { className?: string }) {
   return (
     <nav className={`filtres filtres-dock filtres-repliable ${ouvert ? 'ouvert' : ''} ${p.className ?? ''}`} aria-label="Calques">
       <button className="filtres-dock-tete" aria-expanded={ouvert} onClick={() => setOuvert(!ouvert)}>
-        <IconeGrille /><span>CALQUES</span><span className="filtres-compte">{compte(p)}</span>
+        <IconeGrille /><span>CALQUES</span>
+        {pire(p) && <span className={`hud-verdict verdict-${pire(p)}`} title="La santé la plus mauvaise des calques" />}
+        <span className="filtres-compte">{compte(p)}</span>
         <span className="filtres-chevron" aria-hidden="true">▾</span>
       </button>
       <div className="filtres-depli" inert={!ouvert}>
         <div className="filtres-interrupteurs filtres-depli-liste">
-          {p.calques.map((c) => <LigneInterrupteur key={c.cle} c={c} actif={p.actifs[c.cle]} basculer={p.basculer} />)}
+          {p.calques.map((c) => (
+            <LigneInterrupteur key={c.cle} c={c} actif={p.actifs[c.cle]} basculer={p.basculer}
+              sante={p.verdicts?.[c.cle]} fixe={p.fixes?.includes(c.cle)} />
+          ))}
         </div>
       </div>
     </nav>
@@ -101,7 +131,9 @@ export function FiltresDock(p: ProprietesFiltres) {
   return (
     <nav className={`filtres filtres-dock ${ouvert ? 'ouvert' : ''}`} aria-label="Calques">
       <button className="filtres-dock-tete" aria-expanded={ouvert} onClick={() => setOuvert(!ouvert)}>
-        <IconeGrille /><span>CALQUES</span><span className="filtres-compte">{compte(p)}</span>
+        <IconeGrille /><span>CALQUES</span>
+        {pire(p) && <span className={`hud-verdict verdict-${pire(p)}`} title="La santé la plus mauvaise des calques" />}
+        <span className="filtres-compte">{compte(p)}</span>
         <span className="filtres-chevron" aria-hidden="true">▾</span>
       </button>
       {ouvert && (

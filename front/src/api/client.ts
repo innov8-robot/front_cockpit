@@ -1,4 +1,4 @@
-import type { Cote, EtatCorps, Mission, ModeBras, NouvellePrimitive, Primitive, Robot, Run } from './types';
+import type { Cote, EtatCapteurs, EtatCorps, Mission, ModeBras, NouvellePrimitive, Primitive, Robot, Run } from './types';
 import { apiSimulee } from './mock';
 
 /** Le contrat entre le front et le back. Les écrans ne parlent qu'à lui. */
@@ -15,6 +15,8 @@ export interface Api {
   home(robotId: string): Promise<Robot>;
   /** L'état de chaque moteur du corps et l'attitude du torse, avec le verdict de la Santé. */
   etatCorps(robotId: string): Promise<EtatCorps>;
+  /** Si la caméra et le lidar de tête envoient des données. */
+  etatCapteurs(robotId: string): Promise<EtatCapteurs>;
 
   primitives(): Promise<Primitive[]>;
   primitive(id: string): Promise<Primitive | undefined>;
@@ -26,6 +28,8 @@ export interface Api {
   enregistrerMission(m: Mission): Promise<Mission>;
   supprimerMission(id: string): Promise<void>;
   lancerMission(missionId: string, robotId: string): Promise<Run>;
+  /** Arrête la mission en cours du robot : il finit son geste et s'immobilise ; le run est noté interrompu. */
+  arreterMission(robotId: string): Promise<Robot>;
 
   runs(filtre?: { robotId?: string; missionId?: string }): Promise<Run[]>;
 }
@@ -33,3 +37,6 @@ export interface Api {
 /** Tant qu'aucun back n'est déclaré (VITE_API_URL), le front tourne sur des données simulées. */
 export const api: Api = apiSimulee;
 export const enSimulation = !import.meta.env.VITE_API_URL;
+
+/** Le robot de l'appli : il n'y en a qu'un pour l'instant, le premier que le back connaît. */
+export const robotUnique = () => api.robots().then((rs) => rs[0]);

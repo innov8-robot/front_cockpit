@@ -1,21 +1,21 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { api } from '../api/client';
+import { Link } from 'react-router-dom';
+import { api, robotUnique } from '../api/client';
 import { ETATS_ROBOT, ISSUES_RUN, depuis, nbPrimitives } from '../api/libelles';
 import { Badge, Batterie, Chargement, EnTete, Erreur, Icone, Vide } from '../components/ui';
 import { useCharge } from '../components/useCharge';
 
 export function RobotDetail() {
-  const { id = '' } = useParams();
-  const robot = useCharge(() => api.robot(id), [id]);
-  const runs = useCharge(() => api.runs({ robotId: id }), [id]);
+  const robot = useCharge(robotUnique);
+  const id = robot.donnee?.id;
+  const runs = useCharge(() => (id ? api.runs({ robotId: id }) : Promise.resolve([])), [id]);
   const missions = useCharge(() => api.missions());
   const [missionChoisie, setMissionChoisie] = useState('');
   const [message, setMessage] = useState<{ ton: 'ok' | 'danger'; texte: string } | null>(null);
 
   if (robot.enCours && !robot.donnee) return <Chargement />;
   const r = robot.donnee;
-  if (!r) return <Vide titre="Robot introuvable"><Link to="/flotte">Retour à la flotte</Link></Vide>;
+  if (!r) return <Vide titre="Aucun robot">Le back ne connaît aucun robot.</Vide>;
 
   const nomMission = (mid: string) => missions.donnee?.find((m) => m.id === mid)?.nom ?? '—';
   const etat = ETATS_ROBOT[r.etat];
@@ -39,7 +39,6 @@ export function RobotDetail() {
 
   return (
     <>
-      <Link to="/flotte" className="retour"><Icone nom="retour" taille={16} />Flotte</Link>
       <EnTete titre={r.nom} sousTitre={`${r.modele} · ${r.site}`}
         actions={r.etat !== 'hors_ligne' && (
           <button className="bouton bouton-danger" onClick={arreter} disabled={r.etat === 'arret_urgence'}>
@@ -50,7 +49,7 @@ export function RobotDetail() {
       {robot.erreur && <Erreur message={robot.erreur} />}
       {message && <div className={`alerte alerte-${message.ton}`}>{message.texte}</div>}
 
-      <Link to={`/flotte/${r.id}/corps`} className="bouton lien-corps">
+      <Link to="/robot/corps" className="bouton lien-corps">
         <Icone nom="robot" taille={16} />État du corps · moteurs, températures, couples
       </Link>
 

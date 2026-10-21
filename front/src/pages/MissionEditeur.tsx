@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { api } from '../api/client';
+import { api, robotUnique } from '../api/client';
 import { ETATS_MISSION, nbPrimitives } from '../api/libelles';
 import type { LienMission, Mission, NoeudMission } from '../api/types';
 import { EditeurGraphe } from '../components/graphe/EditeurGraphe';
@@ -29,7 +29,7 @@ export function MissionEditeur() {
   const naviguer = useNavigate();
   const source = useCharge(() => (nouvelle ? Promise.resolve(vierge()) : api.mission(id!)), [id]);
   const primitives = useCharge(() => api.primitives());
-  const robots = useCharge(() => api.robots());
+  const robot = useCharge(robotUnique);
   const [m, setM] = useState<Mission | null>(null);
   const [message, setMessage] = useState<{ ton: 'ok' | 'danger'; texte: string } | null>(null);
 
@@ -40,14 +40,14 @@ export function MissionEditeur() {
 
   const maj = (champs: Partial<Mission>) => setM((x) => (x ? { ...x, ...champs } : x));
   const enCours = m.etat === 'en_cours';
-  const robotChoisi = robots.donnee?.find((r) => r.id === m.robotId);
+  const robotChoisi = robot.donnee;
   const nbJoues = joues(m);
   const nbIsoles = nbPrimitives(m) - nbJoues;
 
   async function enregistrer(): Promise<Mission | null> {
     try {
       const etat = nbJoues > 0 && m!.etat === 'brouillon' ? 'prete' : m!.etat;
-      const sauvee = await api.enregistrerMission({ ...m!, etat });
+      const sauvee = await api.enregistrerMission({ ...m!, etat, robotId: robotChoisi?.id ?? null });
       setM(sauvee);
       setMessage({ ton: 'ok', texte: 'Mission enregistrée.' });
       if (nouvelle) naviguer(`/missions/${sauvee.id}`, { replace: true });
@@ -84,12 +84,6 @@ export function MissionEditeur() {
           placeholder="Nom de la mission" aria-label="Nom de la mission" />
         <Badge ton={ETATS_MISSION[m.etat].ton}>{ETATS_MISSION[m.etat].libelle}</Badge>
         <span className="espace" />
-        <select value={m.robotId ?? ''} onChange={(e) => maj({ robotId: e.target.value || null })} disabled={enCours} aria-label="Robot">
-          <option value="">Robot : non assigné</option>
-          {robots.donnee?.map((r) => (
-            <option key={r.id} value={r.id} disabled={r.etat === 'hors_ligne'}>{r.nom} · {r.site}</option>
-          ))}
-        </select>
         <label className="graphe-repet">×
           <input type="number" min={1} max={999} value={m.repetitions} disabled={enCours} aria-label="Répétitions"
             onChange={(e) => maj({ repetitions: Math.max(1, Number(e.target.value) || 1) })} />

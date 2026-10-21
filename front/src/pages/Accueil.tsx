@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { api, enSimulation } from '../api/client';
-import { ETATS_ROBOT } from '../api/libelles';
-import { reinitialiserSimulation } from '../api/mock';
+import { api } from '../api/client';
+import type { EtatCapteurs, EtatCorps, Robot, Verdict } from '../api/types';
 import { BarreRobot } from '../components/BarreRobot';
+import { IconeCorps } from '../components/IconesRobot';
 import { CALQUES } from '../components/calques';
+import { BarreMission } from '../components/BarreMission';
 import { FiltresCalques } from '../components/Filtres';
 import { Demarrage } from '../components/Demarrage';
 import { IntroLogo } from '../components/IntroLogo';
@@ -14,9 +15,38 @@ import { Overlay } from '../components/Overlay';
 import { useCharge } from '../components/useCharge';
 import { monterScene, type Calque, type Scene3D } from '../vue3d/scene';
 
+const SANTE_MS = 2000;
 
-function heure(): string {
-  return new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+/** Les écrans qu'on ouvre depuis l'accueil, dans le rail du côté droit. */
+const RAIL = [
+  { vers: '/robot', libelle: 'Robot', Icone: IconeCorps },
+  { vers: '/missions', libelle: 'Missions', Icone: IconeMissions },
+  { vers: '/primitives', libelle: 'Primitives', Icone: IconePrimitives },
+];
+
+function IconeMissions() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
+      <circle cx="5" cy="6" r="2" /><circle cx="19" cy="12" r="2" /><circle cx="5" cy="18" r="2" /><path d="M7 6h5a3 3 0 0 1 3 3v1M7 18h5a3 3 0 0 0 3-3v-1" />
+    </svg>
+  );
+}
+
+function IconePrimitives() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" aria-hidden="true">
+      <rect x="4" y="4" width="7" height="7" rx="1.5" /><rect x="13" y="4" width="7" height="7" rx="1.5" /><rect x="4" y="13" width="7" height="7" rx="1.5" /><path d="M16.5 13.5v6M13.5 16.5h6" />
+    </svg>
+  );
+}
+
+/** Le verdict du robot : arrêt d'urgence ou moteur trop chaud / en défaut = problème ; hors ligne = inconnu. */
+function verdictRobot(r: Robot | undefined, corps: EtatCorps | null): { verdict: Verdict; raison: string } {
+  if (!r || r.etat === 'hors_ligne') return { verdict: 'inconnu', raison: 'robot hors ligne' };
+  if (r.etat === 'arret_urgence') return { verdict: 'pb', raison: 'arrêt d’urgence' };
+  const malades = corps?.moteurs.filter((m) => m.etat === 'trop_chaud' || m.etat === 'defaut') ?? [];
+  if (malades.length) return { verdict: 'pb', raison: malades.map((m) => `${m.nom} ${m.etat === 'defaut' ? 'en défaut' : `${m.temperature}°`}`).join(' · ') };
+  return { verdict: corps ? 'ok' : 'inconnu', raison: corps ? 'moteurs dans leurs seuils' : 'en attente de l’état des moteurs' };
 }
 
 export function Accueil() {
@@ -77,7 +107,6 @@ export function Accueil() {
     return () => clearTimeout(t);
   }, [demarre]);
   const [calques, setCalques] = useState<Record<Calque, boolean>>({ robot: true, atelier: true, camera: true, lidar: true, carte: true, objets: true, sol: true });
-  const [maintenant, setMaintenant] = useState(heure);
   const robots = useCharge(() => api.robots());
   // L'état du robot change sous nos yeux (arrêt d'urgence, mission) : le titre le relit comme la barre.
   const { recharger: relireRobots } = robots;
@@ -86,6 +115,16 @@ export function Accueil() {
     return () => clearInterval(t);
   }, [relireRobots]);
   const robot = robots.donnee?.find((r) => r.etat === 'en_mission') ?? robots.donnee?.[0];
+  const [sante, setSante] = useState<{ corps: EtatCorps | null; capteurs: EtatCapteurs | null }>({ corps: null, capteurs: null });
+  useEffect(() => {
+    if (!robot) return;
+    let vivant = true;
+    const lire = () => Promise.all([api.etatCorps(robot.id).catch(() => null), api.etatCapteurs(robot.id).catch(() => null)])
+      .then(([corps, capteurs]) => vivant && setSante({ corps, capteurs }));
+    lire();
+    const t = setInterval(lire, SANTE_MS);
+    return () => { vivant = false; clearInterval(t); };
+  }, [robot?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!hote.current) return;
@@ -96,11 +135,6 @@ export function Accueil() {
       setNbObjets(s.objets().length);
     });
     return () => s.detruire();
-  }, []);
-
-  useEffect(() => {
-    const t = setInterval(() => setMaintenant(heure()), 10_000);
-    return () => clearInterval(t);
   }, []);
 
   function basculer(c: Calque) {
@@ -115,46 +149,15 @@ export function Accueil() {
         onPointerDown={(e) => { appui.current = { x: e.clientX, y: e.clientY }; }} onPointerUp={relacher} />
       <div className="accueil-vignette" aria-hidden="true" />
 
-      <header className="hud-haut">
-        <nav className="hud-nav">
-          <NavLink to="/" end>Robot</NavLink>
-          <NavLink to="/flotte">Flotte</NavLink>
-          <NavLink to="/missions">Missions</NavLink>
-          <NavLink to="/primitives">Primitives</NavLink>
-        </nav>
-        {enSimulation && (
-          <button className="hud-simulation" title="Réinitialiser les données simulées"
-            onClick={() => { reinitialiserSimulation(); location.reload(); }}>SIMULATION</button>
-        )}
-        <div className="hud-heure nombre">{maintenant}</div>
-      </header>
+      <nav className="hud-rail" aria-label="Écrans">
+        {RAIL.map(({ vers, libelle, Icone }) => (
+          <NavLink key={vers} to={vers} className="hud-rail-lien">
+            <span className="hud-rail-icone"><Icone /></span>
+            <span className="hud-rail-nom">{libelle}</span>
+          </NavLink>
+        ))}
+      </nav>
 
-      <section className="hud-titre">
-        <p className="hud-sur">{robot ? `${robot.site} · ${robot.modele}` : ' '}</p>
-        <h1>{robot?.nom ?? 'G1-D'}</h1>
-        {robot && (
-          <p className="hud-etat">
-            <span className={`hud-point hud-${ETATS_ROBOT[robot.etat].ton}`} />
-            {ETATS_ROBOT[robot.etat].libelle}
-            {robot.posteCourant && <span className="hud-discret"> · poste {robot.posteCourant}</span>}
-          </p>
-        )}
-      </section>
-
-      {robot && (
-        <NavLink to={`/flotte/${robot.id}/corps`} className="hud-jauges" aria-label="État du corps">
-          <Jauge libelle="BAT" valeur={robot.batterie} />
-          <Jauge libelle="SIG" valeur={robot.etat === 'hors_ligne' ? 0 : 86} />
-          <div className="hud-console nombre">
-            <span>[LIDAR....]</span>
-            <span className="hud-vert">[......OK]</span>
-            <span>[RGBD.....]</span>
-            <span className="hud-vert">[......OK]</span>
-            <span className="hud-corps">[CORPS....]</span>
-            <span className="hud-corps">[.......▸]</span>
-          </div>
-        </NavLink>
-      )}
 
 
       <MiniCarte poste={robot?.posteCourant ?? null} plein={plein === 'carte'}
@@ -182,10 +185,18 @@ export function Accueil() {
         </div>
       )}
 
-      <FiltresCalques className="hud-calques" actifs={calques} basculer={basculer}
+      <FiltresCalques className="hud-calques" actifs={calques} basculer={basculer} fixes={['robot']}
+        verdicts={{
+          robot: verdictRobot(robot, sante.corps),
+          camera: { verdict: sante.capteurs?.camera ?? 'inconnu', raison: '' },
+          lidar: { verdict: sante.capteurs?.lidar ?? 'inconnu', raison: '' },
+          objets: nbObjets ? { verdict: 'ok', raison: '' } : { verdict: 'inconnu', raison: 'aucun objet déclaré' },
+          atelier: { verdict: pret ? 'ok' : 'inconnu', raison: '' },
+        }}
         calques={CALQUES.map((c) => (c.cle === 'objets' && nbObjets ? { ...c, detail: `${nbObjets} ${c.detail}` } : c))} />
 
       {robot && <BarreRobot robotId={robot.id} forme="ile" />}
+      {robot && <BarreMission robot={robot} />}
 
       {demarre && (
         <Reticule projeterSol={(x, y) => scene.current?.projeterSol(x, y) ?? null}
@@ -199,14 +210,6 @@ export function Accueil() {
   );
 }
 
-function Jauge({ libelle, valeur }: { libelle: string; valeur: number }) {
-  return (
-    <div className="hud-jauge">
-      <div className="hud-jauge-barre"><div style={{ height: `${valeur}%` }} /></div>
-      <span className="nombre">{libelle}</span>
-    </div>
-  );
-}
 
 /** Le run de la dernière image réelle de la caméra de tête (scripts/copier-camera.mjs), ou null sans image. */
 function useApercuCamera(): [string | null, (run: string | null) => void] {
