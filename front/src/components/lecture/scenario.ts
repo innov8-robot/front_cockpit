@@ -1,11 +1,12 @@
 /**
  * Une mission qui joue, simulée pour la page d'essai de la barre de lecture : deux missions (longue avec une branche
- * « échec », courte), des tours, une prise qui rate au deuxième tour, la pause, l'arrêt d'urgence. Le temps est
- * accéléré : une étape de 14 s en dure moins de cinq à l'écran.
+ * « échec », courte), des tours, une prise qui rate au deuxième tour, la pause, l'arrêt d'urgence, un avertissement
+ * qui n'arrête rien et une erreur qui arrête tout. Le temps est accéléré : une étape de 14 s en dure moins de cinq.
  */
 import { useEffect, useReducer } from 'react';
 import type { Mission, Primitive, TypePrimitive } from '../../api/types';
-import { prevus, suivant, type Lecture, type PasLecture } from './lecture';
+import { duree } from '../executions/donnees';
+import { prevus, suivant, type Lecture, type MessageLecture, type PasLecture } from './lecture';
 
 const primitive = (id: string, nom: string, type: TypePrimitive): Primitive => ({
   id, nom, type, description: '', objet: null, ancrage: null, poste: null, vitesse: 1, creeLe: '', creePar: '',
@@ -42,8 +43,20 @@ export const MISSIONS_ESSAI: Record<'longue' | 'courte', Mission> = {
 /** La durée d'une étape simulée, par type de primitive (s) ; elle varie d'un tour à l'autre. */
 const DUREE: Record<TypePrimitive, number> = { deplacer: 14, prise_objet: 18, prise_boite: 20, depose: 11, rentrer: 6 };
 
-/** Après la fin, la mission reprend depuis le début au bout de ce temps (s, temps réel). */
+/** Pourquoi une étape simulée rate, par type de primitive. */
+const CAUSES: Record<TypePrimitive, string> = {
+  deplacer: 'chemin bloqué', prise_objet: 'aucune prise atteignable', prise_boite: 'poignées introuvables', depose: 'bac B introuvable',
+  rentrer: 'bras en butée',
+};
+
+/** Les messages que l'opérateur peut provoquer depuis la page d'essai. */
+const AVERTISSEMENT = 'Relocalisation faible : qualité 41 %. La mission continue.';
+const PANNE = 'Bras droit : plus de réponse depuis 2,5 s. La mission s’arrête.';
+
+/** Après une mission réussie, elle reprend depuis le début au bout de ce temps (s, temps réel). */
 const REPRISE_S = 6;
+/** Un avertissement reste affiché ce temps-là (s, temps réel). */
+const AVERTISSEMENT_S = 8;
 
 interface Moteur {
   mission: Mission;
@@ -55,11 +68,15 @@ interface Moteur {
   debut: number;
   enPause: boolean;
   urgence: boolean;
-  fin: 'reussie' | 'echouee' | null;
+  fin: 'reussie' | 'erreur' | null;
   attente: number;
+  message: MessageLecture | null;
+  /** Le temps qu'il reste à un avertissement (s, temps réel). */
+  messageReste: number;
 }
 
-type Action = { type: 'tick'; reelS: number; vitesse: number } | { type: 'pause' } | { type: 'rater' } | { type: 'urgence' } | { type: 'rearmer' };
+type Action = { type: 'tick'; reelS: number; vitesse: number }
+  | { type: 'pause' | 'rater' | 'urgence' | 'rearmer' | 'avertir' | 'planter' | 'acquitter' };
 
 const primitiveDe = (m: Mission, id: string) => PRIMITIVES.find((p) => p.id === m.noeuds.find((n) => n.id === id)?.primitiveId);
 
@@ -76,21 +93,30 @@ const cle = (tour: number, index: number, id: string) => `${tour}:${index}:${id}
 function demarrer(mission: Mission): Moteur {
   return {
     mission, t: 0, tour: 1, passe: [], noeud: suivant(mission, 'depart', 'ok') ?? null, par: 'ok', debut: 0,
-    enPause: false, urgence: false, fin: null, attente: 0,
+    enPause: false, urgence: false, fin: null, attente: 0, message: null, messageReste: 0,
   };
 }
 
-/** L'étape en cours se termine à `finS`, réussie ou ratée ; la mission prend la sortie qui suit, ou change de tour. */
-function terminer(m: Moteur, finS: number, rate: boolean): Moteur {
+const avertir = (m: Moteur, texte: string): Moteur => ({ ...m, message: { niveau: 'attention', texte }, messageReste: AVERTISSEMENT_S });
+
+/**
+ * L'étape en cours se termine à `finS`, réussie ou ratée ; la mission prend la sortie qui suit, ou change de tour.
+ * Une étape ratée que sa branche « échec » rattrape est un avertissement ; sans branche, ou sur une `panne`, c'est une
+ * erreur qui arrête la mission.
+ */
+function terminer(m: Moteur, finS: number, rate: boolean, panne?: string): Moteur {
   const id = m.noeud!;
+  const prim = primitiveDe(m.mission, id);
   const fait: PasLecture = { cle: cle(m.tour, m.passe.length, id), noeud: id, issue: rate ? 'echoue' : 'reussi', par: m.par, tour: m.tour };
   const sortie = rate ? 'echec' : 'ok';
-  const vers = suivant(m.mission, id, sortie);
+  const vers = panne ? undefined : suivant(m.mission, id, sortie);
   const base = { ...m, passe: [...m.passe, fait], debut: finS };
-  if (vers) return { ...base, noeud: vers, par: sortie };
-  if (rate) return { ...base, noeud: null, fin: 'echouee' };
+  const rateTexte = `« ${prim?.nom} » a raté : ${CAUSES[prim?.type ?? 'deplacer']}.`;
+  if (vers) return rate ? avertir({ ...base, noeud: vers, par: sortie }, `${rateTexte} La mission prend sa branche échec.`) : { ...base, noeud: vers, par: sortie };
+  if (rate) return { ...base, t: finS, noeud: null, fin: 'erreur', message: { niveau: 'erreur', texte: panne ?? `${rateTexte} Pas de branche échec : la mission s’arrête.` } };
   if (m.tour < m.mission.repetitions) return { ...base, tour: m.tour + 1, noeud: suivant(m.mission, 'depart', 'ok') ?? null, par: 'ok' };
-  return { ...base, noeud: null, fin: 'reussie' };
+  const tours = m.mission.repetitions > 1 ? `${m.mission.repetitions} tours` : 'la mission';
+  return { ...base, t: finS, noeud: null, fin: 'reussie', message: { niveau: 'succes', texte: `Terminée : ${tours} en ${duree(finS)}.` } };
 }
 
 function reduire(m: Moteur, a: Action): Moteur {
@@ -99,14 +125,19 @@ function reduire(m: Moteur, a: Action): Moteur {
     case 'urgence': return m.fin ? m : { ...m, urgence: true };
     case 'rearmer': return demarrer(m.mission);
     case 'rater': return m.noeud && !m.urgence ? terminer(m, m.t, true) : m;
+    case 'avertir': return m.fin || m.urgence ? m : avertir(m, AVERTISSEMENT);
+    case 'planter': return m.noeud && !m.urgence ? terminer(m, m.t, true, PANNE) : m;
+    case 'acquitter': return m.fin === 'erreur' ? demarrer(m.mission) : { ...m, message: m.fin ? m.message : null };
     case 'tick': {
-      if (m.fin) return m.attente + a.reelS > REPRISE_S ? demarrer(m.mission) : { ...m, attente: m.attente + a.reelS };
-      if (m.enPause || m.urgence || !m.noeud) return m;
-      const t = m.t + a.reelS * a.vitesse;
-      const d = dureeEtape(m, m.noeud);
-      if (t - m.debut < d) return { ...m, t };
-      const rate = m.tour === 2 && primitiveDe(m.mission, m.noeud)?.type === 'prise_objet';
-      return terminer({ ...m, t }, m.debut + d, rate);
+      if (m.fin === 'reussie') return m.attente + a.reelS > REPRISE_S ? demarrer(m.mission) : { ...m, attente: m.attente + a.reelS };
+      const n = m.message?.niveau !== 'attention' ? m
+        : m.messageReste > a.reelS ? { ...m, messageReste: m.messageReste - a.reelS } : { ...m, message: null, messageReste: 0 };
+      if (n.fin || n.enPause || n.urgence || !n.noeud) return n;
+      const t = n.t + a.reelS * a.vitesse;
+      const d = dureeEtape(n, n.noeud);
+      if (t - n.debut < d) return { ...n, t };
+      const rate = n.tour === 2 && primitiveDe(n.mission, n.noeud)?.type === 'prise_objet';
+      return terminer({ ...n, t }, n.debut + d, rate);
     }
   }
 }
@@ -124,6 +155,7 @@ function lire(m: Moteur): Lecture {
   return {
     mission: m.mission, primitives: PRIMITIVES, pas, courant, dureeS: m.t, dureeEtapeS: m.noeud ? m.t - m.debut : 0,
     tour: m.tour, tours: m.mission.repetitions, etat: m.urgence ? 'urgence' : m.fin ?? (m.enPause ? 'pause' : 'cours'),
+    message: m.urgence ? { niveau: 'erreur', texte: 'Arrêt d’urgence engagé. Réarmez-le depuis la barre du robot pour reprendre.' } : m.message,
   };
 }
 
@@ -143,5 +175,8 @@ export function useScenario(mission: Mission, vitesse: number) {
     rater: () => envoyer({ type: 'rater' }),
     urgence: () => envoyer({ type: 'urgence' }),
     rearmer: () => envoyer({ type: 'rearmer' }),
+    avertir: () => envoyer({ type: 'avertir' }),
+    planter: () => envoyer({ type: 'planter' }),
+    acquitter: () => envoyer({ type: 'acquitter' }),
   };
 }

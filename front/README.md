@@ -100,10 +100,13 @@ ou courte) : le graphe de la mission tel que l'éditeur le dessine, réduit dans
 étincelle part sur le fil que la mission a pris (vert « réussi », ambre « échec ») et la caméra la suit dans tous les
 sens jusqu'à l'étape suivante, qui s'ouvre à son arrivée avec son nom. Aucune durée n'est prédite : on ne sait pas
 combien de temps une étape va tourner. Le système de la barre : blanc ce qui vit, gris ce qui est suspendu (la pause
-n'est pas une alerte), vert ce qui a réussi, ambre ce qui demande de l'attention, rouge le danger ; les actions sont
-blanches, pleine pour la principale (Reprendre), en contour pour la secondaire (Pause). Pour la brancher, le back doit
-servir le chemin RÉELLEMENT joué dans le run en cours (pas seulement le chemin « réussi » prévu). Code :
-`components/lecture/`.
+n'est pas une alerte), vert ce qui a réussi, ambre ce qui n'arrête rien mais demande de l'attention, rouge ce qui a
+arrêté la mission ; les actions sont blanches, pleine pour la principale (Reprendre, Acquitter), en contour pour la
+secondaire (Pause). Un halo autour de la barre et un message dessous disent l'issue : vert la mission terminée, ambre
+un avertissement ou une étape rattrapée par sa branche « échec » (il s'efface seul), rouge une erreur qui l'arrête
+(✕ sur l'étape fautive, jusqu'à l'acquittement) ou l'arrêt d'urgence (■, jusqu'au réarmement). Pour la brancher, le
+back doit servir le chemin RÉELLEMENT joué dans le run en cours (pas seulement le chemin « réussi » prévu), et ses
+alertes avec leur niveau (bloquante ou non) et leur texte. Code : `components/lecture/`.
 
 ## Les couleurs de la scène
 

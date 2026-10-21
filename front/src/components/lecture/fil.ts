@@ -20,7 +20,7 @@ export const TUILE_OUVERTE = 36;
 /** Quand l'étape d'avant est plus haut, la caméra remonte de cette part de l'écart : le fil qui arrive reste visible. */
 const CADRAGE_HAUT = 0.3;
 
-export type EtatFil = 'ok' | 'echec' | 'cours' | 'pause' | 'danger' | 'approche' | 'prevu' | 'hors';
+export type EtatFil = 'ok' | 'echec' | 'cours' | 'pause' | 'danger' | 'erreur' | 'approche' | 'prevu' | 'hors';
 
 export interface NoeudFil {
   id: string;
@@ -98,7 +98,7 @@ export function construireFil(l: Lecture, arrive: boolean): { noeuds: NoeudFil[]
   let idCourant: string | null = null;
   for (const [k, p] of l.pas.entries()) {
     if (p.tour !== tour) continue;
-    etats.set(p.noeud, etatDuPas(l, p.issue, arrive));
+    etats.set(p.noeud, l.etat === 'erreur' && k === l.pas.length - 1 ? 'erreur' : etatDuPas(l, p.issue, arrive));
     const lien = lienEntre(l, precedent(l, k), p.noeud, p.par);
     if (!lien) continue;
     if (k === l.courant) idCourant = lien.id;

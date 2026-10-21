@@ -2016,7 +2016,32 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
   background: rgb(10 13 17 / 0.8); border: 1px solid rgb(255 255 255 / 0.09); box-shadow: 0 14px 44px rgb(0 0 0 / 0.55);
   backdrop-filter: blur(14px); font-family: 'Inter', system-ui, sans-serif; transition: border-color 0.3s, box-shadow 0.3s;
 }
-.bl-barre.bl-etat-urgence { border-color: rgb(255 45 58 / 0.7); box-shadow: 0 0 0 1px rgb(255 45 58 / 0.35), 0 14px 44px rgb(0 0 0 / 0.55); }
+/* Le halo autour de la barre : vert la mission a réussi, ambre un avertissement qui n'arrête rien, rouge ce qui l'a arrêtée. */
+.bl-barre.bl-halo-succes { border-color: rgb(61 255 138 / 0.7); box-shadow: 0 0 0 1px rgb(61 255 138 / 0.35), 0 0 30px rgb(61 255 138 / 0.3), 0 14px 44px rgb(0 0 0 / 0.55); }
+.bl-barre.bl-halo-attention { border-color: rgb(255 176 46 / 0.75); box-shadow: 0 0 0 1px rgb(255 176 46 / 0.35), 0 0 30px rgb(255 176 46 / 0.3), 0 14px 44px rgb(0 0 0 / 0.55); }
+.bl-barre.bl-halo-erreur {
+  border-color: rgb(255 45 58 / 0.8); box-shadow: 0 0 0 1px rgb(255 45 58 / 0.4), 0 0 34px rgb(255 45 58 / 0.4), 0 14px 44px rgb(0 0 0 / 0.55);
+  animation: bl-halo-erreur 0.45s ease-out 2;
+}
+@keyframes bl-halo-erreur { 50% { box-shadow: 0 0 0 2px rgb(255 45 58 / 0.8), 0 0 60px rgb(255 45 58 / 0.7), 0 14px 44px rgb(0 0 0 / 0.55); } }
+.bl-pile { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.bl-pile > .bl-barre { align-self: stretch; }
+.bl-message {
+  --c: #e9eef7; display: inline-flex; align-items: center; gap: 10px; max-width: calc(100% - 40px); min-height: 40px; box-sizing: border-box;
+  padding: 6px 14px 6px 8px; border-radius: 12px; background: rgb(10 13 17 / 0.92); border: 1px solid color-mix(in srgb, var(--c) 70%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--c) 28%, transparent), 0 10px 30px rgb(0 0 0 / 0.5); backdrop-filter: blur(14px);
+  color: #e9eef7; font: 500 13px/1.35 'Inter', system-ui, sans-serif; animation: bl-message 0.3s ease-out;
+}
+@keyframes bl-message { from { opacity: 0; transform: translateY(-6px); } }
+.bl-message-succes { --c: #3dff8a; }
+.bl-message-attention { --c: #ffb02e; }
+.bl-message-erreur { --c: #ff2d3a; }
+.bl-message > b { flex: none; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: var(--c); color: #0b0d10; font: 800 11px/1 ui-monospace, monospace; }
+.bl-message:has(button) { padding-right: 6px; }
+.bl-acquitter { flex: none; height: 30px; padding: 0 14px; border-radius: 8px; border: 1px solid #e9eef7; background: #e9eef7; color: #0b0d10; font: 650 12px/1 'Inter', system-ui, sans-serif; cursor: pointer; }
+.bl-acquitter:hover { background: #fff; }
+.bl-fermer { flex: none; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 8px; border: 1px solid rgb(255 255 255 / 0.2); background: transparent; color: #c9ced6; cursor: pointer; }
+.bl-fermer:hover { background: rgb(255 255 255 / 0.08); color: #fff; }
 
 /* L'état : blanc qui vit, gris suspendu, vert réussi, ambre attention, rouge danger ; toujours avec son signe. */
 .bl-identite { flex: none; width: 200px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
@@ -2027,7 +2052,7 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .bl-etat-pause .bl-etat { color: var(--gris); }
 .bl-etat-urgence .bl-etat { color: #ff5a64; }
 .bl-etat-reussie .bl-etat { color: var(--vert); }
-.bl-etat-echouee .bl-etat { color: var(--ambre); }
+.bl-etat-erreur .bl-etat { color: #ff5a64; }
 
 .bl-centre { position: relative; flex: 1; min-width: 0; align-self: stretch; }
 .bl-temps { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; min-width: 86px; padding-left: 16px; border-left: 1px solid rgb(255 255 255 / 0.08); }
@@ -2083,15 +2108,17 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
   transition: width 0.4s cubic-bezier(0.3, 1.4, 0.5, 1), height 0.4s cubic-bezier(0.3, 1.4, 0.5, 1), border-color 0.3s, box-shadow 0.3s, opacity 0.4s;
 }
 .bl-tuile-matrice { position: absolute; inset: 2px; border-radius: 6px; overflow: hidden; }
-.bl-tuile .em-chargement, .bl-tuile .em-badge-etat, .bf-badge-pause { width: 16px; height: 16px; top: -7px; right: -7px; font-size: 9px; }
+.bl-tuile .em-chargement, .bl-tuile .em-badge-etat, .bf-badge { width: 16px; height: 16px; top: -7px; right: -7px; font-size: 9px; }
 .bl-tuile .em-chargement { border-width: 2.5px; }
-.bf-badge-pause { position: absolute; z-index: 2; display: grid; place-items: center; border-radius: 50%; box-sizing: border-box; font: 800 8px/1 ui-monospace, monospace; color: #0b0d10; background: #c9ced6; box-shadow: 0 0 0 2px #0b0d10; }
+.bf-badge { position: absolute; z-index: 2; display: grid; place-items: center; border-radius: 50%; box-sizing: border-box; font: 800 8px/1 ui-monospace, monospace; color: #0b0d10; box-shadow: 0 0 0 2px #0b0d10; }
+.bf-badge-pause { background: #c9ced6; }
+.bf-badge-erreur { background: var(--rouge); box-shadow: 0 0 0 2px #0b0d10, 0 0 10px var(--rouge); }
 .bf-depart { border-radius: 50% 7px 7px 50%; border-color: rgb(233 238 247 / 0.45); }
 .bf-tuile-ok:not(.bf-depart) { border-color: rgb(61 255 138 / 0.6); }
 .bf-tuile-echec { border-color: var(--ambre); box-shadow: 0 0 12px rgb(255 176 46 / 0.3); }
 .bf-tuile-cours { border-color: #e9eef7; box-shadow: 0 0 18px rgb(233 238 247 / 0.35); animation: em-respire-tuile 1s ease-in-out infinite; }
 .bf-tuile-pause { border-color: #c9ced6; }
-.bf-tuile-danger { border-color: var(--rouge); box-shadow: 0 0 18px rgb(255 45 58 / 0.5); }
+.bf-tuile-danger, .bf-tuile-erreur { border-color: var(--rouge); box-shadow: 0 0 18px rgb(255 45 58 / 0.5); }
 .bf-tuile-approche { border-color: rgb(233 238 247 / 0.5); border-style: dashed; }
 .bf-tuile-prevu { border-style: dashed; opacity: 0.75; }
 .bf-tuile-hors { opacity: 0.32; }

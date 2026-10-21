@@ -15,9 +15,9 @@ const VITESSES = [1, 3, 8];
 const SYSTEME = [
   { couleur: '#e9eef7', signe: '●', nom: 'En cours · blanc', texte: 'Ce qui vit : le point respire, l’étape tourne, l’onde file sur le fil qui y mène.' },
   { couleur: '#8a93a3', signe: '‖', nom: 'En pause · gris', texte: 'Ce qui est suspendu : tout s’arrête, l’onde se fige et devient blanche. Rien d’alarmant.' },
-  { couleur: '#3dff8a', signe: '✓', nom: 'Réussi · vert', texte: 'Une étape réussie, le fil « réussi » pris, la mission terminée. Jamais un bouton.' },
-  { couleur: '#ffb02e', signe: '!', nom: 'Attention · ambre', texte: 'Une étape ratée et la branche « échec » qu’elle prend (fil pointillé), une mission échouée.' },
-  { couleur: '#ff2d3a', signe: '■', nom: 'Danger · rouge', texte: 'L’arrêt d’urgence : la barre entière, l’étape arrêtée, plus rien ne bouge.' },
+  { couleur: '#3dff8a', signe: '✓', nom: 'Réussi · vert', texte: 'Une étape réussie, le fil « réussi » pris ; la mission terminée met un halo vert autour de la barre. Jamais un bouton.' },
+  { couleur: '#ffb02e', signe: '!', nom: 'Non bloquant · ambre', texte: 'Un avertissement, une étape ratée que sa branche « échec » rattrape (fil pointillé) : halo ambre et le message, la mission continue.' },
+  { couleur: '#ff2d3a', signe: '✕', nom: 'Bloquant · rouge', texte: 'Une erreur qui arrête la mission, l’arrêt d’urgence (■) : halo rouge et l’erreur, jusqu’à ce qu’on l’acquitte ou qu’on réarme.' },
   { couleur: '#e9eef7', signe: '▶', nom: 'Action · blanc plein', texte: 'L’action principale (Reprendre) est pleine, la secondaire (Pause) en contour.', plein: true },
 ];
 
@@ -25,19 +25,21 @@ const SYSTEME = [
 function Banc({ mission, vitesse, largeur }: { mission: Mission; vitesse: number; largeur: number }) {
   const s = useScenario(mission, vitesse);
   const l = s.lecture;
-  const fini = l.etat === 'reussie' || l.etat === 'echouee';
+  const fini = l.etat === 'reussie' || l.etat === 'erreur';
   return (
     <>
       <div className="bl-commandes">
         <span className="essai-barre-sur">LA MISSION SIMULÉE</span>
         <button className="lm-bouton" onClick={s.pause} disabled={fini || l.etat === 'urgence'}>{l.etat === 'pause' ? 'Reprendre' : 'Pause'}</button>
         <button className="lm-bouton" onClick={s.rater} disabled={l.courant < 0 || l.etat === 'urgence'}>Faire rater l’étape en cours</button>
+        <button className="lm-bouton" onClick={s.avertir} disabled={fini || l.etat === 'urgence'}>Avertissement</button>
+        <button className="lm-bouton" onClick={s.planter} disabled={l.courant < 0 || l.etat === 'urgence'}>Erreur bloquante</button>
         {l.etat === 'urgence'
           ? <button className="lm-bouton" onClick={s.rearmer}>Réarmer</button>
           : <button className="lm-bouton bl-commande-urgence" onClick={s.urgence} disabled={fini}>Arrêt d’urgence</button>}
-        <span className="bl-commandes-note">La prise rate seule au tour 2 ; à la fin, la mission repart au bout de 6 s.</span>
+        <span className="bl-commandes-note">La prise rate seule au tour 2 (rattrapée par sa branche échec). Réussie, la mission repart au bout de 6 s ; en erreur, à l’acquittement.</span>
       </div>
-      <div className="bl-scene" style={{ maxWidth: largeur }}><BarreFil l={l} pause={s.pause} /></div>
+      <div className="bl-scene" style={{ maxWidth: largeur }}><BarreFil l={l} pause={s.pause} acquitter={s.acquitter} /></div>
     </>
   );
 }

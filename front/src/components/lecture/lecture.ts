@@ -17,7 +17,16 @@ export interface PasLecture {
   tour: number;
 }
 
-export type EtatLecture = 'cours' | 'pause' | 'urgence' | 'reussie' | 'echouee';
+export type EtatLecture = 'cours' | 'pause' | 'urgence' | 'reussie' | 'erreur';
+
+/**
+ * Ce que la barre dit autour d'elle : la mission a réussi (vert), un avertissement qui ne l'arrête pas (ambre), une
+ * erreur qui l'a arrêtée (rouge, jusqu'à ce qu'on l'acquitte).
+ */
+export interface MessageLecture {
+  niveau: 'succes' | 'attention' | 'erreur';
+  texte: string;
+}
 
 export interface Lecture {
   mission: Mission;
@@ -31,6 +40,7 @@ export interface Lecture {
   tour: number;
   tours: number;
   etat: EtatLecture;
+  message: MessageLecture | null;
 }
 
 /** Le nœud où mène une sortie, s'il y en a un. */
