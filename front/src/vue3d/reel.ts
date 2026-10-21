@@ -99,12 +99,44 @@ export interface GrilleChassis {
   h: number;
   /** Les octets de la grille en base64 : 0 jamais vu, 1 à 127 libre, au-delà occupé. */
   cellules: string;
+  /** Les murs droits que le serveur a reconnus dans la grille, en mètres dans le repère de la carte. */
+  murs?: Mur[];
 }
 
+export interface Mur { x1: number; y1: number; x2: number; y2: number }
+
 const SEUIL_OCCUPE = 127;
-/** Comme `navigation.grille.grille_vers_nuage` (la vue 3D viser), sans le sol : chaque mur en colonnette. */
-/** Les murs sont peints sous le seuil du halo (0,7) : seule l’impulsion du sonar y brille. */
+/**
+ * Comme `navigation.grille.grille_vers_nuage` (la vue 3D viser), sans le sol : chaque cellule occupée qu'aucun mur
+ * droit ne couvre, en colonnette. Peintes sous le seuil du halo (0,7) : seule l'impulsion du sonar y brille.
+ */
 const MUR_Z = [0.2, 0.67, 1.13, 1.6];
+/** Un mur droit : un bloc de cette hauteur et de cette épaisseur (m), aux arêtes rouges comme les machines. */
+const HAUTEUR_MUR = 1.6;
+const EPAISSEUR_MUR = 0.06;
+const TRAITS_MUR = new THREE.LineBasicMaterial({ color: '#ff2d3a', transparent: true, opacity: 0.55 });
+const FACES_MUR = new THREE.MeshBasicMaterial({
+  color: '#ff2d3a', transparent: true, opacity: 0.06, depthWrite: false, side: THREE.DoubleSide,
+});
+
+/** La distance d'un point à un segment. */
+function distanceAuMur(x: number, y: number, m: Mur): number {
+  const dx = m.x2 - m.x1;
+  const dy = m.y2 - m.y1;
+  const k = Math.max(0, Math.min(1, ((x - m.x1) * dx + (y - m.y1) * dy) / (dx * dx + dy * dy || 1)));
+  return Math.hypot(x - m.x1 - k * dx, y - m.y1 - k * dy);
+}
+
+/** Le bloc d'un mur droit, posé au sol de la carte. */
+function blocDeMur(m: Mur): THREE.Group {
+  const longueur = Math.hypot(m.x2 - m.x1, m.y2 - m.y1);
+  const volume = new THREE.BoxGeometry(longueur, EPAISSEUR_MUR, HAUTEUR_MUR);
+  const bloc = new THREE.Group();
+  bloc.add(new THREE.Mesh(volume, FACES_MUR), new THREE.LineSegments(new THREE.EdgesGeometry(volume), TRAITS_MUR));
+  bloc.position.set((m.x1 + m.x2) / 2, (m.y1 + m.y2) / 2, HAUTEUR_MUR / 2);
+  bloc.rotation.z = Math.atan2(m.y2 - m.y1, m.x2 - m.x1);
+  return bloc;
+}
 
 /** Les points de la carte, que l'impulsion du sonar allume en bleu quand elle les traverse. */
 function materiauCarte(): THREE.ShaderMaterial {
@@ -143,9 +175,18 @@ function materiauCarte(): THREE.ShaderMaterial {
 export function creerCarteChassis() {
   const groupe = new THREE.Group();
   let points: THREE.Points | null = null;
+  const blocs = new THREE.Group();
+  groupe.add(blocs);
 
   function grille(g: GrilleChassis): void {
     const octets = Uint8Array.from(atob(g.cellules), (c) => c.charCodeAt(0));
+    const murs = g.murs ?? [];
+    for (const b of blocs.children) {
+      for (const o of b.children) (o as THREE.Mesh).geometry.dispose();
+    }
+    blocs.clear();
+    for (const m of murs) blocs.add(blocDeMur(m));
+    const couvert = 1.5 * g.res;
     const xyz: number[] = [];
     const rvb: number[] = [];
     for (let j = 0; j < g.h; j++) {
@@ -153,7 +194,7 @@ export function creerCarteChassis() {
         const v = octets[j * g.w + i];
         const x = g.x0 + (i + 0.5) * g.res;
         const y = g.y0 + (j + 0.5) * g.res;
-        if (v > SEUIL_OCCUPE) {
+        if (v > SEUIL_OCCUPE && !murs.some((m) => distanceAuMur(x, y, m) < couvert)) {
           for (const z of MUR_Z) { xyz.push(x, y, z); rvb.push(0.56, 0.6, 0.68); }
         }
       }
