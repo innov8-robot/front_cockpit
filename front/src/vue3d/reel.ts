@@ -104,6 +104,7 @@ export interface GrilleChassis {
 const SEUIL_OCCUPE = 127;
 /** Comme `navigation.grille.grille_vers_nuage` (la vue 3D viser) : le sol à plat, chaque mur en colonnette. */
 const SOL_Z = 0.02;
+/** Les murs sont peints sous le seuil du halo (0,7) : seule l’impulsion du sonar y brille. */
 const MUR_Z = [0.2, 0.67, 1.13, 1.6];
 const PAS_SOL = 2;
 
@@ -155,7 +156,7 @@ export function creerCarteChassis() {
         const x = g.x0 + (i + 0.5) * g.res;
         const y = g.y0 + (j + 0.5) * g.res;
         if (v > SEUIL_OCCUPE) {
-          for (const z of MUR_Z) { xyz.push(x, y, z); rvb.push(0.85, 0.9, 1); }
+          for (const z of MUR_Z) { xyz.push(x, y, z); rvb.push(0.56, 0.6, 0.68); }
         } else if (v > 0 && i % PAS_SOL === 0 && j % PAS_SOL === 0) {
           xyz.push(x, y, SOL_Z);
           rvb.push(0.3, 0.38, 0.5);
