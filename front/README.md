@@ -40,6 +40,14 @@ serveur, choisie quand `VITE_API_URL` est défini. Aucun écran ne change.
 
 L'enregistrement d'une primitive est simulé (2,5 s) : au réel, il pilotera la démonstration au robot.
 
+## La proposition d'éditeur de missions
+
+**`#/essai/missions`** : user stories, cahier des charges, primitives réelles du cockpit, principes repris de n8n et
+de Scratch, charte graphique des nœuds, galerie des composants et prototype interactif (canevas, panneau, simulation).
+Le code est dans `src/components/missions/` : `charte.ts` (familles, sorties, états), `catalogue.ts` (les types de
+nœuds — en ajouter un, c'est une entrée), `Noeud.tsx` (nœud et cadre de boucle), `Prototype.tsx`, `proposition.ts`
+(le texte de la proposition).
+
 ## Les couleurs de la scène
 
 Une couleur = un sens. **Le rouge est réservé au danger** (arrêt d'urgence, alarme, moteur trop chaud, zone machine),
