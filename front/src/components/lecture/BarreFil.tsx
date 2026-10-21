@@ -1,10 +1,9 @@
 import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { duree } from '../executions/donnees';
-import { typePrimitive } from '../graphe/correspondance';
 import { teinte } from '../missions/apparence';
-import { ICONES, typeNoeud } from '../missions/catalogue';
-import { ETATS as ETATS_NOEUD, TONS } from '../missions/charte';
+import { ICONES } from '../missions/catalogue';
+import { ETATS as ETATS_NOEUD, FAMILLE, TONS } from '../missions/charte';
 import { BadgeEtat, IconePoints } from '../missions/Noeud';
 import { OndeChemin } from '../missions/Onde';
 import { construireFil, trajet, type NoeudFil } from './fil';
@@ -57,17 +56,20 @@ function IconeLecture() {
   return <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5l12 7-12 7z" fill="currentColor" /></svg>;
 }
 
-/** Une tuile du fil : celle de l'éditeur en petit, l'icône en points de sa famille, l'état au coin. */
+/**
+ * Une tuile du fil : celle de l'éditeur en petit, l'icône en points de sa famille, sa forme (un déclencheur arrondi à
+ * gauche, une fin à droite), l'état au coin.
+ */
 function Tuile({ n }: { n: NoeudFil }) {
-  const type = n.depart ? typeNoeud('au_lancement') : typePrimitive(n.primitive);
-  const badge = n.depart ? undefined : n.etat === 'ok' || n.etat === 'echec' || n.etat === 'danger' || n.etat === 'cours' ? n.etat : undefined;
+  const depart = n.type.famille === 'declencheur';
+  const badge = depart ? undefined : n.etat === 'ok' || n.etat === 'echec' || n.etat === 'danger' || n.etat === 'cours' ? n.etat : undefined;
   const style = {
-    ['--famille' as string]: teinte(type.famille, 'familles'), ['--t' as string]: `${n.taille}px`,
+    ['--famille' as string]: teinte(n.type.famille, 'familles'), ['--t' as string]: `${n.taille}px`,
     ['--etat' as string]: badge ? ETATS_NOEUD[badge].couleur : 'transparent',
   } as CSSProperties;
   return (
-    <span className={`bl-tuile bf-tuile-${n.etat} ${n.depart ? 'bf-depart' : ''}`} style={style}>
-      <span className="bl-tuile-matrice"><IconePoints d={ICONES[type.icone] ?? ICONES.note} cadre={14} /></span>
+    <span className={`bl-tuile bf-tuile-${n.etat} bf-forme-${FAMILLE[n.type.famille]?.forme ?? 'action'}`} style={style}>
+      <span className="bl-tuile-matrice"><IconePoints d={ICONES[n.type.icone] ?? ICONES.note} cadre={14} /></span>
       {n.etat === 'pause' ? <span className="bf-badge bf-badge-pause" aria-label="en pause">‖</span>
         : n.etat === 'erreur' ? <span className="bf-badge bf-badge-erreur" aria-label="erreur">✕</span> : <BadgeEtat etat={badge} />}
     </span>
@@ -90,9 +92,10 @@ export function BarreFil({ l, pause, acquitter, lien }: { l: Lecture; pause(): v
   const fini = l.etat === 'reussie' || l.etat === 'erreur';
   const enPause = l.etat === 'pause';
   const e = ETATS[l.etat];
+  const halo = l.message?.niveau === 'erreur' ? 'erreur' : enPause ? 'pause' : l.message?.niveau ?? null;
   return (
     <div className="bl-pile">
-      <div className={`bl-barre bl-etat-${l.etat} ${l.message ? `bl-halo-${l.message.niveau}` : ''}`} role="toolbar" aria-label={`Mission ${l.mission.nom}`}>
+      <div className={`bl-barre bl-etat-${l.etat} ${halo ? `bl-halo-${halo}` : ''}`} role="toolbar" aria-label={`Mission ${l.mission.nom}`}>
         <div className="bl-identite">
           {lien ? <Link className="bl-nom" to={lien} title={`Ouvrir ${l.mission.nom}`}>{l.mission.nom}</Link>
             : <strong className="bl-nom" title={l.mission.nom}>{l.mission.nom}</strong>}
@@ -108,8 +111,8 @@ export function BarreFil({ l, pause, acquitter, lien }: { l: Lecture; pause(): v
               <svg className="bf-liens" width="1" height="1" aria-hidden="true">
                 {f.liens.map((k) => (
                   <g key={k.id} className={k.hors ? 'bf-hors' : undefined}>
-                    <path d={k.d} data-lien={k.id} className={`bf-lien ${k.echec ? 'bf-lien-echec' : ''}`} />
-                    {k.fleche && <path d={k.fleche} className={`bf-fleche ${k.echec ? 'bf-lien-echec' : ''}`} />}
+                    <path d={k.d} data-lien={k.id} className={`bf-lien ${k.pointille ? 'bf-lien-echec' : ''}`} />
+                    {k.fleche && <path d={k.fleche} className={`bf-fleche ${k.pointille ? 'bf-lien-echec' : ''}`} />}
                     <OndeChemin d={k.d} etat={k.etat} ton={k.ton} />
                   </g>
                 ))}
@@ -123,13 +126,13 @@ export function BarreFil({ l, pause, acquitter, lien }: { l: Lecture; pause(): v
               </svg>
               {f.noeuds.map((n) => (
                 <div key={n.id} className={`bf-noeud ${n === ouvert ? 'bf-arrive' : ''}`} style={{ left: n.x, top: n.y }}
-                  title={n.depart ? 'Lancement' : n.primitive?.nom}>
+                  title={n.nom}>
                   <Tuile n={n} />
                 </div>
               ))}
               {ouvert && (
                 <span key={t.cle} className="bf-etiquette" style={{ left: ouvert.x, top: ouvert.y + ouvert.taille / 2 + 6 }}>
-                  {ouvert.primitive?.nom ?? 'Primitive supprimée'}
+                  {ouvert.nom}
                 </span>
               )}
             </div>

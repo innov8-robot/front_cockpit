@@ -1,7 +1,6 @@
 import { useState, type CSSProperties } from 'react';
-import type { Mission } from '../api/types';
 import { BarreFil } from '../components/lecture/BarreFil';
-import { MISSIONS_ESSAI, useScenario } from '../components/lecture/scenario';
+import { MISSIONS_ESSAI, useScenario, type MissionEssai } from '../components/lecture/scenario';
 
 const LARGEURS = [
   { cle: 'ecran', libelle: 'Écran', px: 1200 },
@@ -10,6 +9,12 @@ const LARGEURS = [
 ] as const;
 
 const VITESSES = [1, 3, 8];
+
+const MISSIONS = [
+  { cle: 'prototype', libelle: 'Mission du prototype · boucle, condition, opérateur' },
+  { cle: 'longue', libelle: 'Longue · branche échec · ×3' },
+  { cle: 'courte', libelle: 'Courte · ×4' },
+] as const;
 
 /** Le système graphique de la barre : chaque état a une couleur, un signe et un mouvement, et rien d'autre ne les prend. */
 const SYSTEME = [
@@ -22,7 +27,7 @@ const SYSTEME = [
 ];
 
 /** La barre menée par une mission simulée, et les gestes de l'opérateur sur elle. */
-function Banc({ mission, vitesse, largeur }: { mission: Mission; vitesse: number; largeur: number }) {
+function Banc({ mission, vitesse, largeur }: { mission: MissionEssai; vitesse: number; largeur: number }) {
   const s = useScenario(mission, vitesse);
   const l = s.lecture;
   const fini = l.etat === 'reussie' || l.etat === 'erreur';
@@ -37,7 +42,7 @@ function Banc({ mission, vitesse, largeur }: { mission: Mission; vitesse: number
         {l.etat === 'urgence'
           ? <button className="lm-bouton" onClick={s.rearmer}>Réarmer</button>
           : <button className="lm-bouton bl-commande-urgence" onClick={s.urgence} disabled={fini}>Arrêt d’urgence</button>}
-        <span className="bl-commandes-note">La prise rate seule au tour 2 (rattrapée par sa branche échec). Réussie, la mission repart au bout de 6 s ; en erreur, à l’acquittement.</span>
+        <span className="bl-commandes-note">{mission.repetitions > 1 ? 'La prise rate seule au tour 2, rattrapée par sa branche échec.' : 'Trois pièces : le bac est plein à la deuxième, la troisième ne se prend pas.'} Réussie, la mission repart au bout de 6 s ; en erreur, à l’acquittement.</span>
       </div>
       <div className="bl-scene" style={{ maxWidth: largeur }}><BarreFil l={l} pause={s.pause} acquitter={s.acquitter} /></div>
     </>
@@ -46,7 +51,7 @@ function Banc({ mission, vitesse, largeur }: { mission: Mission; vitesse: number
 
 /** La barre de la mission qui joue : le fil, sur le graphe de la mission (#/essai/barre-lecture). */
 export function EssaiBarreLecture() {
-  const [mission, setMission] = useState<keyof typeof MISSIONS_ESSAI>('longue');
+  const [mission, setMission] = useState<keyof typeof MISSIONS_ESSAI>('prototype');
   const [vitesse, setVitesse] = useState(3);
   const [largeur, setLargeur] = useState<(typeof LARGEURS)[number]['cle']>('ecran');
   return (
@@ -54,10 +59,8 @@ export function EssaiBarreLecture() {
       <header className="lm-page-tete">
         <p className="essai-barre-sur">ESSAI · BARRE DE LECTURE</p>
         <span className="em-segment lm-choix">
-          {(['longue', 'courte'] as const).map((m) => (
-            <button key={m} className={mission === m ? 'actif' : ''} onClick={() => setMission(m)}>
-              {m === 'longue' ? 'Mission longue · branche échec · ×3' : 'Mission courte · ×4'}
-            </button>
+          {MISSIONS.map((m) => (
+            <button key={m.cle} className={mission === m.cle ? 'actif' : ''} onClick={() => setMission(m.cle)}>{m.libelle}</button>
           ))}
         </span>
         <span className="em-segment lm-choix">

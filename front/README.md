@@ -99,13 +99,16 @@ En haut de l'accueil (`components/BarreMission.tsx`) : au repos, choisir une mis
 le vert n'est jamais un bouton) ; pendant la mission, le fil ; à la fin, son issue, lue dans son dernier run. Le nom
 de la mission ouvre son onglet Exécutions. Pendant une mission, les écrans ouverts et les calques se rangent sous le
 fil, plus haut que la barre au repos. Banc d'essai : **`#/essai/barre-lecture`**, sur une mission simulée (branche
-« échec », tours, pause, avertissement, erreur bloquante, arrêt d'urgence, mission longue ou courte).
+« échec », tours, pause, avertissement, erreur bloquante, arrêt d'urgence) : celle du prototype de l'éditeur (une
+boucle sur les pièces, une condition, deux appels à l'opérateur, une prise qui rate), une longue, une courte. Le fil
+dessine tout nœud du catalogue — primitives, logique, opérateur, fin — avec ses sorties (alors / sinon, fini / faire) ;
+la prévision s'arrête devant une condition ou une boucle, et un nouveau tour de boucle remet son corps à neuf.
 
 Le fil : le graphe de la mission tel que l'éditeur le dessine, réduit dans la barre. Quand une étape finit, une
 étincelle part sur le fil que la mission a pris (vert « réussi », ambre « échec ») et la caméra la suit dans tous les
 sens jusqu'à l'étape suivante, qui s'ouvre à son arrivée avec son nom. Aucune durée n'est prédite : on ne sait pas
 combien de temps une étape va tourner. Le système de la barre : blanc ce qui vit, gris ce qui est suspendu (la pause
-n'est pas une alerte), vert ce qui a réussi, ambre ce qui n'arrête rien mais demande de l'attention, rouge ce qui a
+n'est pas une alerte : un halo blanc qui respire), vert ce qui a réussi, ambre ce qui n'arrête rien mais demande de l'attention, rouge ce qui a
 arrêté la mission ; les actions sont blanches, pleine pour la principale (Reprendre, Acquitter), en contour pour la
 secondaire (Pause). Un halo autour de la barre et un message dessous disent l'issue : vert la mission terminée, ambre
 un avertissement ou une étape rattrapée par sa branche « échec » (il s'efface seul), rouge une erreur qui l'arrête

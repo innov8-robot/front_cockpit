@@ -1999,6 +1999,13 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
   animation: bl-halo-erreur 0.45s ease-out 2;
 }
 @keyframes bl-halo-erreur { 50% { box-shadow: 0 0 0 2px rgb(255 45 58 / 0.8), 0 0 60px rgb(255 45 58 / 0.7), 0 14px 44px rgb(0 0 0 / 0.55); } }
+/* En pause, un halo blanc qui respire lentement : la mission attend, rien n'est en faute. */
+.bl-barre.bl-halo-pause { border-color: rgb(233 238 247 / 0.55); animation: bl-halo-pause 2.4s ease-in-out infinite; }
+@keyframes bl-halo-pause {
+  0%, 100% { box-shadow: 0 0 0 1px rgb(233 238 247 / 0.15), 0 0 14px rgb(233 238 247 / 0.12), 0 14px 44px rgb(0 0 0 / 0.55); }
+  50% { box-shadow: 0 0 0 1px rgb(233 238 247 / 0.45), 0 0 34px rgb(233 238 247 / 0.38), 0 14px 44px rgb(0 0 0 / 0.55); }
+}
+@media (prefers-reduced-motion: reduce) { .bl-barre.bl-halo-pause { animation: none; box-shadow: 0 0 0 1px rgb(233 238 247 / 0.35), 0 0 24px rgb(233 238 247 / 0.25), 0 14px 44px rgb(0 0 0 / 0.55); } }
 .bl-pile { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .bl-pile > .bl-barre { align-self: stretch; }
 .bl-message {
@@ -2089,8 +2096,9 @@ a.bl-nom:hover { text-decoration: underline; text-underline-offset: 3px; }
 .bf-badge { position: absolute; z-index: 2; display: grid; place-items: center; border-radius: 50%; box-sizing: border-box; font: 800 8px/1 ui-monospace, monospace; color: #0b0d10; box-shadow: 0 0 0 2px #0b0d10; }
 .bf-badge-pause { background: #c9ced6; }
 .bf-badge-erreur { background: var(--rouge); box-shadow: 0 0 0 2px #0b0d10, 0 0 10px var(--rouge); }
-.bf-depart { border-radius: 50% 7px 7px 50%; border-color: rgb(233 238 247 / 0.45); }
-.bf-tuile-ok:not(.bf-depart) { border-color: rgb(61 255 138 / 0.6); }
+.bf-forme-chapeau { border-radius: 50% 7px 7px 50%; border-color: rgb(233 238 247 / 0.45); }
+.bf-forme-fin { border-radius: 7px 50% 50% 7px; }
+.bf-tuile-ok:not(.bf-forme-chapeau) { border-color: rgb(61 255 138 / 0.6); }
 .bf-tuile-echec { border-color: var(--ambre); box-shadow: 0 0 12px rgb(255 176 46 / 0.3); }
 .bf-tuile-cours { border-color: #e9eef7; box-shadow: 0 0 18px rgb(233 238 247 / 0.35); animation: em-respire-tuile 1s ease-in-out infinite; }
 .bf-tuile-pause { border-color: #c9ced6; }

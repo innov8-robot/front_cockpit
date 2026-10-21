@@ -4,23 +4,45 @@
  */
 import type { Execution, Mission, Primitive, Run } from '../../api/types';
 import { duree } from '../executions/donnees';
-import { MESSAGE_URGENCE, prevus, type Lecture, type PasLecture } from './lecture';
+import { poignee, typePrimitive } from '../graphe/correspondance';
+import { typeNoeud } from '../missions/catalogue';
+import { MESSAGE_URGENCE, prevus, type GrapheLecture, type Lecture, type PasLecture } from './lecture';
+
+/**
+ * Le graphe d'une mission de l'API : le départ devient le déclencheur « au lancement » (sa sortie « réussi » devient
+ * « suite », comme sur le canevas), chaque primitive sa tuile.
+ */
+export function grapheDe(m: Mission, primitives: Primitive[]): GrapheLecture {
+  return {
+    id: m.id, nom: m.nom,
+    noeuds: m.noeuds.map((n) => {
+      const p = primitives.find((x) => x.id === n.primitiveId);
+      return n.primitiveId === null
+        ? { id: n.id, x: n.x, y: n.y, type: typeNoeud('au_lancement'), nom: 'Lancement' }
+        : { id: n.id, x: n.x, y: n.y, type: typePrimitive(p), nom: p?.nom ?? 'Primitive supprimée' };
+    }),
+    liens: m.liens.map((l) => ({ id: l.id, de: l.de, sortie: poignee(l.de, l.sortie), vers: l.vers })),
+  };
+}
 
 /** La mission qui joue, telle que la barre la montre. */
 export function lectureDirecte(m: Mission, primitives: Primitive[], x: Execution, urgence: boolean): Lecture {
+  const g = grapheDe(m, primitives);
   const joues = x.joues ?? x.chemin.slice(1, x.etape + 1).map((noeud, i, t) => ({
     noeud, par: 'ok' as const, issue: i < t.length - 1 ? ('reussi' as const) : ('cours' as const),
   }));
-  const pas: PasLecture[] = joues.map((j, i) => ({ cle: `${x.repetition}:${i}:${j.noeud}`, noeud: j.noeud, issue: j.issue, par: j.par, tour: x.repetition }));
+  const pas: PasLecture[] = joues.map((j, i) => ({
+    cle: `${x.repetition}:${i}:${j.noeud}`, noeud: j.noeud, issue: j.issue, par: poignee(joues[i - 1]?.noeud ?? 'depart', j.par), tour: x.repetition,
+  }));
   const courant = pas.findIndex((p) => p.issue === 'cours');
   if (courant >= 0) {
-    for (const id of prevus(m, pas[courant].noeud, new Set(['depart', ...joues.map((j) => j.noeud)]))) {
-      pas.push({ cle: `${x.repetition}:${pas.length}:${id}`, noeud: id, issue: 'prevu', par: 'ok', tour: x.repetition });
+    for (const s of prevus(g, pas[courant].noeud, new Set([pas[courant].noeud]))) {
+      pas.push({ cle: `${x.repetition}:${pas.length}:${s.noeud}`, noeud: s.noeud, issue: 'prevu', par: s.par, tour: x.repetition });
     }
   }
   return {
-    mission: m, primitives, pas, courant, dureeS: x.dureeS, dureeEtapeS: x.dureeEtapeS ?? null, tour: x.repetition,
-    tours: x.repetitions, etat: urgence ? 'urgence' : x.enPause ? 'pause' : 'cours',
+    mission: g, pas, courant, dureeS: x.dureeS, dureeEtapeS: x.dureeEtapeS ?? null, tour: x.repetition, tours: x.repetitions,
+    etat: urgence ? 'urgence' : x.enPause ? 'pause' : 'cours',
     message: urgence ? MESSAGE_URGENCE : x.alerte ? { niveau: x.alerte.niveau, texte: x.alerte.texte } : null,
   };
 }

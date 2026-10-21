@@ -3,9 +3,9 @@
  * fils de l'éditeur (courbes, retours par-dessous). Chaque nœud et chaque fil prend l'état du tour en cours.
  */
 import { getBezierPath, Position } from '@xyflow/react';
-import type { Primitive } from '../../api/types';
-import type { EtatLien, Ton } from '../missions/charte';
-import { cheminRetour } from '../missions/liens';
+import { sortiesVisibles, type TypeNoeud } from '../missions/catalogue';
+import { SORTIES, type EtatLien, type Sortie, type Ton } from '../missions/charte';
+import { cheminRetour, tonDe } from '../missions/liens';
 import type { Lecture } from './lecture';
 import type { Point } from './travelling';
 
@@ -15,6 +15,8 @@ import type { Point } from './travelling';
  */
 const ECHELLE = { x: 0.55, y: 0.22 };
 const DEMI_TUILE_EDITEUR = 38;
+/** Le retour d'une boucle passe sous les nœuds, à la distance de l'éditeur, réduite. */
+const RETOUR = { sous: 96 * ECHELLE.y, ecart: 24 * ECHELLE.x, r: 6 };
 export const TUILE = 28;
 export const TUILE_OUVERTE = 36;
 /** Quand l'étape d'avant est plus haut, la caméra remonte de cette part de l'écart : le fil qui arrive reste visible. */
@@ -24,8 +26,8 @@ export type EtatFil = 'ok' | 'echec' | 'cours' | 'pause' | 'danger' | 'erreur' |
 
 export interface NoeudFil {
   id: string;
-  primitive: Primitive | undefined;
-  depart: boolean;
+  type: TypeNoeud;
+  nom: string;
   x: number;
   y: number;
   taille: number;
@@ -38,7 +40,7 @@ export interface LienFil {
   fleche: string | null;
   etat: EtatLien;
   ton: Ton;
-  echec: boolean;
+  pointille: boolean;
   /** Hors du chemin de ce tour : ni joué, ni en cours, ni prévu. */
   hors: boolean;
 }
@@ -52,7 +54,7 @@ function precedent(l: Lecture, i: number): string {
   return p && p.tour === l.pas[i].tour ? p.noeud : 'depart';
 }
 
-const lienEntre = (l: Lecture, de: string, vers: string, sortie: string) =>
+const lienEntre = (l: Lecture, de: string, vers: string, sortie: Sortie) =>
   l.mission.liens.find((x) => x.de === de && x.vers === vers && x.sortie === sortie);
 
 /** Où va la caméra : l'étape en cours (ou la dernière jouée), et le fil qui y mène. */
@@ -77,13 +79,39 @@ function etatDuPas(l: Lecture, issue: string, arrive: boolean): EtatFil {
   return l.etat === 'pause' ? 'pause' : 'cours';
 }
 
-/** Le tracé d'un fil, de la sortie d'un nœud à l'entrée d'un autre : une courbe, ou un retour par-dessous. */
-function trace(a: NoeudFil, b: NoeudFil, sortie: string, deuxSorties: boolean) {
+/**
+ * Le tracé d'un fil, de la sortie d'un nœud à l'entrée d'un autre : une courbe, ou un retour par-dessous. Les sorties
+ * d'un nœud se répartissent sur son bord droit, dans l'ordre du catalogue, comme dans l'éditeur.
+ */
+function trace(a: NoeudFil, b: NoeudFil, sortie: Sortie, sorties: Sortie[]) {
+  const rang = sorties.indexOf(sortie);
   const sx = a.x + a.taille / 2;
-  const sy = a.y + (deuxSorties ? ((sortie === 'echec' ? 1 : -1) * a.taille) / 6 : 0);
+  const sy = rang < 0 ? a.y : a.y - a.taille / 2 + (a.taille * (rang + 1)) / (sorties.length + 1);
   const tx = b.x - b.taille / 2;
-  if (tx < sx + 10) return cheminRetour(sx, sy, tx, b.y, { sous: 26, ecart: 12, r: 8 });
+  if (tx < sx + 10) return cheminRetour(sx, sy, tx, b.y, RETOUR);
   return { d: getBezierPath({ sourceX: sx, sourceY: sy, sourcePosition: Position.Right, targetX: tx, targetY: b.y, targetPosition: Position.Left })[0], fleche: null };
+}
+
+/** Ce qui s'est passé dans le tour, nœud par nœud, avec le fil qui y a mené. */
+interface Trace { noeud: string; lien: string | null; etat: EtatFil; prevu: boolean; courant: boolean }
+
+/**
+ * Le tour en cours, rejoué dans l'ordre. Repasser par un nœud — une boucle qui reprend — remet à neuf ce qui l'a suivi
+ * la fois d'avant : on voit le tour de boucle en cours, pas l'empilement des précédents.
+ */
+function historique(l: Lecture, arrive: boolean): Trace[] {
+  const i = indexCible(l);
+  const tour = l.pas[i]?.tour;
+  const h: Trace[] = [{ noeud: 'depart', lien: null, etat: 'ok', prevu: false, courant: false }];
+  for (const [k, p] of l.pas.entries()) {
+    if (p.tour !== tour) continue;
+    const lien = lienEntre(l, precedent(l, k), p.noeud, p.par)?.id ?? null;
+    const avant = h.findLastIndex((x) => x.noeud === p.noeud);
+    if (avant >= 0 && p.issue !== 'prevu') h.splice(avant + 1);
+    const etat = l.etat === 'erreur' && k === l.pas.length - 1 ? 'erreur' : etatDuPas(l, p.issue, arrive);
+    h.push({ noeud: p.noeud, lien, etat: p.issue === 'prevu' && avant >= 0 ? h[avant].etat : etat, prevu: p.issue === 'prevu', courant: k === l.courant });
+  }
+  return h;
 }
 
 /**
@@ -91,23 +119,14 @@ function trace(a: NoeudFil, b: NoeudFil, sortie: string, deuxSorties: boolean) {
  * en cours est « en approche » et son fil n'a pas encore son onde.
  */
 export function construireFil(l: Lecture, arrive: boolean): { noeuds: NoeudFil[]; liens: LienFil[]; lienCourant: LienFil | null } {
-  const i = indexCible(l);
-  const tour = l.pas[i]?.tour;
-  const etats = new Map<string, EtatFil>([['depart', 'ok']]);
+  const h = historique(l, arrive);
+  const etats = new Map(h.map((x) => [x.noeud, x.etat]));
   const pris = new Map<string, EtatLien>();
-  let idCourant: string | null = null;
-  for (const [k, p] of l.pas.entries()) {
-    if (p.tour !== tour) continue;
-    etats.set(p.noeud, l.etat === 'erreur' && k === l.pas.length - 1 ? 'erreur' : etatDuPas(l, p.issue, arrive));
-    const lien = lienEntre(l, precedent(l, k), p.noeud, p.par);
-    if (!lien) continue;
-    if (k === l.courant) idCourant = lien.id;
-    pris.set(lien.id, k === l.courant ? (arrive ? 'actif' : 'aucun') : p.issue === 'prevu' ? 'aucun' : 'parcouru');
-  }
-  const ouvert = l.courant >= 0 && arrive ? l.pas[i].noeud : null;
+  for (const x of h) if (x.lien) pris.set(x.lien, x.courant ? (arrive ? 'actif' : 'aucun') : x.prevu ? 'aucun' : 'parcouru');
+  const idCourant = h.find((x) => x.courant)?.lien ?? null;
+  const ouvert = l.courant >= 0 && arrive ? l.pas[l.courant].noeud : null;
   const noeuds: NoeudFil[] = l.mission.noeuds.map((n) => ({
-    id: n.id, primitive: l.primitives.find((p) => p.id === n.primitiveId), depart: n.primitiveId === null, ...centre(n),
-    taille: n.id === ouvert ? TUILE_OUVERTE : TUILE, etat: etats.get(n.id) ?? 'hors',
+    id: n.id, type: n.type, nom: n.nom, ...centre(n), taille: n.id === ouvert ? TUILE_OUVERTE : TUILE, etat: etats.get(n.id) ?? 'hors',
   }));
   const parId = new Map(noeuds.map((n) => [n.id, n]));
   const avecEchec = new Set(l.mission.liens.filter((x) => x.sortie === 'echec').map((x) => x.de));
@@ -115,10 +134,10 @@ export function construireFil(l: Lecture, arrive: boolean): { noeuds: NoeudFil[]
     const a = parId.get(x.de);
     const b = parId.get(x.vers);
     if (!a || !b) return [];
-    const { d, fleche } = trace(a, b, x.sortie, avecEchec.has(x.de) && !a.depart);
+    const { d, fleche } = trace(a, b, x.sortie, sortiesVisibles(a.type, avecEchec.has(a.id)));
     const courant = x.id === idCourant;
-    const ton: Ton = courant && l.etat === 'urgence' ? 'danger' : courant && l.etat === 'pause' ? 'neutre' : x.sortie === 'echec' ? 'echec' : 'ok';
-    return [{ id: x.id, d, fleche, etat: pris.get(x.id) ?? 'aucun', ton, echec: x.sortie === 'echec', hors: !pris.has(x.id) }];
+    const ton: Ton = courant && l.etat === 'urgence' ? 'danger' : courant && l.etat === 'pause' ? 'neutre' : tonDe(x.sortie);
+    return [{ id: x.id, d, fleche, etat: pris.get(x.id) ?? 'aucun', ton, pointille: SORTIES[x.sortie].pointille, hors: !pris.has(x.id) }];
   });
   return { noeuds, liens, lienCourant: liens.find((k) => k.id === idCourant) ?? null };
 }
