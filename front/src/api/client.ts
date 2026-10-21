@@ -1,5 +1,7 @@
 import type { Cote, EtatCapteurs, EtatCorps, Execution, Mission, ModeBras, NouvellePrimitive, Primitive, Robot, Run } from './types';
 import { apiSimulee } from './mock';
+import { modeCourant, urlServeur } from './mode';
+import { apiReelle } from './reel';
 
 /** Le contrat entre le front et le back. Les écrans ne parlent qu'à lui. */
 export interface Api {
@@ -38,9 +40,9 @@ export interface Api {
   runs(filtre?: { robotId?: string; missionId?: string }): Promise<Run[]>;
 }
 
-/** Tant qu'aucun back n'est déclaré (VITE_API_URL), le front tourne sur des données simulées. */
-export const api: Api = apiSimulee;
-export const enSimulation = !import.meta.env.VITE_API_URL;
+/** La source choisie sur cet appareil (`mode.ts`) : la simulation embarquée, ou le serveur du robot. */
+export const enSimulation = modeCourant() === 'simulation';
+export const api: Api = enSimulation ? apiSimulee : apiReelle(urlServeur());
 
 /** Le robot de l'appli : il n'y en a qu'un pour l'instant, le premier que le back connaît. */
 export const robotUnique = () => api.robots().then((rs) => rs[0]);

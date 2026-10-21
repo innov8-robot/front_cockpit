@@ -9,6 +9,8 @@ import { CALQUE_DETECTIONS, creerDetections, PREMIER_CADRE_S, type Detections } 
 import { creerEnvironnement, teinterMeubles, type Segmentation } from './environnement';
 import { creerHologramme } from './hologramme';
 import { CAMERA_TETE, creerNuages, type Nuages } from './nuages';
+import type { TrameImage, TrameNuage } from '../api/flux';
+import { creerNuagesReels, type NuagesReels } from './reel';
 import { allumerRobot, animerRobot, chargerRobot } from './robot';
 import { creerBandeSol, creerSol } from './sol';
 import { fixerObstacles, mettreAJourSonar, teinterSonar } from './sonar';
@@ -49,6 +51,13 @@ export interface Scene3D {
   /** Ce que le pointeur survole et qu'on peut ouvrir : l'écran de la caméra, ou rien. */
   cibleSous(clientX: number, clientY: number): 'camera' | null;
   survolerCamera(actif: boolean): void;
+  /**
+   * Passe aux données du vrai robot : l'atelier et les nuages simulés s'effacent, les nuages réels prennent leur
+   * place (le lidar sur le torse, la caméra sur la caméra de tête) et ses calques.
+   *
+   * @returns De quoi poser une trame de chaque flux.
+   */
+  brancherReel(): Promise<{ image(t: TrameImage): Promise<void>; nuage(t: TrameNuage): void }>;
   /** Plonge dans l'écran de la caméra jusqu'à voir par l'œil du robot (true), ou en ressort (false). */
   plongerCamera(entrer: boolean): Promise<void>;
   detruire(): void;
@@ -172,7 +181,13 @@ export function monterScene(hote: HTMLElement): Scene3D {
     u.uAccent.value.set(t.deploiement);
   }
 
+  let reels: NuagesReels | null = null;
+
   function appliquerVisibilite(): void {
+    if (reels) {
+      reels.camera.visible = visibles.camera;
+      reels.lidar.visible = visibles.lidar;
+    }
     sol.visible = visibles.sol;
     bandeSol.visible = visibles.sol;
     if (atelier) atelier.visible = visibles.atelier;
@@ -320,6 +335,24 @@ export function monterScene(hote: HTMLElement): Scene3D {
           } };
         }
       });
+    },
+    async brancherReel() {
+      await pret;
+      reels = creerNuagesReels();
+      const simules = [atelier, peau, segmentation?.groupe, nuages?.camera, nuages?.lidar, nuages?.carte];
+      for (const o of simules) if (o) o.removeFromParent();
+      detections?.afficher(false);
+      detections = null;
+      hologramme!.vraie.add(reels.camera);
+      (robot!.links.torso_link ?? robot!).add(reels.lidar);
+      appliquerVisibilite();
+      return {
+        image: async (t: TrameImage) => {
+          const bitmap = await reels!.image(t);
+          if (bitmap) hologramme!.afficherImage(bitmap);
+        },
+        nuage: (t: TrameNuage) => reels!.nuage(t),
+      };
     },
     demarrer() {
       if (debutApparition === null) debutApparition = horloge.getElapsedTime();

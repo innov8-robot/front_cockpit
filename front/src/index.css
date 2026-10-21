@@ -1218,3 +1218,42 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 @media (max-width: 899px) { .graphe-direct-nom { max-width: 90px; } }
 /* La planche réduite d'un bloc (tablette) : le dessin, les traits et les tableaux gardent leurs positions. */
 .corps-echelle { position: relative; transform-origin: 0 0; }
+
+/* Le choix de la source des données, en bas du menu de gauche (SelecteurSource.tsx). */
+.source { position: relative; margin-top: 4px; padding-top: 10px; border-top: 1px solid rgb(255 255 255 / 0.08); display: flex; justify-content: center; }
+.source-bouton {
+  display: flex; flex-direction: column; align-items: center; gap: 5px; width: 72px; padding: 8px 4px; border-radius: 12px;
+  border: 1px solid transparent; background: transparent; color: #8a93a3; cursor: pointer;
+  font: 600 9px/1 ui-monospace, monospace; letter-spacing: 0.14em;
+}
+.source-bouton:hover { color: #e9eef7; background: rgb(255 255 255 / 0.05); }
+.source-point { width: 9px; height: 9px; border-radius: 50%; background: #6b7480; }
+.source-simulation .source-point { background: #ffb02e; box-shadow: 0 0 8px rgb(255 176 46 / 0.7); }
+.source-simulation { color: #ffb02e; }
+.source-ok .source-point { background: #3dff8a; box-shadow: 0 0 8px rgb(61 255 138 / 0.8); }
+.source-ok { color: #3dff8a; }
+.source-pb .source-point { background: #ff2d3a; box-shadow: 0 0 9px #ff2d3a; animation: corps-alarme 0.8s steps(2) infinite; }
+.source-pb { color: #ff5a64; }
+.source-panneau {
+  position: absolute; left: calc(100% + 14px); bottom: 0; width: 280px; z-index: 9; padding: 14px; border-radius: 14px;
+  background: rgb(10 13 17 / 0.92); border: 1px solid rgb(255 255 255 / 0.12); box-shadow: 0 14px 44px rgb(0 0 0 / 0.55);
+  backdrop-filter: blur(14px); color: #e9eef7; display: flex; flex-direction: column; gap: 10px;
+}
+.source-titre { margin: 0; font: 600 10px/1 ui-monospace, monospace; letter-spacing: 0.18em; color: #8a93a3; }
+.source-choix { display: flex; gap: 4px; padding: 3px; border-radius: 10px; background: rgb(255 255 255 / 0.05); }
+.source-choix button {
+  flex: 1; padding: 8px; border: none; border-radius: 7px; background: transparent; color: #8a93a3; cursor: pointer;
+  font: 600 12px/1 inherit;
+}
+.source-choix button.actif { background: rgb(255 255 255 / 0.12); color: #fff; }
+.source-url { display: flex; flex-direction: column; gap: 5px; font-size: 11px; color: #8a93a3; }
+.source-url input {
+  min-height: 0; padding: 8px 10px; border-radius: 8px; border: 1px solid rgb(255 255 255 / 0.14); background: rgb(0 0 0 / 0.3);
+  color: #e9eef7; font: 12px/1.2 ui-monospace, monospace;
+}
+.source-aide { margin: 0; font-size: 11px; line-height: 1.45; color: #8a93a3; }
+.source-appliquer {
+  padding: 10px; border-radius: 10px; border: 1px solid #3dff8a; background: #3dff8a; color: #062211; cursor: pointer;
+  font: 700 11px/1 ui-monospace, monospace; letter-spacing: 0.16em;
+}
+.source-appliquer:disabled { background: transparent; border-color: rgb(255 255 255 / 0.12); color: #5b636e; cursor: default; }
