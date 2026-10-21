@@ -11,12 +11,14 @@ export function tonDe(s: Sortie): Ton {
   return ['faire', 'alors', 'sinon', 'cas1', 'cas2', 'autre'].includes(s) ? 'neutre' : 'ok';
 }
 
-/** Un lien qui revient en arrière — la fin d'un tour vers l'entrée de sa boucle — passe sous les nœuds, comme dans n8n. */
-export function cheminRetour(sx: number, sy: number, tx: number, ty: number) {
-  const bas = Math.max(sy, ty) + 96;
-  const r = 12;
-  const a = sx + 24;
-  const b = tx - 24;
+/**
+ * Un lien qui revient en arrière — la fin d'un tour vers l'entrée de sa boucle — passe sous les nœuds, comme dans n8n.
+ * `sous`, `ecart` et `r` le mettent à l'échelle d'un dessin plus petit que le canevas.
+ */
+export function cheminRetour(sx: number, sy: number, tx: number, ty: number, { sous = 96, ecart = 24, r = 12 } = {}) {
+  const bas = Math.max(sy, ty) + sous;
+  const a = sx + ecart;
+  const b = tx - ecart;
   const m = (a + b) / 2;
   return {
     d: `M${sx} ${sy}H${a - r}Q${a} ${sy} ${a} ${sy + r}V${bas - r}Q${a} ${bas} ${a - r} ${bas}H${b + r}Q${b} ${bas} ${b} ${bas - r}V${ty + r}Q${b} ${ty} ${b + r} ${ty}H${tx}`,

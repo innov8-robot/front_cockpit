@@ -1,22 +1,7 @@
-import { useState } from 'react';
-import { BarreFil, BarreFrise, BarreTravelling } from '../components/lecture/Barres';
-import { MISSIONS_ESSAI, useScenario } from '../components/lecture/scenario';
+import { useState, type CSSProperties } from 'react';
 import type { Mission } from '../api/types';
-
-const PROPOSITIONS = [
-  {
-    cle: 'a', nom: 'A · Le travelling', Barre: BarreTravelling,
-    idee: 'La chaîne sur un rail, chaque étape nommée. La caméra glisse de nœud en nœud et garde l’étape en cours au tiers gauche : derrière ce qui est fait, devant ce qui vient, et dessous où part la mission si elle rate.',
-  },
-  {
-    cle: 'b', nom: 'B · Le fil', Barre: BarreFil,
-    idee: 'Les étapes en tuiles seules ; celle qui se joue s’ouvre au centre, son nom en grand. Dessous, un segment par étape du tour, comme des stories : il se refait quand la mission prend la branche « échec ».',
-  },
-  {
-    cle: 'c', nom: 'C · La frise du temps', Barre: BarreFrise,
-    idee: 'Chaque étape est aussi longue que sa durée ; la tête de lecture reste fixe et le temps défile dessous. Devant elle, les étapes prévues à leur durée moyenne : on voit ce qui reste et quand ça finit.',
-  },
-] as const;
+import { BarreFil } from '../components/lecture/BarreFil';
+import { MISSIONS_ESSAI, useScenario } from '../components/lecture/scenario';
 
 const LARGEURS = [
   { cle: 'ecran', libelle: 'Écran', px: 1200 },
@@ -26,7 +11,17 @@ const LARGEURS = [
 
 const VITESSES = [1, 3, 8];
 
-/** Les trois barres, menées par la même mission simulée : on les compare sur les mêmes instants. */
+/** Le système graphique de la barre : chaque état a une couleur, un signe et un mouvement, et rien d'autre ne les prend. */
+const SYSTEME = [
+  { couleur: '#e9eef7', signe: '●', nom: 'En cours · blanc', texte: 'Ce qui vit : le point respire, l’étape tourne, l’onde file sur le fil qui y mène.' },
+  { couleur: '#8a93a3', signe: '‖', nom: 'En pause · gris', texte: 'Ce qui est suspendu : tout s’arrête, l’onde se fige et devient blanche. Rien d’alarmant.' },
+  { couleur: '#3dff8a', signe: '✓', nom: 'Réussi · vert', texte: 'Une étape réussie, le fil « réussi » pris, la mission terminée. Jamais un bouton.' },
+  { couleur: '#ffb02e', signe: '!', nom: 'Attention · ambre', texte: 'Une étape ratée et la branche « échec » qu’elle prend (fil pointillé), une mission échouée.' },
+  { couleur: '#ff2d3a', signe: '■', nom: 'Danger · rouge', texte: 'L’arrêt d’urgence : la barre entière, l’étape arrêtée, plus rien ne bouge.' },
+  { couleur: '#e9eef7', signe: '▶', nom: 'Action · blanc plein', texte: 'L’action principale (Reprendre) est pleine, la secondaire (Pause) en contour.', plein: true },
+];
+
+/** La barre menée par une mission simulée, et les gestes de l'opérateur sur elle. */
 function Banc({ mission, vitesse, largeur }: { mission: Mission; vitesse: number; largeur: number }) {
   const s = useScenario(mission, vitesse);
   const l = s.lecture;
@@ -42,18 +37,12 @@ function Banc({ mission, vitesse, largeur }: { mission: Mission; vitesse: number
           : <button className="lm-bouton bl-commande-urgence" onClick={s.urgence} disabled={fini}>Arrêt d’urgence</button>}
         <span className="bl-commandes-note">La prise rate seule au tour 2 ; à la fin, la mission repart au bout de 6 s.</span>
       </div>
-      {PROPOSITIONS.map(({ cle, nom, idee, Barre }) => (
-        <section key={cle} className="bl-proposition">
-          <h2>{nom}</h2>
-          <p>{idee}</p>
-          <div className="bl-scene" style={{ maxWidth: largeur }}><Barre l={l} pause={s.pause} /></div>
-        </section>
-      ))}
+      <div className="bl-scene" style={{ maxWidth: largeur }}><BarreFil l={l} pause={s.pause} /></div>
     </>
   );
 }
 
-/** Trois propositions pour la barre de la mission qui joue (#/essai/barre-lecture). */
+/** La barre de la mission qui joue : le fil, sur le graphe de la mission (#/essai/barre-lecture). */
 export function EssaiBarreLecture() {
   const [mission, setMission] = useState<keyof typeof MISSIONS_ESSAI>('longue');
   const [vitesse, setVitesse] = useState(3);
@@ -75,8 +64,21 @@ export function EssaiBarreLecture() {
         <span className="em-segment lm-choix">
           {LARGEURS.map((x) => <button key={x.cle} className={largeur === x.cle ? 'actif' : ''} onClick={() => setLargeur(x.cle)}>{x.libelle}</button>)}
         </span>
+        <p className="lm-idee">
+          Le graphe de la mission tel que l’éditeur le dessine. Quand une étape finit, une étincelle part sur le fil que la
+          mission a pris et la caméra la suit, en haut, en bas, en arrière, jusqu’à l’étape suivante, qui s’ouvre à son arrivée.
+        </p>
       </header>
       <Banc key={mission} mission={MISSIONS_ESSAI[mission]} vitesse={vitesse} largeur={LARGEURS.find((x) => x.cle === largeur)!.px} />
+      <h2 className="bl-titre">Le système graphique</h2>
+      <div className="bl-systeme">
+        {SYSTEME.map((x) => (
+          <div key={x.nom}>
+            <span className={`bl-signe ${x.plein ? 'bl-signe-plein' : ''}`} style={{ ['--c' as string]: x.couleur } as CSSProperties}>{x.signe}</span>
+            <span><b>{x.nom}</b><span>{x.texte}</span></span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

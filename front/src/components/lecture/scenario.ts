@@ -5,7 +5,7 @@
  */
 import { useEffect, useReducer } from 'react';
 import type { Mission, Primitive, TypePrimitive } from '../../api/types';
-import { prevus, suivant, type EtatLecture, type Lecture, type PasLecture } from './lecture';
+import { prevus, suivant, type Lecture, type PasLecture } from './lecture';
 
 const primitive = (id: string, nom: string, type: TypePrimitive): Primitive => ({
   id, nom, type, description: '', objet: null, ancrage: null, poste: null, vitesse: 1, creeLe: '', creePar: '',
@@ -21,26 +21,26 @@ const PRIMITIVES = [
   primitive('base', 'Retour à la base', 'deplacer'),
 ];
 
-const noeud = (id: string, primitiveId: string | null) => ({ id, primitiveId, x: 0, y: 0 });
+const noeud = (id: string, primitiveId: string | null, x: number, y: number) => ({ id, primitiveId, x, y });
 const lien = (de: string, sortie: 'ok' | 'echec', vers: string) => ({ id: `${de}-${sortie}-${vers}`, de, sortie, vers });
 
 export const MISSIONS_ESSAI: Record<'longue' | 'courte', Mission> = {
   longue: {
     id: 'essai-longue', nom: 'Vider la table dans le bac', description: '', robotId: 'r1', repetitions: 3, etat: 'en_cours', modifieeLe: '',
-    noeuds: [noeud('depart', null), noeud('n1', 'table'), noeud('n2', 'prise'), noeud('n3', 'bac'), noeud('n4', 'depose'),
-      noeud('n5', 'rentrer'), noeud('n6', 'base')],
+    noeuds: [noeud('depart', null, 0, 100), noeud('n1', 'table', 250, 100), noeud('n2', 'prise', 520, 100), noeud('n3', 'bac', 800, 0),
+      noeud('n4', 'depose', 1080, 0), noeud('n5', 'rentrer', 800, 230), noeud('n6', 'base', 1080, 230)],
     liens: [lien('depart', 'ok', 'n1'), lien('n1', 'ok', 'n2'), lien('n2', 'ok', 'n3'), lien('n3', 'ok', 'n4'),
-      lien('n2', 'echec', 'n5'), lien('n4', 'echec', 'n5'), lien('n5', 'ok', 'n6')],
+      lien('n2', 'echec', 'n5'), lien('n5', 'ok', 'n6')],
   },
   courte: {
     id: 'essai-courte', nom: 'Prendre et déposer', description: '', robotId: 'r1', repetitions: 4, etat: 'en_cours', modifieeLe: '',
-    noeuds: [noeud('depart', null), noeud('n1', 'prise'), noeud('n2', 'depose'), noeud('n3', 'rentrer')],
+    noeuds: [noeud('depart', null, 0, 80), noeud('n1', 'prise', 250, 80), noeud('n2', 'depose', 520, 0), noeud('n3', 'rentrer', 520, 190)],
     liens: [lien('depart', 'ok', 'n1'), lien('n1', 'ok', 'n2'), lien('n1', 'echec', 'n3')],
   },
 };
 
-/** La durée moyenne d'une étape, par type de primitive (s). */
-const MOYENNE: Record<TypePrimitive, number> = { deplacer: 14, prise_objet: 18, prise_boite: 20, depose: 11, rentrer: 6 };
+/** La durée d'une étape simulée, par type de primitive (s) ; elle varie d'un tour à l'autre. */
+const DUREE: Record<TypePrimitive, number> = { deplacer: 14, prise_objet: 18, prise_boite: 20, depose: 11, rentrer: 6 };
 
 /** Après la fin, la mission reprend depuis le début au bout de ce temps (s, temps réel). */
 const REPRISE_S = 6;
@@ -62,7 +62,6 @@ interface Moteur {
 type Action = { type: 'tick'; reelS: number; vitesse: number } | { type: 'pause' } | { type: 'rater' } | { type: 'urgence' } | { type: 'rearmer' };
 
 const primitiveDe = (m: Mission, id: string) => PRIMITIVES.find((p) => p.id === m.noeuds.find((n) => n.id === id)?.primitiveId);
-const estimee = (m: Mission, id: string) => MOYENNE[primitiveDe(m, id)?.type ?? 'deplacer'];
 
 /** Un nombre entre 0 et 1, toujours le même pour le même texte : la durée d'une étape varie d'un tour à l'autre. */
 function hachage(texte: string): number {
@@ -71,7 +70,7 @@ function hachage(texte: string): number {
   return (h >>> 0) / 2 ** 32;
 }
 
-const dureeReelle = (m: Moteur, id: string) => estimee(m.mission, id) * (0.8 + 0.45 * hachage(`${id}:${m.tour}:${m.passe.length}`));
+const dureeEtape = (m: Moteur, id: string) => DUREE[primitiveDe(m.mission, id)?.type ?? 'deplacer'] * (0.8 + 0.45 * hachage(`${id}:${m.tour}:${m.passe.length}`));
 const cle = (tour: number, index: number, id: string) => `${tour}:${index}:${id}`;
 
 function demarrer(mission: Mission): Moteur {
@@ -84,10 +83,7 @@ function demarrer(mission: Mission): Moteur {
 /** L'étape en cours se termine à `finS`, réussie ou ratée ; la mission prend la sortie qui suit, ou change de tour. */
 function terminer(m: Moteur, finS: number, rate: boolean): Moteur {
   const id = m.noeud!;
-  const fait: PasLecture = {
-    cle: cle(m.tour, m.passe.length, id), noeud: id, primitive: primitiveDe(m.mission, id), issue: rate ? 'echoue' : 'reussi',
-    par: m.par, dureeS: finS - m.debut, estimeeS: estimee(m.mission, id), tour: m.tour,
-  };
+  const fait: PasLecture = { cle: cle(m.tour, m.passe.length, id), noeud: id, issue: rate ? 'echoue' : 'reussi', par: m.par, tour: m.tour };
   const sortie = rate ? 'echec' : 'ok';
   const vers = suivant(m.mission, id, sortie);
   const base = { ...m, passe: [...m.passe, fait], debut: finS };
@@ -107,7 +103,7 @@ function reduire(m: Moteur, a: Action): Moteur {
       if (m.fin) return m.attente + a.reelS > REPRISE_S ? demarrer(m.mission) : { ...m, attente: m.attente + a.reelS };
       if (m.enPause || m.urgence || !m.noeud) return m;
       const t = m.t + a.reelS * a.vitesse;
-      const d = dureeReelle(m, m.noeud);
+      const d = dureeEtape(m, m.noeud);
       if (t - m.debut < d) return { ...m, t };
       const rate = m.tour === 2 && primitiveDe(m.mission, m.noeud)?.type === 'prise_objet';
       return terminer({ ...m, t }, m.debut + d, rate);
@@ -115,31 +111,19 @@ function reduire(m: Moteur, a: Action): Moteur {
   }
 }
 
-/** Ce que la barre montre du moteur : le passé, l'étape en cours, la suite prévue, le temps qui reste. */
+/** Ce que la barre montre du moteur : le passé, l'étape en cours, la suite prévue. */
 function lire(m: Moteur): Lecture {
   const pas = [...m.passe];
   let courant = -1;
-  let avancement = 0;
-  let resteS: number | null = null;
-  const etat: EtatLecture = m.urgence ? 'urgence' : m.fin ?? (m.enPause ? 'pause' : 'cours');
-  const echec = m.noeud ? suivant(m.mission, m.noeud, 'echec') : undefined;
   if (m.noeud) {
     courant = pas.length;
-    const ecoule = m.t - m.debut;
-    const est = estimee(m.mission, m.noeud);
-    avancement = Math.min(0.97, ecoule / est);
-    pas.push({ cle: cle(m.tour, pas.length, m.noeud), noeud: m.noeud, primitive: primitiveDe(m.mission, m.noeud), issue: 'cours', par: m.par, dureeS: ecoule, estimeeS: est, tour: m.tour });
+    pas.push({ cle: cle(m.tour, pas.length, m.noeud), noeud: m.noeud, issue: 'cours', par: m.par, tour: m.tour });
     const vus = new Set([...m.passe.filter((p) => p.tour === m.tour).map((p) => p.noeud), m.noeud]);
-    for (const id of prevus(m.mission, m.noeud, vus)) {
-      pas.push({ cle: cle(m.tour, pas.length, id), noeud: id, primitive: primitiveDe(m.mission, id), issue: 'prevu', par: 'ok', dureeS: estimee(m.mission, id), estimeeS: estimee(m.mission, id), tour: m.tour });
-    }
-    const tourEntier = [suivant(m.mission, 'depart', 'ok') ?? '', ...prevus(m.mission, suivant(m.mission, 'depart', 'ok') ?? '', new Set())]
-      .reduce((s, id) => s + (id ? estimee(m.mission, id) : 0), 0);
-    resteS = Math.max(0, est - ecoule) + pas.slice(courant + 1).reduce((s, p) => s + p.dureeS, 0) + (m.mission.repetitions - m.tour) * tourEntier;
+    for (const id of prevus(m.mission, m.noeud, vus)) pas.push({ cle: cle(m.tour, pas.length, id), noeud: id, issue: 'prevu', par: 'ok', tour: m.tour });
   }
   return {
-    mission: m.mission, pas, courant, avancement, dureeS: m.t, tour: m.tour, tours: m.mission.repetitions, etat, resteS,
-    siEchec: echec ? primitiveDe(m.mission, echec) ?? null : null,
+    mission: m.mission, primitives: PRIMITIVES, pas, courant, dureeS: m.t, dureeEtapeS: m.noeud ? m.t - m.debut : 0,
+    tour: m.tour, tours: m.mission.repetitions, etat: m.urgence ? 'urgence' : m.fin ?? (m.enPause ? 'pause' : 'cours'),
   };
 }
 

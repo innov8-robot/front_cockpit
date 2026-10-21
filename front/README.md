@@ -93,6 +93,18 @@ survol ; la mission qui joue montre son étape, son tour et sa pause), B · cart
 mission en miniature), C · liste et aperçu (la mission choisie : son graphe dans l'éditeur en lecture, ses derniers
 runs et leur cause). « Nouvelle mission » y est blanc : le rouge est réservé au danger. Code : `components/listeMissions/`.
 
+## La barre de la mission qui joue : le fil
+
+**`#/essai/barre-lecture`**, sur une mission simulée (branche « échec », tours, pause, arrêt d'urgence, mission longue
+ou courte) : le graphe de la mission tel que l'éditeur le dessine, réduit dans la barre. Quand une étape finit, une
+étincelle part sur le fil que la mission a pris (vert « réussi », ambre « échec ») et la caméra la suit dans tous les
+sens jusqu'à l'étape suivante, qui s'ouvre à son arrivée avec son nom. Aucune durée n'est prédite : on ne sait pas
+combien de temps une étape va tourner. Le système de la barre : blanc ce qui vit, gris ce qui est suspendu (la pause
+n'est pas une alerte), vert ce qui a réussi, ambre ce qui demande de l'attention, rouge le danger ; les actions sont
+blanches, pleine pour la principale (Reprendre), en contour pour la secondaire (Pause). Pour la brancher, le back doit
+servir le chemin RÉELLEMENT joué dans le run en cours (pas seulement le chemin « réussi » prévu). Code :
+`components/lecture/`.
+
 ## Les couleurs de la scène
 
 Une couleur = un sens. **Le rouge est réservé au danger** (arrêt d'urgence, alarme, moteur trop chaud, zone machine),
