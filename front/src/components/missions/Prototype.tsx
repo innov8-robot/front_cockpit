@@ -20,10 +20,9 @@ const RANGEE = 120;
 type DonneesLien = { sortie: Sortie; etat?: EtatLien; ton?: Ton };
 type LienMission = Edge<DonneesLien, 'pulse'>;
 
-/** La couleur de l'onde d'un lien : l'issue de sa sortie ; un choix (alors, sinon, faire) n'en est pas une. */
+/** La couleur du flux d'un lien : ambre s'il part d'un échec, vert sur tout le chemin validé. */
 function tonDe(s: Sortie): Ton {
-  if (s === 'echec') return 'echec';
-  return ['faire', 'alors', 'sinon', 'cas1', 'cas2', 'autre'].includes(s) ? 'neutre' : 'ok';
+  return s === 'echec' ? 'echec' : 'ok';
 }
 
 /** Un lien qui revient en arrière — la fin d'un tour vers l'entrée de sa boucle — passe sous les nœuds, comme dans n8n. */
@@ -116,7 +115,8 @@ function exemple(): { nodes: NoeudMission[]; edges: LienMission[] } {
 /** Un pas de la simulation : un nœud change d'état ; un lien s'allume vers lui ; une boucle change de tour, un geste d'essai. */
 interface Pas { noeud: string; etat: EtatNoeud; lien?: string; tour?: number; essai?: number; prise?: string; remettre?: string[] }
 
-const CORPS = ['si', 'appel_bac', 'prendre', 'poser', 'compter', 'appel_prise', 'e3', 'e4', 'e5', 'e6', 'e7', 'e8', 'e10'];
+/** Ce qu'un nouveau tour remet à zéro : l'état des étapes du corps ; le chemin déjà validé, lui, reste allumé. */
+const CORPS = ['si', 'appel_bac', 'prendre', 'poser', 'compter', 'appel_prise'];
 
 /** Deux pièces : la première passe ; la seconde rate ses deux essais, l'opérateur est appelé, la boucle n'en voit plus. */
 const DEROULE: Pas[] = [
@@ -140,6 +140,8 @@ const DEROULE: Pas[] = [
 
 interface Instantane {
   noeuds: Map<string, EtatNoeud>;
+  /** Le dernier état d'une étape aux tours d'avant : à la fin, ce qui a été validé une fois le reste. */
+  anciens: Map<string, EtatNoeud>;
   tours: Map<string, number>;
   essais: Map<string, number>;
   prises: Map<string, string>;
@@ -148,12 +150,16 @@ interface Instantane {
 
 /** L'état de la mission après `k` pas : chaque nœud et chaque lien à leur dernier état. */
 function rejouer(k: number): Instantane {
-  const e: Instantane = { noeuds: new Map(), tours: new Map(), essais: new Map(), prises: new Map(), liens: new Map() };
+  const e: Instantane = { noeuds: new Map(), anciens: new Map(), tours: new Map(), essais: new Map(), prises: new Map(), liens: new Map() };
   const eteindre = () => {
     for (const [id, x] of e.liens) if (x === 'actif') e.liens.set(id, 'parcouru');
   };
   for (const p of DEROULE.slice(0, k + 1)) {
-    for (const id of p.remettre ?? []) for (const m of [e.noeuds, e.liens, e.essais, e.prises]) m.delete(id);
+    for (const id of p.remettre ?? []) {
+      const avant = e.noeuds.get(id);
+      if (avant) e.anciens.set(id, avant);
+      for (const m of [e.noeuds, e.essais, e.prises]) m.delete(id);
+    }
     if (p.lien) { eteindre(); e.liens.set(p.lien, 'actif'); }
     e.noeuds.set(p.noeud, p.etat);
     if (p.tour) e.tours.set(p.noeud, p.tour);
@@ -411,7 +417,7 @@ function Canevas() {
         ...n, data: {
           ...n.data, direct: direct(n, e), prise: e.prises.get(n.id),
           veille: etat === 'cours' && k >= 0 && DEROULE[k].noeud !== n.id,
-          etat: k < 0 ? undefined : urgence && etat === 'cours' ? 'danger' : etat ?? (k >= DEROULE.length - 1 ? 'saute' : 'attente'),
+          etat: k < 0 ? undefined : urgence && etat === 'cours' ? 'danger' : etat ?? (k >= DEROULE.length - 1 ? e.anciens.get(n.id) ?? 'saute' : 'attente'),
         },
       };
     }));
