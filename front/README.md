@@ -40,6 +40,23 @@ serveur, choisie quand `VITE_API_URL` est défini. Aucun écran ne change.
 
 L'enregistrement d'une primitive est simulé (2,5 s) : au réel, il pilotera la démonstration au robot.
 
+## Les couleurs de la scène
+
+Une couleur = un sens. **Le rouge est réservé au danger** (arrêt d'urgence, alarme, moteur trop chaud, zone machine),
+l'ambre à l'attention, le vert à l'OK ; aucun thème de la scène ne les emploie. La scène a sa propre famille : un ton
+pour ce que voient les capteurs maintenant, le même éteint pour la carte mémorisée, une couleur pour le sonar, une
+palette par classe pour les objets.
+
+Les thèmes sont dans `src/vue3d/theme.ts`, et se comparent en direct sur la page d'essai **`#/essai/da`** (chacun
+avec son principe d'harmonie et ses conflits avec les couleurs de sécurité).
+
+- **Changer le thème de l'accueil** : remplacer `THEME_ACCUEIL` dans `src/vue3d/theme.ts` par la clé d'un thème
+  (`'spectre'` aujourd'hui ; `'glace'`, `'phosphore'`, `'viridis'`, `'abysse'`…).
+- **Créer un thème** : ajouter une entrée à `THEMES`. Une couleur par rôle (`camera`, `lidar`, `memoire`, `sonar`,
+  `deploiement`, `meubles`, `sol`) ; pour colorer le vivant et la mémoire selon la hauteur, donner à `camera`,
+  `lidar` et `memoire` un tableau de cinq couleurs, du sol vers le haut (famille `'hauteur'`, comme Viridis).
+- **Le changer à la volée** : `scene.theme(t)` (`Scene3D`), comme le fait la page d'essai.
+
 ## La vue 3D (écran d'accueil)
 
 `src/vue3d/` : three.js, sans viser (viser se dessine depuis un serveur Python ; ici c'est le téléphone qui dessine).

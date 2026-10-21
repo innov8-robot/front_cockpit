@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CALQUE_DETECTIONS, ORDRE_MASQUE, ORDRE_SEGMENTATION } from './detections';
+import { MATERIAU_PEAU, sonariser } from './sonar';
 
 /**
  * Un atelier fictif autour du robot, dans son repère (x devant, z en haut, mètres). Les mêmes formes sont
@@ -236,6 +237,14 @@ const TONS: Record<Ton, THREE.LineBasicMaterial> = {
   objet: new THREE.LineBasicMaterial({ color: '#c3cde0', transparent: true, opacity: 0.45 }),
   machine: new THREE.LineBasicMaterial({ color: '#ff2d3a', transparent: true, opacity: 0.4 }),
 };
+// L'impulsion du sonar épouse les arêtes des meubles en passant.
+for (const materiau of Object.values(TONS)) sonariser(materiau);
+
+/** Change la couleur des arêtes des meubles et des objets ; celle des machines (zone de danger) reste rouge. */
+export function teinterMeubles(couleur: string): void {
+  TONS.meuble.color.set(couleur);
+  TONS.objet.color.set(couleur).lerp(new THREE.Color('#ffffff'), 0.5);
+}
 
 function dessiner(formes: Forme[], sol: number): THREE.Group {
   const groupe = new THREE.Group();
@@ -276,6 +285,27 @@ function masquer(formes: Forme[]): THREE.Group {
     volume.renderOrder = ORDRE_MASQUE;
     volume.layers.set(CALQUE_DETECTIONS);
     groupe.add(volume);
+  }
+  return groupe;
+}
+
+/** Les obstacles qui font de l'ombre au sonar, dans le repère du robot ; les pieds fins n'en font pas qui se voie. */
+function obstacles(formes: Forme[]): THREE.Box3[] {
+  const boites = formes.map((f) => (f.type === 'boite'
+    ? new THREE.Box3(f.min.clone(), f.max.clone())
+    : new THREE.Box3(new THREE.Vector3(f.x - f.r, f.y - f.r, f.z0), new THREE.Vector3(f.x + f.r, f.y + f.r, f.z1))));
+  return boites.filter((b) => Math.min(b.max.x - b.min.x, b.max.y - b.min.y) >= 0.06);
+}
+
+/** La peau du sonar sur chaque meuble et chaque objet (sonar.MATERIAU_PEAU). */
+function peauSonar(formes: Forme[]): THREE.Group {
+  const groupe = new THREE.Group();
+  for (const f of formes) {
+    const peau = new THREE.Mesh(volumePlein(f), MATERIAU_PEAU);
+    poserVolume(peau, f);
+    peau.renderOrder = ORDRE_SEGMENTATION;
+    peau.layers.set(CALQUE_DETECTIONS);
+    groupe.add(peau);
   }
   return groupe;
 }
@@ -335,12 +365,13 @@ function segmenter(formes: Forme[], objets: ObjetDeclare[]): Segmentation {
 
 /** L'atelier : ses traits, ses volumes de masquage, la segmentation, le lancer de rayon et les objets déclarés. */
 export function creerEnvironnement(sol: number): {
-  objet: THREE.Group; masque: THREE.Group; segmentation: Segmentation; lancer: Lancer; objets: ObjetDeclare[];
+  objet: THREE.Group; masque: THREE.Group; peau: THREE.Group; segmentation: Segmentation; lancer: Lancer;
+  objets: ObjetDeclare[]; obstacles: THREE.Box3[];
 } {
   const { formes, classes } = construire(sol);
   const objets = objetsDeclares(formes, classes);
   return {
-    objet: dessiner(formes, sol), masque: masquer(formes), segmentation: segmenter(formes, objets),
-    lancer: lancerContre(formes, sol), objets,
+    objet: dessiner(formes, sol), masque: masquer(formes), peau: peauSonar(formes), segmentation: segmenter(formes, objets),
+    lancer: lancerContre(formes, sol), objets, obstacles: obstacles(formes),
   };
 }

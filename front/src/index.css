@@ -1147,6 +1147,41 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .hud-rail { right: auto; left: 20px; top: 50%; transform: translateY(-50%); }
 .hud-rail-lien.active::before { left: auto; right: -8px; }
 
+/* La page d'essai de la direction artistique de la scène (#/essai/da). */
+.essai-da { position: fixed; inset: 0; background: #1a1f23; color: #e9eef7; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; }
+.essai-da-scene { position: absolute; inset: 0; }
+.essai-da-scene canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.essai-da-panneau {
+  position: absolute; z-index: 2; left: 20px; top: 20px; bottom: 20px; width: 330px; overflow-y: auto;
+  padding: 20px 20px 16px; border: 1px solid rgb(255 255 255 / 0.09); border-radius: 16px;
+  background: rgb(10 12 15 / 0.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+}
+.essai-da-panneau h1 { margin: 6px 0 4px; font-size: 1.35rem; }
+.essai-da-themes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.essai-da-themes button {
+  display: flex; align-items: center; gap: 9px; padding: 9px 10px; border-radius: 10px; cursor: pointer;
+  border: 1px solid rgb(255 255 255 / 0.1); background: rgb(255 255 255 / 0.03); color: #c9ced6;
+  font: 600 0.82rem/1 'Inter', system-ui, sans-serif; text-align: left;
+}
+.essai-da-themes button:hover { border-color: rgb(255 255 255 / 0.25); }
+.essai-da-themes button.actif { border-color: #e9eef7; color: #fff; background: rgb(255 255 255 / 0.08); }
+.essai-da-pastilles { display: inline-flex; }
+.essai-da-pastilles i { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid #0a0c0f; margin-left: -4px; }
+.essai-da-pastilles i:first-child { margin-left: 0; }
+.essai-da-idee { margin: 16px 0 6px; color: #c9ced6; font-size: 0.85rem; line-height: 1.5; }
+.essai-da-harmonie { margin: 0 0 6px; color: #9aa3ae; font-size: 0.8rem; line-height: 1.45; font-style: italic; }
+.essai-da-conflit { margin: 6px 0 0; padding: 7px 9px; border-radius: 8px; background: rgb(255 176 46 / 0.1); color: #ffcf7a; font-size: 0.78rem; line-height: 1.4; }
+.essai-da-titre { margin: 18px 0 8px; font: 600 9.5px/1 ui-monospace, monospace; letter-spacing: 0.18em; color: #8a93a3; }
+.essai-da-legende { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+.essai-da-legende li { display: flex; gap: 11px; align-items: flex-start; }
+.essai-da-legende i { flex: none; width: 14px; height: 14px; margin-top: 2px; border-radius: 4px; box-shadow: 0 0 10px rgb(255 255 255 / 0.12); }
+.essai-da-legende .essai-da-classes { border-radius: 50%; }
+.essai-da-legende span { display: flex; flex-direction: column; gap: 3px; font-size: 0.8rem; color: #9aa3ae; line-height: 1.35; }
+.essai-da-legende strong { color: #e9eef7; font-weight: 600; }
+@media (max-width: 700px) {
+  .essai-da-panneau { left: 12px; right: 12px; top: auto; bottom: 12px; width: auto; max-height: 46vh; }
+}
+
 /* La mission en cours : le nom, le graphe à plat qui avance, et un seul bouton pause / reprise à droite. */
 .barre-mission.en-cours { gap: 16px; padding-right: 8px; }
 .graphe-direct { display: flex; align-items: center; gap: 0; margin: 0; padding: 0; list-style: none; min-width: 0; overflow-x: auto; scrollbar-width: none; }

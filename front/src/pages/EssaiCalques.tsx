@@ -16,7 +16,7 @@ const PROPOSITIONS: { lettre: string; nom: string; idee: string; Filtres: (p: Pr
 /** Page d'essai des filtres de calques de l'accueil : #/essai/calques. */
 export function EssaiCalques() {
   const [actifs, setActifs] = useState<Record<Calque, boolean>>(
-    { robot: true, atelier: true, camera: true, lidar: true, objets: true, sol: false });
+    { robot: true, atelier: true, camera: true, lidar: true, carte: true, objets: true, sol: false });
   const basculer = (cle: Calque) => setActifs({ ...actifs, [cle]: !actifs[cle] });
 
   return (

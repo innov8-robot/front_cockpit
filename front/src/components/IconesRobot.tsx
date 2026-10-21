@@ -109,3 +109,13 @@ export function IconeGrille({ taille }: { taille?: number }) {
     </Trait>
   );
 }
+
+/** La carte mémorisée : une carte pliée en trois. */
+export function IconeCarte({ taille }: { taille?: number }) {
+  return (
+    <Trait taille={taille}>
+      <path d="M3.5 6.5l5.5-2.5 6 2.5 5.5-2.5v13.5l-5.5 2.5-6-2.5-5.5 2.5z" />
+      <path d="M9 4v13.5M15 6.5V20" />
+    </Trait>
+  );
+}
