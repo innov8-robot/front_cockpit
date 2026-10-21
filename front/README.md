@@ -51,6 +51,11 @@ cadre. Le code est dans `src/components/missions/` : `charte.ts` (familles, sort
 `catalogue.ts` (les types de nœuds — en ajouter un, c'est une entrée), `Noeud.tsx` (nœud et cadre de boucle),
 `Prototype.tsx` (canevas, lien animé, menu, simulation), `proposition.ts` (le texte de la proposition).
 
+**`#/essai/logique`** : la même mission (une boucle, un geste à deux essais qui appelle l'opérateur s'il rate, une
+question) dessinée de trois façons — A ligne de métro, B blocs empilés façon Scratch, C colonne façon Zapier — et
+jouée dans les trois à la fois. La mission est écrite une fois dans `logique.ts` ; chaque dessin est un fichier
+(`LogiqueMetro.tsx`, `LogiqueBlocs.tsx`, `LogiqueColonne.tsx`), l'onde des liens vit dans `Onde.tsx`.
+
 ## Les couleurs de la scène
 
 Une couleur = un sens. **Le rouge est réservé au danger** (arrêt d'urgence, alarme, moteur trop chaud, zone machine),

@@ -2,7 +2,8 @@ import { FAMILLE, FAMILLES, ETATS, SORTIES, STATUTS, TONS, type Ton } from '../c
 import { CATALOGUE } from '../components/missions/catalogue';
 import { CarteNoeud } from '../components/missions/Noeud';
 import { EXIGENCES, EXISTANT, HISTOIRES, PERSONAS, PRINCIPES, QUESTIONS } from '../components/missions/proposition';
-import { OndeExemple, Prototype } from '../components/missions/Prototype';
+import { OndeExemple } from '../components/missions/Onde';
+import { Prototype } from '../components/missions/Prototype';
 
 const SECTIONS: [string, string][] = [
   ['intention', 'L’intention'], ['existant', 'Ce qui existe'], ['personas', 'Pour qui'], ['histoires', 'User stories'],
@@ -180,7 +181,7 @@ export function EssaiMissions() {
 
         <section id="prototype">
           <h2><span>08</span>Prototype</h2>
-          <p className="em-intro">« Vider la table dans le bac » : aller à la table, pour chaque pièce vue la prendre (deux essais), la déposer, compter ; une pièce imprenable appelle l’opérateur ; à la fin, rentrer les bras et retourner à la base. « ▶ Simuler » joue une exécution : la première pièce passe, la seconde rate deux fois et l’opérateur est appelé. Clic droit sur un nœud : ses actions ; double-clic : ses réglages ; la palette, à droite, se glisse sur le canevas.</p>
+          <p className="em-intro">« Vider la table dans le bac » : aller à la table, pour chaque pièce vue la prendre (deux essais), la déposer, compter ; une pièce imprenable appelle l’opérateur ; à la fin, rentrer les bras et retourner à la base. « ▶ Simuler » joue une exécution : la première pièce passe, la seconde rate deux fois et l’opérateur est appelé. Clic droit sur un nœud : ses actions ; double-clic : ses réglages ; la palette, à droite, se glisse sur le canevas. Trois autres façons de dessiner la logique : <a href="#/essai/logique">#/essai/logique</a>.</p>
           <Prototype />
         </section>
 

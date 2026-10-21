@@ -3,6 +3,7 @@ import { Accueil } from './pages/Accueil';
 import { EssaiBarre } from './pages/EssaiBarre';
 import { EssaiCalques } from './pages/EssaiCalques';
 import { EssaiDA } from './pages/EssaiDA';
+import { EssaiLogique } from './pages/EssaiLogique';
 import { EssaiMissions } from './pages/EssaiMissions';
 
 /**
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="/essai/calques" element={<EssaiCalques />} />
         <Route path="/essai/da" element={<EssaiDA />} />
         <Route path="/essai/missions" element={<EssaiMissions />} />
+        <Route path="/essai/logique" element={<EssaiLogique />} />
         <Route path="*" element={<Accueil />} />
       </Routes>
     </HashRouter>

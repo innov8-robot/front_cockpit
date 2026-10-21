@@ -294,3 +294,10 @@ export const NOEUDS_ROBOT: TypeNoeud[] = [
 
 /** Tout le catalogue, dans l'ordre de la palette. */
 export const CATALOGUE: TypeNoeud[] = [...NOEUDS_GENERAUX, ...NOEUDS_ROBOT];
+
+/** Le type de nœud d'une clé du catalogue. */
+export function typeNoeud(cle: string): TypeNoeud {
+  const t = CATALOGUE.find((x) => x.cle === cle);
+  if (!t) throw new Error(`nœud inconnu : ${cle}`);
+  return t;
+}

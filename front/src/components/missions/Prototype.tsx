@@ -3,17 +3,16 @@ import {
   ReactFlowProvider, useEdgesState, useNodesState, useReactFlow, type Connection, type Edge, type EdgeProps,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type MouseEvent } from 'react';
-import { FAMILLE, FAMILLES, SORTIES, STATUTS, TONS, type EtatNoeud, type Sortie, type Ton } from './charte';
+import { useEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent } from 'react';
+import { FAMILLE, FAMILLES, SORTIES, STATUTS, type EtatLien, type EtatNoeud, type Sortie, type Ton } from './charte';
 import { CATALOGUE, type TypeNoeud } from './catalogue';
 import { IconeNoeud, NoeudCadre, NoeudCarte, type NoeudMission } from './Noeud';
+import { OndeChemin } from './Onde';
 
 /** Un pas de la simulation dure un peu plus d'une période de l'onde (1 Hz) : on la voit passer au moins une fois. */
 const PAS_MS = 1100;
 const GLISSE = 'application/x-noeud-mission';
 
-/** L'état d'un lien pendant une exécution. */
-type EtatLien = 'aucun' | 'parcouru' | 'actif';
 
 type DonneesLien = { sortie: Sortie; etat?: EtatLien; ton?: Ton };
 type LienMission = Edge<DonneesLien, 'pulse'>;
@@ -25,54 +24,16 @@ function tonDe(s: Sortie): Ton {
 }
 
 /**
- * Un trait de l'onde, en fraction du lien (pathLength = 1) : `longueur` de trait qui file jusqu'à ce que sa tête ait
- * dépassé la traîne la plus longue ; la tête et la traîne arrivent ensemble au bout.
- */
-function trait(longueur: number, traine: number, couleur: string): CSSProperties {
-  return {
-    stroke: couleur, color: couleur, strokeDasharray: `${longueur} 3`,
-    ['--de' as string]: longueur, ['--a' as string]: longueur - 1 - traine,
-  };
-}
-
-/**
- * Un lien de mission. Au repos, le trait de sa sortie. Parcouru, une lueur de la couleur de son issue. Actif — il mène
- * au nœud qui s'exécute —, une onde lumineuse, une tête vive et sa traîne, le parcourt vers ce nœud une fois par seconde.
+ * Un lien de mission. Au repos, le trait de sa sortie ; parcouru ou actif, l'onde de `OndeChemin` par-dessus.
  */
 function LienPulse({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data, markerEnd, style }: EdgeProps<LienMission>) {
   const [chemin] = getSmoothStepPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, borderRadius: 10 });
   const etat = data?.etat ?? 'aucun';
-  const couleur = TONS[data?.ton ?? 'neutre'];
-  const lueur = useRef<SVGPathElement>(null);
-  const [px, setPx] = useState(200);
-  useLayoutEffect(() => {
-    if (lueur.current) setPx(Math.max(lueur.current.getTotalLength(), 1));
-  }, [chemin, etat]);
-  const tete = Math.min(Math.max(26 / px, 0.06), 0.3);
-  const traine = Math.min(Math.max(110 / px, 0.18), 0.7);
   return (
     <>
       <BaseEdge id={id} path={chemin} markerEnd={markerEnd} style={{ ...style, opacity: etat === 'aucun' ? 0.6 : 0.95 }} />
-      {etat !== 'aucun' && <path ref={lueur} d={chemin} className="em-lien-lueur" style={{ stroke: couleur }} />}
-      {etat === 'actif' && <>
-        <path d={chemin} pathLength={1} className="em-lien-onde em-lien-traine" style={trait(traine, traine, couleur)} />
-        <path d={chemin} pathLength={1} className="em-lien-onde" style={trait(tete, traine, couleur)} />
-      </>}
+      <OndeChemin d={chemin} etat={etat} ton={data?.ton ?? 'neutre'} />
     </>
-  );
-}
-
-/** L'onde seule, sur un lien droit : la charte la montre dans chaque couleur. */
-export function OndeExemple({ ton, largeur = 140 }: { ton: Ton; largeur?: number }) {
-  const d = `M4 8H${largeur}`;
-  const traine = Math.min(110 / largeur, 0.7);
-  return (
-    <svg width={largeur + 10} height="16" aria-hidden="true" style={{ overflow: 'visible' }}>
-      <path d={d} className="em-lien-lueur" style={{ stroke: TONS[ton] }} />
-      <path d={d} pathLength={1} className="em-lien-onde em-lien-traine" style={trait(traine, traine, TONS[ton])} />
-      <path d={d} pathLength={1} className="em-lien-onde" style={trait(Math.min(26 / largeur, 0.3), traine, TONS[ton])} />
-      <path d={`M${largeur} 3l8 5-8 5z`} fill={TONS[ton]} />
-    </svg>
   );
 }
 

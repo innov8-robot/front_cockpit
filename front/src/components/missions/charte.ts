@@ -67,6 +67,9 @@ export const ETATS = {
 
 export type EtatNoeud = keyof typeof ETATS;
 
+/** L'état d'un lien pendant une exécution : au repos, déjà parcouru, ou menant à l'étape en cours. */
+export type EtatLien = 'aucun' | 'parcouru' | 'actif';
+
 /** La couleur de l'onde d'un lien pendant une exécution : l'issue qu'elle porte ; l'entrée dans une boucle est neutre. */
 export type Ton = 'ok' | 'echec' | 'danger' | 'neutre';
 export const TONS: Record<Ton, string> = { ok: '#3dff8a', echec: '#ffb02e', danger: '#ff2d3a', neutre: '#e9eef7' };
