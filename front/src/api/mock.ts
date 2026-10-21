@@ -1,5 +1,5 @@
 import type { Api } from './client';
-import type { Cote, EtatCapteurs, EtatCorps, GesteRobot, Mission, Primitive, Robot, Run } from './types';
+import type { Cote, EtatCapteurs, EtatCorps, Execution, GesteRobot, Mission, Primitive, Robot, Run } from './types';
 
 const CLE = 'mpc.front.simulation.v4';
 const LATENCE_MS = 120;
@@ -14,7 +14,12 @@ interface Magasin {
   primitives: Primitive[];
   missions: Mission[];
   runs: Run[];
+  /** La mission que joue le robot : son lancement, et le temps passé en pause (ms). */
+  execution?: { robotId: string; missionId: string; debut: number; pause: number; pauseDepuis: number | null } | null;
 }
+
+/** Une primitive simulée dure ce temps (ms). */
+const DUREE_ETAPE_MS = 5000;
 
 const ilYA = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
 
@@ -197,8 +202,49 @@ const commande = <T>(f: () => Promise<T>): Promise<T> => {
   }
 };
 
+/** Le chemin joué : du départ, on suit la sortie « réussi » jusqu'au bout (la simulation réussit tout). */
+function chemin(m: Mission): string[] {
+  const vus = ['depart'];
+  for (;;) {
+    const suite = m.liens.find((l) => l.de === vus.at(-1) && l.sortie === 'ok');
+    if (!suite || vus.includes(suite.vers)) return vus;
+    vus.push(suite.vers);
+  }
+}
+
+/** Fait avancer la mission simulée jusqu'à maintenant ; à la dernière répétition, elle se termine. */
+function avancer(): Execution | null {
+  const x = magasin.execution;
+  if (!x) return null;
+  const m = magasin.missions.find((y) => y.id === x.missionId);
+  const r = magasin.robots.find((y) => y.id === x.robotId);
+  if (!m || !r || r.missionCourante !== m.id) {
+    magasin.execution = null;
+    return null;
+  }
+  const c = chemin(m);
+  const etapes = Math.max(1, c.length - 1);
+  const joue = Date.now() - x.debut - x.pause - (x.pauseDepuis ? Date.now() - x.pauseDepuis : 0);
+  const fait = joue / DUREE_ETAPE_MS;
+  const repetition = Math.floor(fait / etapes);
+  if (repetition >= m.repetitions) {
+    const run = magasin.runs.find((u) => u.robotId === r.id && u.missionId === m.id && u.dureeS === 0);
+    if (run) run.dureeS = Math.round(joue / 1000);
+    m.etat = 'terminee';
+    r.etat = 'disponible';
+    r.missionCourante = null;
+    magasin.execution = null;
+    sauver();
+    return null;
+  }
+  return {
+    missionId: m.id, chemin: c, etape: 1 + (Math.floor(fait) % etapes), avancement: fait % 1,
+    repetition: repetition + 1, repetitions: m.repetitions, enPause: x.pauseDepuis !== null, dureeS: joue / 1000,
+  };
+}
+
 export const apiSimulee: Api = {
-  robots: () => plusTard(magasin.robots),
+  robots: () => { avancer(); return plusTard(magasin.robots); },
   robot: (id) => plusTard(magasin.robots.find((r) => r.id === id)),
   etatCorps: (robotId) => etatCorpsSimule(robotId),
   etatCapteurs: (robotId) => {
@@ -289,8 +335,21 @@ export const apiSimulee: Api = {
       issue: 'reussi', cause: null,
     };
     magasin.runs.unshift(run);
+    magasin.execution = { robotId, missionId, debut: Date.now(), pause: 0, pauseDepuis: null };
     sauver();
     return plusTard(run);
+  },
+  execution: () => plusTard(avancer()),
+  pauseMission: (robotId, pause) => {
+    const x = magasin.execution;
+    if (!x || x.robotId !== robotId) return Promise.reject(new Error('Aucune mission en cours'));
+    if (pause && x.pauseDepuis === null) x.pauseDepuis = Date.now();
+    if (!pause && x.pauseDepuis !== null) {
+      x.pause += Date.now() - x.pauseDepuis;
+      x.pauseDepuis = null;
+    }
+    sauver();
+    return plusTard(avancer());
   },
   arreterMission: (robotId) => {
     const r = magasin.robots.find((x) => x.id === robotId);
@@ -305,6 +364,7 @@ export const apiSimulee: Api = {
     if (m) m.etat = 'prete';
     if (r.etat === 'en_mission') r.etat = 'disponible';
     r.missionCourante = null;
+    magasin.execution = null;
     sauver();
     return plusTard(r);
   },

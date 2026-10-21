@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { nbPrimitives } from '../api/libelles';
-import type { Mission, Robot, Run } from '../api/types';
+import { TYPES_PRIMITIVE } from '../api/libelles';
+import type { Execution, Mission, Primitive, Robot } from '../api/types';
+import { COULEURS_TYPE } from './graphe/NoeudPrimitive';
 
 /** La barre se relit à cette période : la mission en cours et son chrono vivent. */
 const RAFRAICHI_MS = 1000;
@@ -15,18 +17,21 @@ const chrono = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${
  */
 export function BarreMission({ robot }: { robot: Robot }) {
   const [missions, setMissions] = useState<Mission[]>([]);
-  const [run, setRun] = useState<Run | null>(null);
+  const [primitives, setPrimitives] = useState<Primitive[]>([]);
+  const [execution, setExecution] = useState<Execution | null>(null);
   const [choix, setChoix] = useState('');
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
-  const [maintenant, setMaintenant] = useState(Date.now());
+
+  useEffect(() => {
+    api.primitives().then(setPrimitives).catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     let vivant = true;
     const lire = () => {
       api.missions().then((m) => vivant && setMissions(m)).catch(() => undefined);
-      api.runs({ robotId: robot.id }).then((u) => vivant && setRun(u[0] ?? null)).catch(() => undefined);
-      setMaintenant(Date.now());
+      api.execution(robot.id).then((x) => vivant && setExecution(x)).catch(() => undefined);
     };
     lire();
     const t = setInterval(lire, RAFRAICHI_MS);
@@ -44,7 +49,8 @@ export function BarreMission({ robot }: { robot: Robot }) {
     setEnCours(true);
     setErreur(null);
     try {
-      await ordre;
+      const r = await ordre;
+      if (r && typeof r === 'object' && 'chemin' in r) setExecution(r as Execution);
     } catch (e) {
       setErreur(e instanceof Error ? e.message : String(e));
     } finally {
@@ -52,19 +58,21 @@ export function BarreMission({ robot }: { robot: Robot }) {
     }
   }
 
-  if (courante) {
-    const depuis = run && run.missionId === courante.id ? (maintenant - new Date(run.debut).getTime()) / 1000 : 0;
+  if (courante && execution) {
+    const pause = execution.enPause;
     return (
-      <div className="barre-mission en-cours" role="toolbar" aria-label="Mission">
-        <span className="barre-mission-voyant" aria-hidden="true" />
+      <div className={`barre-mission en-cours ${pause ? 'en-pause' : ''}`} role="toolbar" aria-label={`Mission ${courante.nom}`}
+        title={courante.nom}>
         <div className="barre-mission-textes">
-          <small>MISSION EN COURS</small>
-          <strong>{courante.nom}</strong>
+          <small>{pause ? 'EN PAUSE' : 'EN COURS'} · <span className="nombre">{chrono(execution.dureeS)}</span>
+            {execution.repetitions > 1 && <> · <span className="nombre">{execution.repetition}/{execution.repetitions}</span></>}
+          </small>
         </div>
-        <span className="barre-mission-chrono nombre">{chrono(depuis)}</span>
-        <span className="barre-mission-detail nombre">{nbPrimitives(courante)} primitives · ×{courante.repetitions}</span>
-        <button className="barre-mission-stop" disabled={enCours} onClick={() => agir(api.arreterMission(robot.id))}>
-          <span aria-hidden="true">■</span> STOP
+        <GrapheDirect mission={courante} execution={execution} primitives={primitives} />
+        <button className={`barre-mission-pause ${pause ? 'reprendre' : ''}`} disabled={enCours}
+          aria-label={pause ? 'Reprendre la mission' : 'Mettre la mission en pause'}
+          onClick={() => agir(api.pauseMission(robot.id, !pause))}>
+          {pause ? <IconeLecture /> : <IconePause />}
         </button>
         {erreur && <span className="barre-mission-erreur" role="alert">{erreur}</span>}
       </div>
@@ -93,4 +101,43 @@ export function BarreMission({ robot }: { robot: Robot }) {
       {(raison || erreur) && <span className="barre-mission-erreur" role="alert">{erreur ?? raison}</span>}
     </div>
   );
+}
+
+/**
+ * Le graphe de la mission en direct, à plat : les primitives du chemin joué, dans l'ordre. Celles qui sont faites
+ * s'éteignent, celle qui se joue se remplit avec son avancement, les suivantes attendent.
+ */
+function GrapheDirect({ mission, execution, primitives }: { mission: Mission; execution: Execution; primitives: Primitive[] }) {
+  const parId = new Map(primitives.map((p) => [p.id, p]));
+  const etapes = execution.chemin.slice(1).map((id) => mission.noeuds.find((n) => n.id === id));
+  return (
+    <ol className="graphe-direct" aria-label="Avancement de la mission">
+      {etapes.map((n, i) => {
+        const p = n?.primitiveId ? parId.get(n.primitiveId) : undefined;
+        const k = i + 1;
+        const etat = k < execution.etape ? 'fait' : k === execution.etape ? 'courant' : 'a-venir';
+        const couleur = p ? COULEURS_TYPE[p.type] : '#8a93a3';
+        return (
+          <li key={n?.id ?? i} className={`graphe-direct-etape ${etat}`} style={{ ['--couleur' as string]: couleur }}
+            title={p ? `${TYPES_PRIMITIVE[p.type].libelle} · ${p.nom}` : undefined}>
+            <span className="graphe-direct-pastille" aria-hidden="true">{etat === 'fait' ? '✓' : k}</span>
+            <span className="graphe-direct-nom">{p?.nom ?? '—'}</span>
+            {etat === 'courant' && (
+              <span className="graphe-direct-jauge" aria-hidden="true">
+                <span style={{ width: `${Math.round(execution.avancement * 100)}%` }} />
+              </span>
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function IconePause() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor" /><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor" /></svg>;
+}
+
+function IconeLecture() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5l12 7-12 7z" fill="currentColor" /></svg>;
 }

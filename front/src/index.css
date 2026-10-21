@@ -1181,3 +1181,38 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 @media (max-width: 700px) {
   .essai-da-panneau { left: 12px; right: 12px; top: auto; bottom: 12px; width: auto; max-height: 46vh; }
 }
+
+/* La mission en cours : le nom, le graphe à plat qui avance, et un seul bouton pause / reprise à droite. */
+.barre-mission.en-cours { gap: 16px; padding-right: 8px; }
+.graphe-direct { display: flex; align-items: center; gap: 0; margin: 0; padding: 0; list-style: none; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.graphe-direct::-webkit-scrollbar { display: none; }
+.graphe-direct-etape {
+  position: relative; display: flex; align-items: center; gap: 7px; flex: none; padding: 6px 10px 6px 6px;
+  border-radius: 10px; border: 1px solid rgb(255 255 255 / 0.08); color: #8a93a3; font-size: 11px;
+}
+.graphe-direct-etape + .graphe-direct-etape { margin-left: 18px; }
+.graphe-direct-etape + .graphe-direct-etape::before {
+  content: ''; position: absolute; right: 100%; top: 50%; width: 18px; height: 1px; background: rgb(255 255 255 / 0.18);
+}
+.graphe-direct-etape.fait + .graphe-direct-etape::before { background: var(--couleur); opacity: 0.6; }
+.graphe-direct-pastille {
+  width: 20px; height: 20px; display: grid; place-items: center; border-radius: 6px; font-size: 10px; font-weight: 700;
+  border: 1px solid rgb(255 255 255 / 0.14); color: #8a93a3;
+}
+.graphe-direct-nom { max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.graphe-direct-etape.fait { opacity: 0.55; }
+.graphe-direct-etape.fait .graphe-direct-pastille { background: var(--couleur); border-color: var(--couleur); color: #0b0d10; }
+.graphe-direct-etape.courant { color: #fff; border-color: var(--couleur); background: rgb(255 255 255 / 0.04);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--couleur) 35%, transparent); padding-bottom: 9px; }
+.graphe-direct-etape.courant .graphe-direct-pastille { border-color: var(--couleur); color: var(--couleur); animation: indice-pulse 1.2s ease-in-out infinite; }
+.graphe-direct-jauge { position: absolute; left: 6px; right: 6px; bottom: 3px; height: 2px; border-radius: 2px; background: rgb(255 255 255 / 0.1); overflow: hidden; }
+.graphe-direct-jauge span { display: block; height: 100%; background: var(--couleur); transition: width 0.9s linear; }
+.en-pause .graphe-direct-etape.courant .graphe-direct-pastille { animation: none; }
+.en-pause .barre-mission-textes small { color: #ffb02e; }
+.barre-mission-pause {
+  flex: none; width: 46px; height: 46px; display: grid; place-items: center; border-radius: 14px; cursor: pointer;
+  color: #e9eef7; background: rgb(255 255 255 / 0.06); border: 1px solid rgb(255 255 255 / 0.18);
+}
+.barre-mission-pause:hover { background: rgb(255 255 255 / 0.12); }
+.barre-mission-pause.reprendre { color: #062211; background: #3dff8a; border-color: #3dff8a; box-shadow: 0 0 18px rgb(61 255 138 / 0.35); }
+@media (max-width: 899px) { .graphe-direct-nom { max-width: 90px; } }

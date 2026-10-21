@@ -1,4 +1,4 @@
-import type { Cote, EtatCapteurs, EtatCorps, Mission, ModeBras, NouvellePrimitive, Primitive, Robot, Run } from './types';
+import type { Cote, EtatCapteurs, EtatCorps, Execution, Mission, ModeBras, NouvellePrimitive, Primitive, Robot, Run } from './types';
 import { apiSimulee } from './mock';
 
 /** Le contrat entre le front et le back. Les écrans ne parlent qu'à lui. */
@@ -30,6 +30,10 @@ export interface Api {
   lancerMission(missionId: string, robotId: string): Promise<Run>;
   /** Arrête la mission en cours du robot : il finit son geste et s'immobilise ; le run est noté interrompu. */
   arreterMission(robotId: string): Promise<Robot>;
+  /** La mission en cours du robot et où elle en est ; null s'il n'en joue aucune. */
+  execution(robotId: string): Promise<Execution | null>;
+  /** Met la mission en pause (le robot finit son mouvement et s'immobilise), ou la reprend. */
+  pauseMission(robotId: string, pause: boolean): Promise<Execution | null>;
 
   runs(filtre?: { robotId?: string; missionId?: string }): Promise<Run[]>;
 }

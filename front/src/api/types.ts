@@ -126,3 +126,19 @@ export interface EtatCapteurs {
   camera: Verdict;
   lidar: Verdict;
 }
+
+/** Où en est la mission en cours : le chemin joué, l'étape courante et son avancement, la pause. */
+export interface Execution {
+  missionId: string;
+  /** Les nœuds joués dans l'ordre (le départ, puis les primitives qu'on atteint par « réussi »). */
+  chemin: string[];
+  /** L'index dans `chemin` de l'étape qui se joue, et son avancement de 0 à 1. */
+  etape: number;
+  avancement: number;
+  /** La répétition en cours (à partir de 1) et leur nombre. */
+  repetition: number;
+  repetitions: number;
+  enPause: boolean;
+  /** Le temps joué depuis le lancement, pauses retirées (s). */
+  dureeS: number;
+}
