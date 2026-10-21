@@ -53,7 +53,7 @@ que, répéter, répéter jusqu'à) sort par faire à chaque tour et par fini à
 dans son entrée par un fil qui passe dessous ; « Selon l'échec » a une sortie par cas. Un geste a un paramètre
 « essais » et un « si ça rate » qui ouvre sa sortie échec. Une sortie libre porte un « + » qui ouvre le choix de
 l'étape suivante ; une boucle neuve arrive avec sa case à remplir. Le code est dans `src/components/missions/` : `charte.ts` (familles, sorties, états, couleurs de l'onde),
-`catalogue.ts` (les types de nœuds — en ajouter un, c'est une entrée), `Noeud.tsx` (nœud et cadre de boucle),
+`catalogue.ts` (les types de nœuds — en ajouter un, c'est une entrée), `Noeud.tsx` (la tuile et la case à remplir),
 `Prototype.tsx` (canevas, liens, menu du « + », simulation), `actions.ts` (ce que les nœuds demandent au canevas),
 `proposition.ts` (le texte de la proposition).
 
