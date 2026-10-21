@@ -117,6 +117,26 @@ export function creerHologramme(rendu: THREE.WebGLRenderer, scene: THREE.Scene, 
     panneau,
     /** La caméra de tête elle-même : la vue plein écran vole jusqu'à elle. */
     oeil,
+    /** Le repère de la caméra (regarde vers -z) : le nuage réel de la caméra s'y accroche. */
+    vraie,
+    /** Revient à la scène filmée depuis la caméra (le monde, nuages compris), à la place d'une image. */
+    afficherMonde() {
+      const ancienne = materiau.uniforms.uImage.value as THREE.Texture;
+      if (ancienne !== cible.texture) ancienne.dispose();
+      materiau.uniforms.uImage.value = cible.texture;
+      photo = false;
+    },
+    /** Montre une image du vrai flux sur l'écran, à la place de la scène filmée. */
+    afficherImage(bitmap: ImageBitmap) {
+      const ancienne = materiau.uniforms.uImage.value as THREE.Texture;
+      const texture = new THREE.Texture(bitmap);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.flipY = false;
+      texture.needsUpdate = true;
+      materiau.uniforms.uImage.value = texture;
+      if (photo && ancienne !== cible.texture) ancienne.dispose();
+      photo = true;
+    },
     /** Cache l'écran et sa pyramide (quand on regarde par la caméra, on ne doit pas les voir). */
     masquer(masque: boolean) {
       affiche.visible = !masque;

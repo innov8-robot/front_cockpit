@@ -47,7 +47,7 @@ export function creerSol(): THREE.Mesh {
         float fondu = exp(-r * 0.16);
         float lignes = ligne(vXZ, 1.0, 1.0) * 0.32;
         float points = point(vXZ, 0.25, 0.012) * 0.45;
-        float anneau = smoothstep(0.03, 0.0, abs(r - 0.62)) * (1.6 + 2.4 * ${GLSL_EMISSION});
+        float anneau = smoothstep(0.03, 0.0, abs(r - 0.62)) * (0.55 + 1.2 * ${GLSL_EMISSION});
         vec3 couleur = uLigne * (lignes + points) * fondu + uSonarCouleur * anneau;
         // Le déploiement : la grille n'existe qu'en deçà du front, qui brille en rouge en passant.
         float front = smoothstep(0.25, 0.0, abs(r - uRevele)) * step(0.05, uRevele) * step(uRevele, 30.0);

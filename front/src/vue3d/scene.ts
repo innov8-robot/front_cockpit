@@ -9,6 +9,8 @@ import { CALQUE_DETECTIONS, creerDetections, PREMIER_CADRE_S, type Detections } 
 import { creerEnvironnement, teinterMeubles, type Segmentation } from './environnement';
 import { creerHologramme } from './hologramme';
 import { CAMERA_TETE, creerNuages, type Nuages } from './nuages';
+import type { TrameImage, TrameNuage } from '../api/flux';
+import { creerCarteChassis, creerNuagesReels, type GrilleChassis, type NuagesReels } from './reel';
 import { allumerRobot, animerRobot, chargerRobot } from './robot';
 import { creerBandeSol, creerSol } from './sol';
 import { fixerObstacles, mettreAJourSonar, teinterSonar } from './sonar';
@@ -49,6 +51,21 @@ export interface Scene3D {
   /** Ce que le pointeur survole et qu'on peut ouvrir : l'écran de la caméra, ou rien. */
   cibleSous(clientX: number, clientY: number): 'camera' | null;
   survolerCamera(actif: boolean): void;
+  /**
+   * Passe aux données du vrai robot : l'atelier et les nuages simulés s'effacent, les nuages réels prennent leur
+   * place (le lidar sur le torse, la caméra sur la caméra de tête) et ses calques.
+   *
+   * @returns De quoi poser une trame de chaque flux.
+   */
+  brancherReel(): Promise<{
+    image(t: TrameImage): Promise<void>;
+    nuage(t: TrameNuage): void;
+    /** Pose le modèle aux angles mesurés (noms d'articulations de l'URDF). */
+    articulations(valeurs: Record<string, number>): void;
+    /** La carte du châssis, puis la pose de la base dans cette carte. */
+    grille(g: GrilleChassis): void;
+    poserBase(pose: { x: number; y: number; yaw: number }): void;
+  }>;
   /** Plonge dans l'écran de la caméra jusqu'à voir par l'œil du robot (true), ou en ressort (false). */
   plongerCamera(entrer: boolean): Promise<void>;
   detruire(): void;
@@ -110,6 +127,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
   let detections: Detections | null = null;
   let objets: { nom: string; couleur: string }[] = [];
   let atelier: THREE.Object3D | null = null;
+  let masqueAtelier: THREE.Object3D | null = null;
   let hologramme: ReturnType<typeof creerHologramme> | null = null;
   let debutApparition: number | null = null;
   let rayon = 0;
@@ -130,6 +148,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
     const bornes = new THREE.Box3().setFromObject(r);
     const zSol = bornes.isEmpty() ? 0 : bornes.min.y;
     monde.position.y = -zSol;
+    zSolReel = zSol;
     // Le sonar part du sol, au centre de l'anneau sous le robot.
     origineSonarLocale.set(0, 0, zSol + 0.02);
     scene.updateMatrixWorld(true);
@@ -145,6 +164,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
     }
     monde.add(atelier);
     nuages = creerNuages(teteLocale, env.lancer, env.objets);
+    masqueAtelier = env.masque;
     monde.add(env.masque);
     // Les ombres du sonar : les obstacles de l'atelier, ramenés dans le monde.
     fixerObstacles(env.obstacles.map((b) => b.clone().applyMatrix4(monde.matrixWorld)));
@@ -172,7 +192,17 @@ export function monterScene(hote: HTMLElement): Scene3D {
     u.uAccent.value.set(t.deploiement);
   }
 
+  let reels: NuagesReels | null = null;
+  let carteReelle: THREE.Object3D | null = null;
+  let zSolReel = 0;
+  let posture: 'simulee' | 'mesuree' = 'simulee';
+
   function appliquerVisibilite(): void {
+    if (carteReelle) carteReelle.visible = visibles.carte;
+    if (reels) {
+      reels.camera.visible = visibles.camera;
+      reels.lidar.visible = visibles.lidar;
+    }
     sol.visible = visibles.sol;
     bandeSol.visible = visibles.sol;
     if (atelier) atelier.visible = visibles.atelier;
@@ -266,7 +296,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
       mettreAJourSonar(t, monde.localToWorld(origineSonar), monde.localToWorld(oeilSonar),
         deploye === null ? 0 : Math.min(1, deploye));
     }
-    if (robot) animerRobot(robot, t);
+    if (robot && posture === 'simulee') animerRobot(robot, t);
     nuages?.mettreAJour(t);
     hologramme?.mettreAJour(t);
     voler(t);
@@ -320,6 +350,40 @@ export function monterScene(hote: HTMLElement): Scene3D {
           } };
         }
       });
+    },
+    async brancherReel() {
+      await pret;
+      reels = creerNuagesReels();
+      const simules = [atelier, masqueAtelier, peau, segmentation?.groupe, nuages?.camera, nuages?.lidar, nuages?.carte];
+      for (const o of simules) if (o) o.removeFromParent();
+      // Les meubles simulés ne font plus d'ombre à l'impulsion : elle se réfléchit sur les murs de la carte.
+      fixerObstacles([]);
+      detections?.afficher(false);
+      detections = null;
+      // Le modèle suit désormais le robot : plus de respiration simulée.
+      posture = 'mesuree';
+      const carte = creerCarteChassis();
+      // Le sol du modèle : la carte se pose dessus, sous les roues.
+      carte.groupe.position.z = zSolReel;
+      carteReelle = carte.groupe;
+      monde.add(carte.groupe);
+      // Les deux nuages dans le repère du torse, comme la vue 3D viser : la hand-eye y porte la caméra.
+      const torse = robot!.links.torso_link ?? robot!;
+      torse.add(reels.camera, reels.lidar);
+      // L'écran de la tête filme le monde reconstruit (le nuage RGBD y est déjà), pas l'image brute.
+      hologramme!.afficherMonde();
+      appliquerVisibilite();
+      return {
+        image: async (t: TrameImage) => {
+          (await reels!.image(t))?.close();
+        },
+        nuage: (t: TrameNuage) => reels!.nuage(t),
+        grille: (g: GrilleChassis) => carte.grille(g),
+        poserBase: (pose: { x: number; y: number; yaw: number }) => carte.poserBase(pose),
+        articulations: (valeurs: Record<string, number>) => {
+          for (const [nom, v] of Object.entries(valeurs)) robot!.setJointValue(nom, v);
+        },
+      };
     },
     demarrer() {
       if (debutApparition === null) debutApparition = horloge.getElapsedTime();

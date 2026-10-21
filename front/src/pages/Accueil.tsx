@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { api } from '../api/client';
+import { api, enSimulation } from '../api/client';
+import { decoderImage, decoderNuage, ouvrirFlux } from '../api/flux';
+import { urlServeur } from '../api/mode';
+import type { GrilleChassis } from '../vue3d/reel';
+import { chargerCarte, surChangementDeCarte } from '../api/cartes';
 import type { EtatCapteurs, EtatCorps, Robot, Verdict } from '../api/types';
 import { BarreRobot } from '../components/BarreRobot';
 import { CALQUES } from '../components/calques';
@@ -10,6 +14,7 @@ import { Demarrage } from '../components/Demarrage';
 import { IntroLogo } from '../components/IntroLogo';
 import { MiniCarte } from '../components/MiniCarte';
 import { Reticule } from '../components/Reticule';
+import { SelecteurSource } from '../components/SelecteurSource';
 import { Overlay } from '../components/Overlay';
 import { useCharge } from '../components/useCharge';
 import { monterScene, type Calque, type Scene3D } from '../vue3d/scene';
@@ -62,6 +67,8 @@ export function Accueil() {
   // Par l'œil du robot : la scène et ses objets segmentés, ou la dernière image réelle s'il y en a une.
   const [apercu, setApercu] = useApercuCamera();
   const [imageReelle, setImageReelle] = useState(false);
+  /** La dernière image du flux du robot (URL d'objet), au réel. */
+  const [direct, setDirect] = useState<string | null>(null);
 
   function survoler(e: React.PointerEvent) {
     const s = scene.current;
@@ -133,7 +140,34 @@ export function Accueil() {
       setPret(true);
       setNbObjets(s.objets().length);
     });
-    return () => s.detruire();
+    // Au réel, les flux du serveur remplacent les nuages et l'atelier simulés.
+    let fermer: (() => void)[] = [];
+    if (!enSimulation) {
+      s.brancherReel().then((reel) => {
+        const url = urlServeur();
+        let precedente: string | null = null;
+        fermer = [
+          ouvrirFlux(url, '/ws/camera', (b) => {
+            const t = decoderImage(b as ArrayBuffer);
+            reel.image(t).catch(() => undefined);
+            const nouvelle = URL.createObjectURL(t.jpeg);
+            setDirect(nouvelle);
+            if (precedente) URL.revokeObjectURL(precedente);
+            precedente = nouvelle;
+          }),
+          ouvrirFlux(url, '/ws/lidar', (b) => reel.nuage(decoderNuage(b as ArrayBuffer))),
+          suivreCarte(url, reel),
+          ouvrirFlux(url, '/ws/etat', (b) => {
+            const m = JSON.parse(typeof b === 'string' ? b : new TextDecoder().decode(b));
+            reel.articulations(m.articulations);
+          }),
+        ];
+      });
+    }
+    return () => {
+      for (const f of fermer) f();
+      s.detruire();
+    };
   }, []);
 
   function basculer(c: Calque) {
@@ -155,6 +189,7 @@ export function Accueil() {
             <span className="hud-rail-nom">{libelle}</span>
           </NavLink>
         ))}
+              <SelecteurSource />
       </nav>
 
 
@@ -164,14 +199,14 @@ export function Accueil() {
 
       {(plein === 'camera') && (
         <div className="vue-camera" aria-label="Vue de la caméra de tête">
-          {apercu && imageReelle && (
+          {(direct ?? apercu) && imageReelle && (
             <>
-              <img className="vue-camera-image" src="camera/apercu.jpg" alt="Dernière image de la caméra de tête"
+              <img className="vue-camera-image" src={direct ?? 'camera/apercu.jpg'} alt="Image de la caméra de tête"
                 onError={() => setApercu(null)} />
-              <p className="vue-camera-source">IMAGE D'ARCHIVE · {apercu}</p>
+              <p className="vue-camera-source">{direct ? 'FLUX DU ROBOT' : `IMAGE D'ARCHIVE · ${apercu}`}</p>
             </>
           )}
-          {apercu && (
+          {(direct ?? apercu) && (
             <button className="hud-plein-fermer vue-camera-bascule" aria-pressed={imageReelle}
               onClick={() => setImageReelle(!imageReelle)}>
               {imageReelle ? 'OBJETS SEGMENTÉS' : 'IMAGE RÉELLE'}
@@ -217,4 +252,18 @@ function useApercuCamera(): [string | null, (run: string | null) => void] {
     fetch('camera/apercu.json').then((r) => r.json()).then((m: { run: string }) => setRun(m.run)).catch(() => setRun(null));
   }, []);
   return [run, setRun];
+}
+
+/** Relit la carte du châssis (toutes les 10 s) et sa pose (deux fois par seconde) pour la scène 3D au réel. */
+function suivreCarte(url: string, reel: { grille(g: GrilleChassis): void; poserBase(p: { x: number; y: number; yaw: number }): void }) {
+  let vivant = true;
+  const carte = () => chargerCarte(url).then((g) => vivant && g && reel.grille(g)).catch(() => undefined);
+  const pose = () => fetch(`${url}/api/chassis`).then((r) => (r.ok ? r.json() : null))
+    .then((c) => vivant && c && reel.poserBase(c.pose)).catch(() => undefined);
+  carte();
+  pose();
+  const t1 = setInterval(carte, 10_000);
+  const t2 = setInterval(pose, 500);
+  const arreter = surChangementDeCarte(carte);
+  return () => { vivant = false; clearInterval(t1); clearInterval(t2); arreter(); };
 }
