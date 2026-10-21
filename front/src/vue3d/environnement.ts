@@ -10,12 +10,12 @@ import { CALQUE_DETECTIONS, ORDRE_MASQUE, ORDRE_SEGMENTATION } from './detection
 type Forme = (
   | { type: 'boite'; min: THREE.Vector3; max: THREE.Vector3; ton: Ton }
   | { type: 'cylindre'; x: number; y: number; r: number; z0: number; z1: number; ton: Ton }
-) & { objet?: number };
+) & { objet?: number; couleur: THREE.Color };
 
 type Ton = 'meuble' | 'objet' | 'machine';
 
-/** Ce qu'un rayon a touché : l'indice de l'objet déclaré, -1 pour le reste de l'atelier. */
-export interface Touche { objet: number }
+/** Ce qu'un rayon a touché : l'indice de l'objet déclaré (-1 pour le reste de l'atelier) et sa couleur. */
+export interface Touche { objet: number; couleur?: THREE.Color }
 
 /** Rend la distance du premier obstacle sur le rayon ; `touche`, s'il est donné, reçoit l'objet touché. */
 export type Lancer = (o: THREE.Vector3, d: THREE.Vector3, touche?: Touche) => number;
@@ -37,6 +37,23 @@ export const CLASSES: Record<string, string> = {
   bac: '#c77dff',
 };
 
+/** Les fausses couleurs des matières de l'atelier, telles qu'une caméra couleur les verrait. */
+const PEINTURES = {
+  plateau: new THREE.Color('#b07a46'), metal: new THREE.Color('#8e959c'), piece: new THREE.Color('#2a2b2e'),
+  carton: new THREE.Color('#b8875a'), mug: new THREE.Color('#d24b3c'), bac: new THREE.Color('#2f64c4'),
+  bande: new THREE.Color('#3a3d42'), machine: new THREE.Color('#e3b43a'), etagere: new THREE.Color('#2f6db0'),
+  palette: new THREE.Color('#c79a63'), station: new THREE.Color('#5b6168'), beton: new THREE.Color('#b9b6ae'),
+  sol: new THREE.Color('#8a8d90'), mur: new THREE.Color('#d6d3cb'), plafond: new THREE.Color('#5a5d61'),
+  marquage: new THREE.Color('#e8c11c'),
+};
+
+/** Le sol : du béton, et le marquage jaune au sol autour du poste de la table. */
+function couleurSol(x: number, y: number): THREE.Color {
+  const dedans = (bx0: number, by0: number, bx1: number, by1: number) => x > bx0 && x < bx1 && y > by0 && y < by1;
+  const bordure = dedans(0.15, -0.85, 1.32, 0.85) && !dedans(0.21, -0.79, 1.26, 0.79);
+  return bordure ? PEINTURES.marquage : PEINTURES.sol;
+}
+
 const SALLE = { x0: -4.5, x1: 6.5, y0: -5.5, y1: 5.5, h: 4 };
 
 function construire(sol: number): { formes: Forme[]; classes: string[] } {
@@ -44,26 +61,35 @@ function construire(sol: number): { formes: Forme[]; classes: string[] } {
   const classes: string[] = [];
   // Les formes ajoutées pendant `declarer` appartiennent à l'objet déclaré.
   let courant: number | undefined;
+  // La couleur des formes ajoutées ensuite : une fausse couleur de matière, pour colorer le nuage de la caméra.
+  let peinture = PEINTURES.metal;
+  const peindre = (c: THREE.Color) => { peinture = c; };
   const declarer = (classe: string, ajouter: () => void) => {
     courant = classes.push(classe) - 1;
     ajouter();
     courant = undefined;
   };
   const boite = (x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, ton: Ton = 'meuble') =>
-    f.push({ type: 'boite', min: new THREE.Vector3(x0, y0, sol + z0), max: new THREE.Vector3(x1, y1, sol + z1), ton, objet: courant });
+    f.push({ type: 'boite', min: new THREE.Vector3(x0, y0, sol + z0), max: new THREE.Vector3(x1, y1, sol + z1), ton, objet: courant, couleur: peinture });
   const cylindre = (x: number, y: number, r: number, z0: number, z1: number, ton: Ton = 'objet') =>
-    f.push({ type: 'cylindre', x, y, r, z0: sol + z0, z1: sol + z1, ton, objet: courant });
+    f.push({ type: 'cylindre', x, y, r, z0: sol + z0, z1: sol + z1, ton, objet: courant, couleur: peinture });
   const pieds = (x0: number, y0: number, x1: number, y1: number, h: number, e = 0.04) => {
     for (const [x, y] of [[x0, y0], [x1 - e, y0], [x0, y1 - e], [x1 - e, y1 - e]]) boite(x, y, 0, x + e, y + e, h);
   };
 
   // La table de travail et ce qui est posé dessus, déclaré : le mug, le carton, deux pièces et le bac.
   const t = 0.75;
+  peindre(PEINTURES.plateau);
   boite(0.38, -0.6, t - 0.03, 1.08, 0.6, t);
+  peindre(PEINTURES.metal);
   pieds(0.38, -0.6, 1.08, 0.6, t - 0.03);
+  peindre(PEINTURES.piece);
   declarer('pièce', () => boite(0.46, -0.21, t, 0.58, -0.11, t + 0.06, 'objet'));
+  peindre(PEINTURES.carton);
   declarer('carton', () => boite(0.6, 0.02, t, 0.7, 0.1, t + 0.09, 'objet'));
+  peindre(PEINTURES.piece);
   declarer('pièce', () => boite(0.52, -0.42, t, 0.6, -0.32, t + 0.05, 'objet'));
+  peindre(PEINTURES.mug);
   declarer('mug', () => cylindre(0.42, -0.06, 0.055, t, t + 0.23));
   const bac = (x0: number, y0: number, x1: number, y1: number, z: number, h: number) => {
     boite(x0, y0, z, x1, y0 + 0.02, z + h, 'objet');
@@ -72,39 +98,50 @@ function construire(sol: number): { formes: Forme[]; classes: string[] } {
     boite(x1 - 0.02, y0, z, x1, y1, z + h, 'objet');
     boite(x0, y0, z, x1, y1, z + 0.01, 'objet');
   };
+  peindre(PEINTURES.bac);
   declarer('bac', () => bac(0.72, 0.18, 1.02, 0.42, t, 0.13));
 
   // Le convoyeur, à gauche, avec ses cartons.
+  peindre(PEINTURES.bande);
   boite(-0.6, 1.3, 0.72, 3.4, 1.8, 0.8);
   boite(-0.6, 1.26, 0.8, 3.4, 1.3, 0.86);
   boite(-0.6, 1.8, 0.8, 3.4, 1.84, 0.86);
+  peindre(PEINTURES.metal);
   for (const x of [-0.5, 0.6, 1.7, 2.8, 3.3]) pieds(x, 1.32, x + 0.08, 1.78, 0.72);
+  peindre(PEINTURES.carton);
   for (const [x, l, h] of [[0.1, 0.3, 0.22], [1.2, 0.4, 0.3], [2.3, 0.3, 0.18]]) boite(x, 1.38, 0.8, x + l, 1.72, 0.8 + h, 'objet');
 
   // La machine, à droite : le bâti, la porte vitrée, le pupitre.
+  peindre(PEINTURES.machine);
   boite(1.9, -3.4, 0, 3.0, -1.8, 2.0, 'machine');
   boite(1.88, -3.1, 0.7, 1.9, -2.1, 1.6, 'machine');
   boite(1.7, -1.75, 0.95, 1.9, -1.4, 1.35, 'machine');
   boite(1.78, -1.62, 0, 1.84, -1.56, 0.95, 'machine');
 
   // L'étagère, derrière à gauche, et ses cartons.
+  peindre(PEINTURES.etagere);
   for (const x of [-2.6, -1.4, -0.2]) for (const y of [2.7, 3.2]) boite(x, y, 0, x + 0.06, y + 0.06, 2.2);
   for (const z of [0.15, 0.85, 1.55]) boite(-2.6, 2.7, z, -0.14, 3.26, z + 0.04);
+  peindre(PEINTURES.carton);
   for (const [x, z, l, h] of [[-2.5, 0.19, 0.5, 0.35], [-1.9, 0.19, 0.4, 0.3], [-1.2, 0.89, 0.6, 0.4], [-0.9, 1.59, 0.5, 0.3], [-2.4, 1.59, 0.7, 0.45]]) {
     boite(x, 2.78, z, x + l, 3.18, z + h, 'objet');
   }
 
   // La palette chargée, devant à droite.
+  peindre(PEINTURES.palette);
   boite(3.2, 0.2, 0, 4.4, 1.0, 0.14);
+  peindre(PEINTURES.carton);
   for (const [x, y, h] of [[3.25, 0.25, 0.5], [3.85, 0.25, 0.4], [3.25, 0.62, 0.45], [3.85, 0.62, 0.55], [3.5, 0.4, 0.3]]) {
     boite(x, y, h > 0.5 ? 0.14 : 0.14, x + 0.52, y + 0.35, 0.14 + h, 'objet');
   }
 
   // La station de charge, derrière le robot.
+  peindre(PEINTURES.station);
   boite(-1.7, -0.45, 0, -1.15, 0.45, 0.55, 'machine');
   boite(-1.2, -0.25, 0.1, -1.1, 0.25, 0.35, 'machine');
 
   // Les piliers du bâtiment.
+  peindre(PEINTURES.beton);
   for (const [x, y] of [[5, -4.5], [5, 4.5], [-3.5, -4.5], [-3.5, 4.5], [5, 0]]) cylindre(x, y, 0.22, 0, SALLE.h, 'meuble');
   return { formes: f, classes };
 }
@@ -129,11 +166,13 @@ function lancerContre(formes: Forme[], sol: number): Lancer {
   return (o, d, touche) => {
     let meilleur = Infinity;
     let objet = -1;
+    let couleur: THREE.Color = PEINTURES.mur;
     for (const f of formes) {
       const t = f.type === 'boite' ? contreBoite(o, d, f.min, f.max) : contreCylindre(o, d, f);
       if (t > 0.02 && t < meilleur) {
         meilleur = t;
         objet = f.objet ?? -1;
+        couleur = f.couleur;
       }
     }
     const murs: [number, number, number][] = [
@@ -146,9 +185,13 @@ function lancerContre(formes: Forme[], sol: number): Lancer {
       if (t > 0 && t < meilleur) {
         meilleur = t;
         objet = -1;
+        couleur = k < 2 ? PEINTURES.mur : dk < 0 ? couleurSol(o.x + d.x * t, o.y + d.y * t) : PEINTURES.plafond;
       }
     }
-    if (touche) touche.objet = objet;
+    if (touche) {
+      touche.objet = objet;
+      touche.couleur = couleur;
+    }
     return meilleur;
   };
 }

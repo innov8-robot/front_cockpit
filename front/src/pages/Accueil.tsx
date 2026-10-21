@@ -3,7 +3,6 @@ import { NavLink } from 'react-router-dom';
 import { api } from '../api/client';
 import type { EtatCapteurs, EtatCorps, Robot, Verdict } from '../api/types';
 import { BarreRobot } from '../components/BarreRobot';
-import { IconeCorps } from '../components/IconesRobot';
 import { CALQUES } from '../components/calques';
 import { BarreMission } from '../components/BarreMission';
 import { FiltresCalques } from '../components/Filtres';
@@ -19,9 +18,8 @@ const SANTE_MS = 2000;
 
 /** Les écrans qu'on ouvre depuis l'accueil, dans le rail du côté droit. */
 const RAIL = [
-  { vers: '/robot', libelle: 'Robot', Icone: IconeCorps },
-  { vers: '/missions', libelle: 'Missions', Icone: IconeMissions },
   { vers: '/primitives', libelle: 'Primitives', Icone: IconePrimitives },
+  { vers: '/missions', libelle: 'Missions', Icone: IconeMissions },
 ];
 
 function IconeMissions() {

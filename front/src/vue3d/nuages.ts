@@ -34,10 +34,13 @@ function materiauCanal(couleur: string, taille: number, vie: number, canal: THRE
       uCanal: { value: new THREE.Color(canal.x, canal.y, canal.z) },
       uTeintes: { value: teintes },
       uObjets: { value: 0 },
+      uRgb: { value: 0 },
     },
     vertexShader: /* glsl */ `
       attribute float aNaissance;
       attribute float aObjet;
+      attribute vec3 aRgb;
+      uniform float uRgb;
       uniform vec3 uCouleur;
       uniform vec3 uCanal;
       uniform vec3 uTeintes[${MAX_OBJETS}];
@@ -63,8 +66,10 @@ function materiauCanal(couleur: string, taille: number, vie: number, canal: THRE
         int k = int(aObjet + 0.5) - 1;
         bool objet = k >= 0;
         float teinte = objet ? uObjets : 0.0;
-        vCouleur = uCouleur;
-        for (int i = 0; i < ${MAX_OBJETS}; i++) if (objet && i == k) vCouleur = mix(uCouleur, uTeintes[i] * uCanal, teinte);
+        // La caméra couleur : chaque point porte la couleur de ce qu'il touche, dans le canal de cette passe.
+        vec3 base = uRgb > 0.5 ? aRgb * uCanal * 1.25 : uCouleur;
+        vCouleur = base;
+        for (int i = 0; i < ${MAX_OBJETS}; i++) if (objet && i == k) vCouleur = mix(base, uTeintes[i] * uCanal, teinte);
         vAlpha = min(1.0, vAlpha + 0.35 * teinte);
         gl_PointSize = clamp(uTaille * uEchelle / -vue.z, 1.5, 4.0) * (1.0 + 0.4 * teinte);
         gl_Position = projectionMatrix * vue;
@@ -130,7 +135,10 @@ export function creerNuages(tete: THREE.Vector3, lancer: Lancer, objets: ObjetDe
   geoCam.setAttribute('aNaissance', new THREE.BufferAttribute(new Float32Array(L * H), 1));
   const objetCam = new Float32Array(L * H);
   geoCam.setAttribute('aObjet', new THREE.BufferAttribute(objetCam, 1));
+  const rgbCam = new Float32Array(L * H * 3);
+  geoCam.setAttribute('aRgb', new THREE.BufferAttribute(rgbCam, 3));
   const camera = nuageAberrant(geoCam, '#c4d2ea', 7, 0, teintes);
+  for (const m of camera.materiaux) m.uniforms.uRgb.value = 1;
   const origineCam = tete.clone().add(CAMERA_TETE.decalage);
   const tangage = THREE.MathUtils.degToRad(CAMERA_TETE.tangageDeg);
   const fovH = THREE.MathUtils.degToRad(CAMERA_TETE.champHDeg) / 2;
@@ -153,6 +161,12 @@ export function creerNuages(tete: THREE.Vector3, lancer: Lancer, objets: ObjetDe
         t *= 1 + (Math.random() - 0.5) * 0.004;
         const objet = Number.isNaN(t) ? -1 : touche.objet;
         objetCam[n / 3] = objet + 1;
+        // Une fausse couleur : la matière touchée, un grain de capteur, et un peu plus sombre au loin.
+        const lumiere = (0.82 + Math.random() * 0.18) * (1.1 - Math.min(t, 3) * 0.12);
+        const matiere = touche.couleur;
+        rgbCam[n] = (matiere?.r ?? 0.7) * lumiere;
+        rgbCam[n + 1] = (matiere?.g ?? 0.7) * lumiere;
+        rgbCam[n + 2] = (matiere?.b ?? 0.7) * lumiere;
         if (objet >= 0) pointsParObjet[objet]++;
         posCam[n++] = origineCam.x + d.x * t;
         posCam[n++] = origineCam.y + d.y * t;
@@ -161,6 +175,7 @@ export function creerNuages(tete: THREE.Vector3, lancer: Lancer, objets: ObjetDe
     }
     geoCam.attributes.position.needsUpdate = true;
     geoCam.attributes.aObjet.needsUpdate = true;
+    geoCam.attributes.aRgb.needsUpdate = true;
   }
 
   const N = 60_000;
