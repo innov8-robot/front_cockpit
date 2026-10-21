@@ -1,13 +1,12 @@
 /**
- * Une mission qui joue, simulée pour la page d'essai de la barre de lecture. Trois missions : longue (une branche
- * « échec »), courte, et celle du prototype de l'éditeur (une boucle sur les pièces, une condition, deux appels à
- * l'opérateur, une prise qui rate). La pause, l'arrêt d'urgence, un avertissement qui n'arrête rien et une erreur qui
- * arrête tout. Le temps est accéléré : une étape de 14 s en dure moins de cinq.
+ * Une mission qui joue, simulée pour les pages d'essai de la barre de lecture. Trois missions au format de l'API :
+ * celle du prototype de l'éditeur (une boucle sur les pièces, une condition, deux appels à l'opérateur, une prise qui
+ * rate), une longue (une branche « échec ») et une courte. La pause, le pas à pas, l'arrêt par l'opérateur, l'arrêt
+ * d'urgence, un avertissement qui n'arrête rien et une erreur qui arrête tout. Le temps est accéléré.
  */
 import { useEffect, useReducer } from 'react';
-import type { Mission, Primitive, TypePrimitive } from '../../api/types';
+import type { Mission, NoeudMission, Primitive, TypePrimitive } from '../../api/types';
 import { duree } from '../executions/donnees';
-import { typeNoeud } from '../missions/catalogue';
 import type { Sortie } from '../missions/charte';
 import { grapheDe } from './direct';
 import { MESSAGE_URGENCE, prevus, suivant, type GrapheLecture, type Lecture, type MessageLecture, type PasLecture } from './lecture';
@@ -15,16 +14,15 @@ import { MESSAGE_URGENCE, prevus, suivant, type GrapheLecture, type Lecture, typ
 /** Ce que l'étape décide en finissant : la sortie qu'elle prend, ou qu'elle rate. */
 interface Regle { sortie?: Sortie; rate?: boolean }
 
-/** Une mission de la page d'essai : son graphe, ses répétitions, et ce que chaque nœud est et décide. */
+/** Une mission de la page d'essai : la mission de l'API, son graphe, et ce que chaque nœud est et décide. */
 export interface MissionEssai {
+  mission: Mission;
   graphe: GrapheLecture;
   repetitions: number;
   /** Le genre de chaque nœud (la clé du catalogue, ou le type de la primitive) : sa durée et sa cause d'échec. */
   genres: Record<string, string>;
   /** Ce que l'opérateur doit faire, pour les nœuds qui l'appellent. */
   appels: Record<string, string>;
-  /** La règle d'un nœud qui finit, à sa `visite`-ième fois dans le tour ; sans règle, il réussit par « ok » ou « suite ». */
-  regle(id: string, genre: string, visite: number, tour: number): Regle;
 }
 
 const primitive = (id: string, nom: string, type: TypePrimitive): Primitive => ({
@@ -32,7 +30,7 @@ const primitive = (id: string, nom: string, type: TypePrimitive): Primitive => (
   tauxReussite: null, executions: 0,
 });
 
-const PRIMITIVES = [
+export const PRIMITIVES_ESSAI = [
   primitive('table', 'Aller à la table', 'deplacer'),
   primitive('prise', 'Prendre la pièce Novares', 'prise_objet'),
   primitive('bac', 'Aller au bac B', 'deplacer'),
@@ -41,85 +39,84 @@ const PRIMITIVES = [
   primitive('base', 'Retour à la base', 'deplacer'),
 ];
 
-const noeud = (id: string, primitiveId: string | null, x: number, y: number) => ({ id, primitiveId, x, y });
-const lien = (de: string, sortie: 'ok' | 'echec', vers: string) => ({ id: `${de}-${sortie}-${vers}`, de, sortie, vers });
-
-/** Une mission de primitives, comme l'API les sert : sa prise rate au deuxième tour. */
-function depuisApi(m: Mission): MissionEssai {
-  const genres = Object.fromEntries(m.noeuds.map((n) => [n.id, PRIMITIVES.find((p) => p.id === n.primitiveId)?.type ?? 'declencheur']));
-  return {
-    graphe: grapheDe(m, PRIMITIVES), repetitions: m.repetitions, genres, appels: {},
-    regle: (_id, genre, _visite, tour) => (tour === 2 && genre === 'prise_objet' ? { rate: true } : {}),
-  };
-}
-
-const LONGUE: Mission = {
-  id: 'essai-longue', nom: 'Vider la table dans le bac', description: '', robotId: 'r1', repetitions: 3, etat: 'en_cours', modifieeLe: '',
-  noeuds: [noeud('depart', null, 0, 100), noeud('n1', 'table', 250, 100), noeud('n2', 'prise', 520, 100), noeud('n3', 'bac', 800, 0),
-    noeud('n4', 'depose', 1080, 0), noeud('n5', 'rentrer', 800, 230), noeud('n6', 'base', 1080, 230)],
-  liens: [lien('depart', 'ok', 'n1'), lien('n1', 'ok', 'n2'), lien('n2', 'ok', 'n3'), lien('n3', 'ok', 'n4'),
-    lien('n2', 'echec', 'n5'), lien('n5', 'ok', 'n6')],
-};
-
-const COURTE: Mission = {
-  id: 'essai-courte', nom: 'Prendre et déposer', description: '', robotId: 'r1', repetitions: 4, etat: 'en_cours', modifieeLe: '',
-  noeuds: [noeud('depart', null, 0, 80), noeud('n1', 'prise', 250, 80), noeud('n2', 'depose', 520, 0), noeud('n3', 'rentrer', 520, 190)],
-  liens: [lien('depart', 'ok', 'n1'), lien('n1', 'ok', 'n2'), lien('n1', 'echec', 'n3')],
-};
+const noeud = (id: string, primitiveId: string | null, x: number, y: number): NoeudMission => ({ id, primitiveId, x, y });
+const logique = (id: string, type: string, valeurs: Record<string, string | number>, x: number, y: number): NoeudMission => ({
+  id, primitiveId: null, type, valeurs, x, y,
+});
+const lien = (de: string, sortie: Mission['liens'][number]['sortie'], vers: string) => ({ id: `${de}-${sortie}-${vers}`, de, sortie, vers });
+const mission = (id: string, nom: string, repetitions: number, noeuds: NoeudMission[], liens: Mission['liens']): Mission => ({
+  id, nom, description: '', robotId: 'r1', repetitions, etat: 'en_cours', modifieeLe: '', noeuds, liens,
+});
 
 /** L'écart entre deux colonnes et deux rangées de la mission du prototype, sur le canevas de l'éditeur. */
 const COLONNE = 260;
 const RANGEE = 120;
+const c = (n: number) => n * COLONNE;
 
 /**
  * La mission du prototype de l'éditeur : pour chaque pièce sur la table, si le bac est plein, appeler l'opérateur ;
  * prendre la pièce (deux essais), la poser, compter, et revenir à la boucle ; une pièce imprenable appelle l'opérateur,
- * puis la boucle passe à la suivante. Quand il n'en reste plus : rentrer les bras, aller à la base, terminer. Ici, trois
- * pièces : le bac est plein à la deuxième, la troisième ne se prend pas.
+ * puis la boucle passe à la suivante. Quand il n'en reste plus : rentrer les bras, aller à la base, terminer.
  */
-function prototype(): MissionEssai {
-  const c = (n: number) => n * COLONNE;
-  const n = (id: string, cle: string, x: number, y: number, nom: string) => ({ cle, noeud: { id, type: typeNoeud(cle), x, y, nom } });
-  const noeuds = [
-    n('depart', 'au_lancement', c(0), 200, 'Lancement'),
-    n('aller', 'deplacer', c(1), 200, 'Aller à la table'),
-    n('boucle', 'pour_chaque', c(2), 200, 'Pour chaque pièce sur la table'),
-    n('si', 'si', c(3), 212, 'Le bac est plein ?'),
-    n('appel_bac', 'demander', c(4), 200 - RANGEE, 'Opérateur : videz le bac'),
-    n('prendre', 'prise_objet', c(5), 212, 'Prendre la pièce (2 essais)'),
-    n('poser', 'depose_objet', c(6), 200, 'Poser dans le bac B'),
-    n('compter', 'compteur', c(7), 200, 'Compter les pièces déposées'),
-    n('appel_prise', 'demander', c(6), 200 + 1.6 * RANGEE, 'Opérateur : retirez la pièce'),
-    n('rentrer', 'rentrer', c(3), 200 - 2.3 * RANGEE, 'Rentrer les bras'),
-    n('base', 'deplacer', c(4), 200 - 2.3 * RANGEE, 'Aller à la base'),
-    n('fin', 'terminer', c(5), 200 - 2.3 * RANGEE, 'Terminer : réussie'),
-  ];
-  const l = (id: string, de: string, sortie: Sortie, vers: string) => ({ id, de, sortie, vers });
-  return {
-    graphe: {
-      id: 'essai-prototype', nom: 'Vider la table, en boucle',
-      noeuds: noeuds.map((x) => x.noeud),
-      liens: [
-        l('e1', 'depart', 'suite', 'aller'), l('e2', 'aller', 'ok', 'boucle'), l('e3', 'boucle', 'faire', 'si'),
-        l('e4', 'si', 'alors', 'appel_bac'), l('e5', 'appel_bac', 'ok', 'prendre'), l('e6', 'si', 'sinon', 'prendre'),
-        l('e7', 'prendre', 'ok', 'poser'), l('e8', 'poser', 'ok', 'compter'), l('e9', 'compter', 'suite', 'boucle'),
-        l('e10', 'prendre', 'echec', 'appel_prise'), l('e11', 'appel_prise', 'ok', 'boucle'), l('e12', 'boucle', 'fini', 'rentrer'),
-        l('e13', 'rentrer', 'ok', 'base'), l('e14', 'base', 'ok', 'fin'),
-      ],
-    },
-    repetitions: 1,
-    genres: Object.fromEntries(noeuds.map((x) => [x.noeud.id, x.cle])),
-    appels: { appel_bac: 'videz le bac', appel_prise: 'retirez la pièce' },
-    regle: (id, _genre, visite) => {
-      if (id === 'boucle') return { sortie: visite <= 3 ? 'faire' : 'fini' };
-      if (id === 'si') return { sortie: visite === 2 ? 'alors' : 'sinon' };
-      if (id === 'prendre') return { rate: visite === 3 };
-      return {};
-    },
-  };
+const PROTOTYPE = mission('essai-prototype', 'Vider la table, en boucle', 1, [
+  noeud('depart', null, c(0), 200),
+  noeud('aller', 'table', c(1), 200),
+  logique('boucle', 'pour_chaque', { objet: 'pièce', zone: 'la table' }, c(2), 200),
+  logique('si', 'si', { condition: 'bac plein' }, c(3), 212),
+  logique('appel_bac', 'demander', { message: 'Videz le bac' }, c(4), 200 - RANGEE),
+  noeud('prendre', 'prise', c(5), 212),
+  noeud('poser', 'depose', c(6), 200),
+  logique('compter', 'compteur', { variable: 'déposées', pas: 1 }, c(7), 200),
+  logique('appel_prise', 'demander', { message: 'Retirez la pièce' }, c(6), 200 + 1.6 * RANGEE),
+  noeud('rentrer', 'rentrer', c(3), 200 - 2.3 * RANGEE),
+  noeud('base', 'base', c(4), 200 - 2.3 * RANGEE),
+  logique('fin', 'terminer', { verdict: 'réussie' }, c(5), 200 - 2.3 * RANGEE),
+], [
+  lien('depart', 'ok', 'aller'), lien('aller', 'ok', 'boucle'), lien('boucle', 'faire', 'si'), lien('si', 'alors', 'appel_bac'),
+  lien('appel_bac', 'ok', 'prendre'), lien('si', 'sinon', 'prendre'), lien('prendre', 'ok', 'poser'), lien('poser', 'ok', 'compter'),
+  lien('compter', 'suite', 'boucle'), lien('prendre', 'echec', 'appel_prise'), lien('appel_prise', 'ok', 'boucle'),
+  lien('boucle', 'fini', 'rentrer'), lien('rentrer', 'ok', 'base'), lien('base', 'ok', 'fin'),
+]);
+
+const LONGUE = mission('essai-longue', 'Vider la table dans le bac', 3, [
+  noeud('depart', null, 0, 100), noeud('n1', 'table', 250, 100), noeud('n2', 'prise', 520, 100), noeud('n3', 'bac', 800, 0),
+  noeud('n4', 'depose', 1080, 0), noeud('n5', 'rentrer', 800, 230), noeud('n6', 'base', 1080, 230),
+], [
+  lien('depart', 'ok', 'n1'), lien('n1', 'ok', 'n2'), lien('n2', 'ok', 'n3'), lien('n3', 'ok', 'n4'), lien('n2', 'echec', 'n5'),
+  lien('n5', 'ok', 'n6'),
+]);
+
+const COURTE = mission('essai-courte', 'Prendre et déposer', 4, [
+  noeud('depart', null, 0, 80), noeud('n1', 'prise', 250, 80), noeud('n2', 'depose', 520, 0), noeud('n3', 'rentrer', 520, 190),
+], [lien('depart', 'ok', 'n1'), lien('n1', 'ok', 'n2'), lien('n1', 'echec', 'n3')]);
+
+/** Une mission de l'API, prête pour la simulation. */
+function essai(m: Mission): MissionEssai {
+  const genres = Object.fromEntries(m.noeuds.map((n) => [n.id, n.type ?? PRIMITIVES_ESSAI.find((p) => p.id === n.primitiveId)?.type ?? 'declencheur']));
+  const appels = Object.fromEntries(m.noeuds.filter((n) => n.type === 'demander').map((n) => [n.id, String(n.valeurs?.message ?? '').toLowerCase()]));
+  return { mission: m, graphe: grapheDe(m, PRIMITIVES_ESSAI), repetitions: m.repetitions, genres, appels };
 }
 
-export const MISSIONS_ESSAI = { longue: depuisApi(LONGUE), courte: depuisApi(COURTE), prototype: prototype() };
+export const MISSIONS_ESSAI = { prototype: essai(PROTOTYPE), longue: essai(LONGUE), courte: essai(COURTE) };
+
+/** Les nœuds de boucle : « faire » tant qu'il reste des pièces, puis « fini ». */
+const BOUCLES = ['pour_chaque', 'pour', 'repeter', 'tant_que'];
+/** Combien de pièces une boucle simulée trouve sur la table. */
+const PIECES = 3;
+
+/**
+ * La règle d'un nœud qui finit, à sa `visite`-ième fois dans le tour : une boucle fait « faire » trois fois puis
+ * « fini » ; une condition est vraie à la deuxième pièce ; une prise rattrapée par une sortie « échec » rate à la
+ * dernière pièce d'une boucle, ou au deuxième tour d'une mission sans boucle. Le reste réussit par « ok » ou « suite ».
+ */
+function regle(m: MissionEssai, id: string, visite: number, tour: number): Regle {
+  const genre = m.genres[id];
+  if (BOUCLES.includes(genre)) return { sortie: visite <= PIECES ? 'faire' : 'fini' };
+  if (genre === 'si') return { sortie: visite === 2 ? 'alors' : 'sinon' };
+  const rattrapee = m.mission.liens.some((l) => l.de === id && l.sortie === 'echec');
+  const boucle = Object.values(m.genres).some((g) => BOUCLES.includes(g));
+  return { rate: genre === 'prise_objet' && rattrapee && (boucle ? visite === PIECES : tour === 2 && visite === 1) };
+}
 
 /** La durée d'une étape simulée, par genre de nœud (s) ; elle varie d'un tour à l'autre. */
 const DUREE: Record<string, number> = {
@@ -137,7 +134,7 @@ const CAUSES: Record<string, string> = {
 const AVERTISSEMENT = 'Relocalisation faible : qualité 41 %. La mission continue.';
 const PANNE = 'Bras droit : plus de réponse depuis 2,5 s. La mission s’arrête.';
 
-/** Après une mission réussie, elle reprend depuis le début au bout de ce temps (s, temps réel). */
+/** Après une mission réussie ou arrêtée, elle reprend depuis le début au bout de ce temps (s, temps réel). */
 const REPRISE_S = 6;
 /** Un avertissement reste affiché ce temps-là (s, temps réel). */
 const AVERTISSEMENT_S = 8;
@@ -153,8 +150,10 @@ interface Moteur {
   /** Combien de fois chaque nœud a été atteint dans ce tour. */
   visites: Record<string, number>;
   enPause: boolean;
+  /** Le pas à pas : la mission se met en pause à la fin de chaque étape. */
+  pasAPas: boolean;
   urgence: boolean;
-  fin: 'reussie' | 'erreur' | null;
+  fin: 'reussie' | 'erreur' | 'arretee' | null;
   attente: number;
   message: MessageLecture | null;
   /** Le temps qu'il reste à un avertissement (s, temps réel) ; un appel à l'opérateur dure, lui, tant que l'étape. */
@@ -162,12 +161,12 @@ interface Moteur {
 }
 
 type Action = { type: 'tick'; reelS: number; vitesse: number }
-  | { type: 'pause' | 'rater' | 'urgence' | 'rearmer' | 'avertir' | 'planter' | 'acquitter' };
+  | { type: 'pause' | 'rater' | 'urgence' | 'rearmer' | 'avertir' | 'planter' | 'acquitter' | 'arreter' | 'etape' };
 
 /** Un nombre entre 0 et 1, toujours le même pour le même texte : la durée d'une étape varie d'un tour à l'autre. */
 function hachage(texte: string): number {
   let h = 2166136261;
-  for (const c of texte) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  for (const ch of texte) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
   return (h >>> 0) / 2 ** 32;
 }
 
@@ -175,7 +174,7 @@ const genre = (m: Moteur, id: string) => m.mission.genres[id] ?? 'deplacer';
 const nom = (m: Moteur, id: string) => m.mission.graphe.noeuds.find((n) => n.id === id)?.nom ?? id;
 const dureeEtape = (m: Moteur, id: string) => (DUREE[genre(m, id)] ?? 5) * (0.8 + 0.45 * hachage(`${id}:${m.tour}:${m.passe.length}`));
 const cle = (tour: number, index: number, id: string) => `${tour}:${index}:${id}`;
-/** Le premier nœud d'un tour, et la sortie du départ qui y mène. */
+/** Le premier lien d'un tour : celui qui part du départ. */
 const premier = (g: GrapheLecture) => g.liens.find((l) => l.de === 'depart');
 /** La sortie que prend un nœud qui réussit sans règle : « ok » ou « suite », sinon la première reliée. */
 const sortieParDefaut = (g: GrapheLecture, id: string) =>
@@ -188,11 +187,11 @@ function entrer(m: Moteur, id: string, par: Sortie): Moteur {
   return appel ? { ...n, message: { niveau: 'attention', texte: `La mission attend l’opérateur : ${appel}.` }, messageReste: Infinity } : n;
 }
 
-function demarrer(mission: MissionEssai): Moteur {
+function demarrer(mission: MissionEssai, pasAPas = false): Moteur {
   const p = premier(mission.graphe);
   const m: Moteur = {
-    mission, t: 0, tour: 1, passe: [], noeud: null, par: 'suite', debut: 0, visites: {},
-    enPause: false, urgence: false, fin: null, attente: 0, message: null, messageReste: 0,
+    mission, t: 0, tour: 1, passe: [], noeud: null, par: 'suite', debut: 0, visites: {}, enPause: false, pasAPas,
+    urgence: false, fin: null, attente: 0, message: null, messageReste: 0,
   };
   return p ? entrer(m, p.vers, p.sortie) : m;
 }
@@ -201,8 +200,8 @@ const avertir = (m: Moteur, texte: string): Moteur => ({ ...m, message: { niveau
 
 /**
  * L'étape en cours se termine à `finS` : réussie par `sortie`, ou ratée. La mission prend la sortie qui suit, ou
- * change de tour. Une étape ratée que sa branche « échec » rattrape est un avertissement ; sans branche, ou sur une
- * `panne`, c'est une erreur qui arrête la mission.
+ * change de tour ; en pas à pas, elle se met en pause sur l'étape suivante. Une étape ratée que sa branche « échec »
+ * rattrape est un avertissement ; sans branche, ou sur une `panne`, c'est une erreur qui arrête la mission.
  */
 function terminer(m: Moteur, finS: number, rate: boolean, sortie?: Sortie, panne?: string): Moteur {
   const id = m.noeud!;
@@ -211,38 +210,52 @@ function terminer(m: Moteur, finS: number, rate: boolean, sortie?: Sortie, panne
   const prise = rate ? 'echec' : sortie ?? sortieParDefaut(g, id);
   const vers = panne || !prise ? undefined : suivant(g, id, prise);
   const appelEnCours = m.message?.niveau === 'attention' && m.messageReste === Infinity;
-  const base = { ...m, passe: [...m.passe, fait], debut: finS, ...(appelEnCours ? { message: null, messageReste: 0 } : {}) };
+  const base = { ...m, passe: [...m.passe, fait], debut: finS, enPause: m.pasAPas, ...(appelEnCours ? { message: null, messageReste: 0 } : {}) };
   const rateTexte = `« ${nom(m, id)} » a raté : ${CAUSES[genre(m, id)] ?? 'erreur du robot'}.`;
   if (vers && prise) {
     const suite = entrer(base, vers, prise);
     if (!rate) return suite;
     return avertir(suite, `${rateTexte} ${m.mission.appels[vers] ? 'La mission appelle l’opérateur.' : 'La mission prend sa branche échec.'}`);
   }
-  if (rate) return { ...base, t: finS, noeud: null, fin: 'erreur', message: { niveau: 'erreur', texte: panne ?? `${rateTexte} Pas de branche échec : la mission s’arrête.` } };
+  if (rate) return { ...base, t: finS, noeud: null, enPause: false, fin: 'erreur', message: { niveau: 'erreur', texte: panne ?? `${rateTexte} Pas de branche échec : la mission s’arrête.` } };
   const p = premier(g);
   if (m.tour < m.mission.repetitions && p) return entrer({ ...base, tour: m.tour + 1, visites: {} }, p.vers, p.sortie);
   const tours = m.mission.repetitions > 1 ? `${m.mission.repetitions} tours` : 'la mission';
-  return { ...base, t: finS, noeud: null, fin: 'reussie', message: { niveau: 'succes', texte: `Terminée : ${tours} en ${duree(finS)}.` } };
+  return { ...base, t: finS, noeud: null, enPause: false, fin: 'reussie', message: { niveau: 'succes', texte: `Terminée : ${tours} en ${duree(finS)}.` } };
+}
+
+/** L'opérateur arrête la mission : l'étape en cours s'interrompt, rien n'est en faute. */
+function arreter(m: Moteur): Moteur {
+  if (!m.noeud || m.fin || m.urgence) return m;
+  const fait: PasLecture = { cle: cle(m.tour, m.passe.length, m.noeud), noeud: m.noeud, issue: 'echoue', par: m.par, tour: m.tour };
+  return {
+    ...m, passe: [...m.passe, fait], noeud: null, enPause: false, fin: 'arretee', attente: 0,
+    message: { niveau: 'neutre', texte: `Arrêtée par l’opérateur à « ${nom(m, m.noeud)} ».` },
+  };
 }
 
 function reduire(m: Moteur, a: Action): Moteur {
   switch (a.type) {
-    case 'pause': return m.fin || m.urgence ? m : { ...m, enPause: !m.enPause };
+    case 'pause': return m.fin || m.urgence ? m : m.enPause ? { ...m, enPause: false, pasAPas: false } : { ...m, enPause: true };
+    case 'etape': return m.fin || m.urgence ? m : { ...m, enPause: false, pasAPas: true };
+    case 'arreter': return arreter(m);
     case 'urgence': return m.fin ? m : { ...m, urgence: true };
-    case 'rearmer': return demarrer(m.mission);
+    case 'rearmer': return demarrer(m.mission, m.pasAPas);
     case 'rater': return m.noeud && !m.urgence ? terminer(m, m.t, true) : m;
     case 'avertir': return m.fin || m.urgence ? m : avertir(m, AVERTISSEMENT);
     case 'planter': return m.noeud && !m.urgence ? terminer(m, m.t, true, undefined, PANNE) : m;
-    case 'acquitter': return m.fin === 'erreur' ? demarrer(m.mission) : { ...m, message: m.fin ? m.message : null };
+    case 'acquitter': return m.fin === 'erreur' ? demarrer(m.mission, m.pasAPas) : { ...m, message: m.fin ? m.message : null };
     case 'tick': {
-      if (m.fin === 'reussie') return m.attente + a.reelS > REPRISE_S ? demarrer(m.mission) : { ...m, attente: m.attente + a.reelS };
+      if (m.fin === 'reussie' || m.fin === 'arretee') {
+        return m.attente + a.reelS > REPRISE_S ? demarrer(m.mission, m.pasAPas) : { ...m, attente: m.attente + a.reelS };
+      }
       const n = m.message?.niveau !== 'attention' ? m
         : m.messageReste > a.reelS ? { ...m, messageReste: m.messageReste - a.reelS } : { ...m, message: null, messageReste: 0 };
       if (n.fin || n.enPause || n.urgence || !n.noeud) return n;
       const t = n.t + a.reelS * a.vitesse;
       const d = dureeEtape(n, n.noeud);
       if (t - n.debut < d) return { ...n, t };
-      const r = n.mission.regle(n.noeud, genre(n, n.noeud), n.visites[n.noeud] ?? 1, n.tour);
+      const r = regle(n.mission, n.noeud, n.visites[n.noeud] ?? 1, n.tour);
       return terminer({ ...n, t }, n.debut + d, r.rate ?? false, r.sortie);
     }
   }
@@ -262,7 +275,7 @@ function lire(m: Moteur): Lecture {
   return {
     mission: m.mission.graphe, pas, courant, dureeS: m.t, dureeEtapeS: m.noeud ? m.t - m.debut : 0,
     tour: m.tour, tours: m.mission.repetitions, etat: m.urgence ? 'urgence' : m.fin ?? (m.enPause ? 'pause' : 'cours'),
-    message: m.urgence ? MESSAGE_URGENCE : m.message,
+    message: m.urgence ? MESSAGE_URGENCE : m.message, pasAPas: m.pasAPas,
   };
 }
 
@@ -271,14 +284,18 @@ const PAS_MS = 100;
 
 /** La mission simulée qui joue, et les gestes de l'opérateur sur elle. */
 export function useScenario(mission: MissionEssai, vitesse: number) {
-  const [moteur, envoyer] = useReducer(reduire, mission, demarrer);
+  const [moteur, envoyer] = useReducer(reduire, mission, (x) => demarrer(x));
   useEffect(() => {
     const t = setInterval(() => envoyer({ type: 'tick', reelS: PAS_MS / 1000, vitesse }), PAS_MS);
     return () => clearInterval(t);
   }, [vitesse]);
   return {
     lecture: lire(moteur),
+    /** Pause, ou reprise en continu (le pas à pas s'arrête). */
     pause: () => envoyer({ type: 'pause' }),
+    /** Une étape, puis la pause : le pas à pas. */
+    etape: () => envoyer({ type: 'etape' }),
+    arreter: () => envoyer({ type: 'arreter' }),
     rater: () => envoyer({ type: 'rater' }),
     urgence: () => envoyer({ type: 'urgence' }),
     rearmer: () => envoyer({ type: 'rearmer' }),

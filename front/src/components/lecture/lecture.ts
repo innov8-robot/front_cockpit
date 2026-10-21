@@ -42,14 +42,14 @@ export interface PasLecture {
   tour: number;
 }
 
-export type EtatLecture = 'cours' | 'pause' | 'urgence' | 'reussie' | 'erreur';
+export type EtatLecture = 'cours' | 'pause' | 'urgence' | 'reussie' | 'erreur' | 'arretee';
 
 /**
  * Ce que la barre dit autour d'elle : la mission a réussi (vert), un avertissement qui ne l'arrête pas (ambre), une
- * erreur qui l'a arrêtée (rouge, jusqu'à ce qu'on l'acquitte).
+ * erreur qui l'a arrêtée (rouge, jusqu'à ce qu'on l'acquitte), l'opérateur l'a arrêtée (gris, rien d'alarmant).
  */
 export interface MessageLecture {
-  niveau: 'succes' | 'attention' | 'erreur';
+  niveau: 'succes' | 'attention' | 'erreur' | 'neutre';
   texte: string;
 }
 
@@ -70,6 +70,8 @@ export interface Lecture {
   tours: number;
   etat: EtatLecture;
   message: MessageLecture | null;
+  /** La mission s'arrête après chaque étape et attend qu'on lance la suivante. */
+  pasAPas?: boolean;
 }
 
 /** Les sorties qu'on suit pour prévoir la suite : celles qui ne dépendent d'aucune condition. */

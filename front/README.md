@@ -128,6 +128,22 @@ tour, avec la sortie qui y a mené et leur issue — sans eux, la barre suppose 
 prévu. La simulation les sert : au tour 2, la première prise qui a une sortie « échec » rate et la mission suit sa
 branche ; l'arrêt d'urgence ferme le run en cours (interrompu). Code : `components/lecture/`.
 
+## Feuille de route de la barre de lecture
+
+Maquette : **`#/essai/barre-developpee`**, sur la mission simulée. Rien de ceci n'est encore dans la barre de l'accueil.
+
+1. **Un stop dans la barre.** Un carré à maintenir une seconde (l'anneau se remplit pendant l'appui ; un appui trop
+   court affiche « Maintenir pour arrêter »). L'arrêt est gris, « Arrêtée par l'opérateur à « … » », ■ sur l'étape :
+   rien n'est en faute. L'arrêt d'urgence reste le bouton rouge de la barre du robot. Le contrat a déjà
+   `arreterMission`.
+2. **Le workflow déplié.** Un chevron au bout de la barre déplie, dessous, la mission dans le canevas de l'éditeur, en
+   lecture : les états du tour, les fils pris, le temps de l'étape sous sa tuile, la vue qui suit l'étape en cours. La
+   barre reste au-dessus et le fil continue d'y courir ; replier ne coupe rien.
+3. **Lecture · pause · pas à pas, dans le déplié.** Trois commandes au bas du canevas, comme un débogueur : ▶ joue en
+   continu, ‖ met en pause, ⏭ « Étape suivante » joue une étape puis se remet en pause — c'est le pas à pas, sans
+   interrupteur de mode : ▶ en sort. Une seule action est pleine à la fois (▶ en pause, « Étape suivante » en pas à
+   pas), l'en-tête dit le mode. Il faudra au back `etapeSuivante(robotId)` et `Execution.pasAPas`.
+
 ## Les couleurs de la scène
 
 Une couleur = un sens. **Le rouge est réservé au danger** (arrêt d'urgence, alarme, moteur trop chaud, zone machine),

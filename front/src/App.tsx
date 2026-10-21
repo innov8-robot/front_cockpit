@@ -1,6 +1,7 @@
 import { HashRouter, Route, Routes } from 'react-router-dom';
 import { Accueil } from './pages/Accueil';
 import { EssaiBarre } from './pages/EssaiBarre';
+import { EssaiBarreDeveloppee } from './pages/EssaiBarreDeveloppee';
 import { EssaiBarreLecture } from './pages/EssaiBarreLecture';
 import { EssaiCalques } from './pages/EssaiCalques';
 import { EssaiDA } from './pages/EssaiDA';
@@ -18,6 +19,7 @@ export default function App() {
       <Routes>
         <Route path="/essai/barre" element={<EssaiBarre />} />
         <Route path="/essai/barre-lecture" element={<EssaiBarreLecture />} />
+        <Route path="/essai/barre-developpee" element={<EssaiBarreDeveloppee />} />
         <Route path="/essai/calques" element={<EssaiCalques />} />
         <Route path="/essai/da" element={<EssaiDA />} />
         <Route path="/essai/missions" element={<EssaiMissions />} />

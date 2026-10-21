@@ -22,7 +22,7 @@ export const TUILE_OUVERTE = 36;
 /** Quand l'étape d'avant est plus haut, la caméra remonte de cette part de l'écart : le fil qui arrive reste visible. */
 const CADRAGE_HAUT = 0.3;
 
-export type EtatFil = 'ok' | 'echec' | 'cours' | 'pause' | 'danger' | 'erreur' | 'approche' | 'prevu' | 'hors';
+export type EtatFil = 'ok' | 'echec' | 'cours' | 'pause' | 'danger' | 'erreur' | 'arrete' | 'approche' | 'prevu' | 'hors';
 
 export interface NoeudFil {
   id: string;
@@ -108,10 +108,19 @@ function historique(l: Lecture, arrive: boolean): Trace[] {
     const lien = lienEntre(l, precedent(l, k), p.noeud, p.par)?.id ?? null;
     const avant = h.findLastIndex((x) => x.noeud === p.noeud);
     if (avant >= 0 && p.issue !== 'prevu') h.splice(avant + 1);
-    const etat = l.etat === 'erreur' && k === l.pas.length - 1 ? 'erreur' : etatDuPas(l, p.issue, arrive);
+    const derniere = k === l.pas.length - 1;
+    const etat = l.etat === 'erreur' && derniere ? 'erreur' : l.etat === 'arretee' && derniere ? 'arrete' : etatDuPas(l, p.issue, arrive);
     h.push({ noeud: p.noeud, lien, etat: p.issue === 'prevu' && avant >= 0 ? h[avant].etat : etat, prevu: p.issue === 'prevu', courant: k === l.courant });
   }
   return h;
+}
+
+/** L'état de chaque nœud et de chaque fil pour le tour en cours, et le fil qui mène à l'étape en cours. */
+export function etatsDuTour(l: Lecture, arrive: boolean) {
+  const h = historique(l, arrive);
+  const pris = new Map<string, EtatLien>();
+  for (const x of h) if (x.lien) pris.set(x.lien, x.courant ? (arrive ? 'actif' : 'aucun') : x.prevu ? 'aucun' : 'parcouru');
+  return { noeuds: new Map(h.map((x) => [x.noeud, x.etat])), liens: pris, lienCourant: h.find((x) => x.courant)?.lien ?? null };
 }
 
 /**
@@ -119,11 +128,7 @@ function historique(l: Lecture, arrive: boolean): Trace[] {
  * en cours est « en approche » et son fil n'a pas encore son onde.
  */
 export function construireFil(l: Lecture, arrive: boolean): { noeuds: NoeudFil[]; liens: LienFil[]; lienCourant: LienFil | null } {
-  const h = historique(l, arrive);
-  const etats = new Map(h.map((x) => [x.noeud, x.etat]));
-  const pris = new Map<string, EtatLien>();
-  for (const x of h) if (x.lien) pris.set(x.lien, x.courant ? (arrive ? 'actif' : 'aucun') : x.prevu ? 'aucun' : 'parcouru');
-  const idCourant = h.find((x) => x.courant)?.lien ?? null;
+  const { noeuds: etats, liens: pris, lienCourant: idCourant } = etatsDuTour(l, arrive);
   const ouvert = l.courant >= 0 && arrive ? l.pas[l.courant].noeud : null;
   const noeuds: NoeudFil[] = l.mission.noeuds.map((n) => ({
     id: n.id, type: n.type, nom: n.nom, ...centre(n), taille: n.id === ouvert ? TUILE_OUVERTE : TUILE, etat: etats.get(n.id) ?? 'hors',
