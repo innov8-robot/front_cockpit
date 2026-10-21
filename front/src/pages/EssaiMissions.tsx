@@ -1,5 +1,7 @@
-import { FAMILLE, FAMILLES, ETATS, SORTIES, STATUTS, TONS, type Ton } from '../components/missions/charte';
+import { FAMILLES, ETATS, SORTIES, STATUTS, TONS, type Ton } from '../components/missions/charte';
 import { CATALOGUE } from '../components/missions/catalogue';
+import { useState } from 'react';
+import { APPARENCE_PAR_DEFAUT, ApparenceContexte, teinte, type Apparence } from '../components/missions/apparence';
 import { CarteNoeud } from '../components/missions/Noeud';
 import { EXIGENCES, EXISTANT, HISTOIRES, PERSONAS, PRINCIPES, QUESTIONS } from '../components/missions/proposition';
 import { OndeExemple } from '../components/missions/Onde';
@@ -17,7 +19,10 @@ const ONDES: [Ton, string][] = [['ok', 'après un succès'], ['echec', 'après u
 
 /** La proposition d'éditeur de missions : du besoin au prototype (#/essai/missions). */
 export function EssaiMissions() {
+  const [apparence, setApparence] = useState<Apparence>(APPARENCE_PAR_DEFAUT);
+  const changer = (a: Partial<Apparence>) => setApparence((x) => ({ ...x, ...a }));
   return (
+    <ApparenceContexte.Provider value={{ apparence, changer }}>
     <div className="em-page fond-hud">
       <nav className="em-sommaire" aria-label="Sommaire">
         <p className="essai-barre-sur">PROPOSITION</p>
@@ -160,7 +165,7 @@ export function EssaiMissions() {
             if (!ts.length) return null;
             return (
               <div key={f.cle} className="em-galerie-famille">
-                <h3 className="em-sous" style={{ color: FAMILLE[f.cle].couleur }}>{f.nom}</h3>
+                <h3 className="em-sous" style={{ color: teinte(f.cle, apparence.couleurs) }}>{f.nom}</h3>
                 <div className="em-galerie">
                   {ts.map((t) => (
                     <figure key={t.cle}>
@@ -190,5 +195,6 @@ export function EssaiMissions() {
         </section>
       </main>
     </div>
+    </ApparenceContexte.Provider>
   );
 }

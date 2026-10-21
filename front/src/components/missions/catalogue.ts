@@ -335,3 +335,13 @@ export function resumer(type: TypeNoeud, valeurs: Record<string, string | number
 export function sortiesVisibles(type: TypeNoeud, echec?: boolean): Sortie[] {
   return type.sorties.filter((s) => s !== 'echec' || echec);
 }
+
+/**
+ * L'expression d'un nœud de logique, montrée en pastille sous son nom : sa condition (« bac plein ? ») ou son compte
+ * (« i de 1 à 4 », « 3 fois ») ; `condition` quand c'est un booléen. Rien pour les autres familles.
+ */
+export function expression(type: TypeNoeud, valeurs: Record<string, string | number> = {}): { texte: string; condition: boolean } | null {
+  if (type.famille !== 'logique') return null;
+  const texte = resumer(type, valeurs);
+  return texte ? { texte, condition: type.reglages.some((r) => r.type === 'condition') } : null;
+}

@@ -3,8 +3,9 @@ import {
   useEdgesState, useNodesState, useReactFlow, type Connection, type Edge, type EdgeProps, type XYPosition,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { useEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent, type ReactNode } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent, type ReactNode } from 'react';
 import { Actions, type ActionsCanevas, type Point } from './actions';
+import { ApparenceContexte, teinte, type Apparence } from './apparence';
 import { FAMILLE, FAMILLES, SORTIES, STATUTS, type EtatLien, type EtatNoeud, type Sortie, type Ton } from './charte';
 import { CATALOGUE, sortiesVisibles, typeNoeud, type TypeNoeud } from './catalogue';
 import { IconeNoeud, NoeudCarte, NoeudVide, type DonneesNoeud, type Direct, type NoeudMission } from './Noeud';
@@ -184,7 +185,7 @@ function direct(n: NoeudMission, e: Instantane): Direct | undefined {
 /** Le panneau d'un nœud, façon n8n : ses réglages et ses paramètres, qui agissent ; ce qu'il lui faut ; ce qui en sort. */
 function Panneau({ noeud, modifier, fermer }: { noeud: NoeudMission; modifier(d: Partial<DonneesNoeud>): void; fermer(): void }) {
   const t: TypeNoeud = noeud.data.type;
-  const f = FAMILLE[t.famille];
+  const f = { ...FAMILLE[t.famille], couleur: teinte(t.famille, useContext(ApparenceContexte).apparence.couleurs) };
   const valeurs = noeud.data.valeurs;
   const regler = (cle: string, v: string) => modifier({ valeurs: { ...valeurs, [cle]: v } });
   return (
@@ -245,6 +246,7 @@ function Panneau({ noeud, modifier, fermer }: { noeud: NoeudMission; modifier(d:
 
 /** Les nœuds par famille, filtrés par une recherche : la palette et le menu du « + » les montrent pareil. */
 function Liste({ cherche, filtre, rendu }: { cherche: string; filtre?: (t: TypeNoeud) => boolean; rendu(t: TypeNoeud): ReactNode }) {
+  const { couleurs } = useContext(ApparenceContexte).apparence;
   const visibles = CATALOGUE.filter((t) => (!filtre || filtre(t)) && `${t.nom} ${t.phrase}`.toLowerCase().includes(cherche.toLowerCase()));
   return (
     <>
@@ -253,7 +255,7 @@ function Liste({ cherche, filtre, rendu }: { cherche: string; filtre?: (t: TypeN
         if (!ts.length) return null;
         return (
           <div key={f.cle} className="em-palette-famille">
-            <p style={{ color: f.couleur }}>{f.nom.toUpperCase()}</p>
+            <p style={{ color: teinte(f.cle, couleurs) }}>{f.nom.toUpperCase()}</p>
             {ts.map(rendu)}
           </div>
         );
@@ -263,10 +265,10 @@ function Liste({ cherche, filtre, rendu }: { cherche: string; filtre?: (t: TypeN
 }
 
 function Item({ t }: { t: TypeNoeud }) {
-  const f = FAMILLE[t.famille];
+  const couleur = teinte(t.famille, useContext(ApparenceContexte).apparence.couleurs);
   return (
     <>
-      <IconeNoeud nom={t.icone} couleur={f.couleur} taille={14} />
+      <IconeNoeud nom={t.icone} couleur={couleur} taille={14} />
       <span>{t.nom}</span>
       {t.bouge && <i title="Fait bouger le robot" />}
     </>
@@ -275,6 +277,7 @@ function Item({ t }: { t: TypeNoeud }) {
 
 /** La palette, à droite : les nœuds rangés par famille, qu'on glisse sur le canevas. */
 function Palette() {
+  const { couleurs } = useContext(ApparenceContexte).apparence;
   const [cherche, setCherche] = useState('');
   const glisser = (e: DragEvent, cle: string) => {
     e.dataTransfer.setData(GLISSE, cle);
@@ -285,7 +288,7 @@ function Palette() {
       <input className="em-recherche" placeholder="Chercher…" value={cherche} onChange={(e) => setCherche(e.target.value)} />
       <Liste cherche={cherche} rendu={(t) => (
         <div key={t.cle} className="em-palette-item" title={t.aide} draggable onDragStart={(e) => glisser(e, t.cle)}
-          style={{ ['--famille' as string]: FAMILLE[t.famille].couleur }}><Item t={t} /></div>
+          style={{ ['--famille' as string]: teinte(t.famille, couleurs) }}><Item t={t} /></div>
       )} />
     </aside>
   );
@@ -296,6 +299,7 @@ interface Choix { x: number; y: number; depuis?: { id: string; sortie: Sortie };
 
 /** Le menu du « + » : chercher une étape et la poser, comme le panneau de nœuds de n8n. */
 function Choisir({ choix, choisir }: { choix: Choix; choisir(t: TypeNoeud): void }) {
+  const { couleurs } = useContext(ApparenceContexte).apparence;
   const [cherche, setCherche] = useState('');
   return (
     <div className="em-choisir" style={{ left: choix.x, top: choix.y }} onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Choisir l’étape">
@@ -303,7 +307,7 @@ function Choisir({ choix, choisir }: { choix: Choix; choisir(t: TypeNoeud): void
       <div className="em-choisir-liste">
         <Liste cherche={cherche} filtre={(t) => t.entree} rendu={(t) => (
           <button key={t.cle} className="em-palette-item" title={t.aide} onClick={() => choisir(t)}
-            style={{ ['--famille' as string]: FAMILLE[t.famille].couleur }}><Item t={t} /></button>
+            style={{ ['--famille' as string]: teinte(t.famille, couleurs) }}><Item t={t} /></button>
         )} />
       </div>
     </div>
@@ -314,7 +318,7 @@ interface Menu { x: number; y: number; id: string }
 
 /** Le menu d'un nœud, au clic droit : ses réglages d'abord, puis ce qu'on fait d'un nœud dans n8n. */
 function MenuNoeud({ menu, noeud, actions }: { menu: Menu; noeud: NoeudMission; actions: Record<'reglages' | 'jouer' | 'dupliquer' | 'basculer' | 'supprimer', () => void> }) {
-  const f = FAMILLE[noeud.data.type.famille];
+  const f = { couleur: teinte(noeud.data.type.famille, useContext(ApparenceContexte).apparence.couleurs) };
   const item = (cle: keyof typeof actions, icone: string, texte: string, classe = '') => (
     <button role="menuitem" className={classe} onClick={actions[cle]}><span aria-hidden="true">{icone}</span>{texte}</button>
   );
@@ -344,8 +348,23 @@ function nouveau(t: TypeNoeud, position: XYPosition): { nodes: NoeudMission[]; e
   return { nodes: [n, vide], edges: [lien(nouvelId('e'), id, 'faire', vide.id), lien(nouvelId('e'), vide.id, 'suite', id)] };
 }
 
+/** Les deux interrupteurs de l'apparence, dans la barre d'outils. */
+function Interrupteurs() {
+  const { apparence, changer } = useContext(ApparenceContexte);
+  const bouton = <K extends keyof Apparence>(cle: K, valeur: Apparence[K], texte: string) => (
+    <button className={apparence[cle] === valeur ? 'actif' : ''} onClick={() => changer({ [cle]: valeur })} aria-pressed={apparence[cle] === valeur}>{texte}</button>
+  );
+  return (
+    <div className="em-interrupteurs">
+      <span className="em-segment" title="Icônes">{bouton('icones', 'points', '⠿ points')}{bouton('icones', 'trait', '╱ trait')}</span>
+      <span className="em-segment" title="Couleurs">{bouton('couleurs', 'spectre', 'Spectre')}{bouton('couleurs', 'familles', 'Familles')}</span>
+    </div>
+  );
+}
+
 function Canevas() {
   const flot = useReactFlow();
+  const { couleurs } = useContext(ApparenceContexte).apparence;
   const depart = useMemo(() => exemple(), []);
   const [nodes, setNodes, onNodesChange] = useNodesState<NoeudMission>(depart.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<LienMission>(depart.edges);
@@ -526,6 +545,7 @@ function Canevas() {
             <span className="em-titre-mission">Vider la table dans le bac</span>
             <span className="em-pill-ok">✓ Vérifiée</span>
             <span className="em-espace" />
+            <Interrupteurs />
             <span className={`em-chrono ${arrete ? 'em-chrono-urgence' : ''}`}>{etiquette}</span>
             <button onClick={remettre} title="Remettre à zéro" aria-label="Remettre à zéro">↺</button>
             {enCours
@@ -541,7 +561,7 @@ function Canevas() {
             <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#2a3038" />
             <Controls showInteractive={false} position="bottom-left" />
             <MiniMap pannable zoomable position="bottom-right"
-              nodeColor={(n) => (n.type === 'vide' ? '#3a4049' : FAMILLE[(n.data as NoeudMission['data']).type.famille].couleur)}
+              nodeColor={(n) => (n.type === 'vide' ? '#3a4049' : teinte((n.data as NoeudMission['data']).type.famille, couleurs))}
               maskColor="rgb(5 6 8 / 0.75)" style={{ background: '#0b0d10', width: 140, height: 84 }} />
           </ReactFlow>
           <p className="em-astuce" aria-hidden="true"><kbd>+</kbd> étape suivante · <kbd>clic droit</kbd> actions · <kbd>double-clic</kbd> réglages · <kbd>glisser</kbd> depuis la palette</p>

@@ -50,11 +50,15 @@ droite (on glisse un nœud sur le canevas), clic droit sur un nœud pour ses act
 cadre. Les nœuds sont dessinés comme dans n8n — une tuile et son icône, le nom et le résumé de ses réglages dessous —,
 et la logique est faite de nœuds, pas de cadres : « Si » sort par alors / sinon ; une boucle (pour, pour chaque, tant
 que, répéter, répéter jusqu'à) sort par faire à chaque tour et par fini à la fin, et la dernière étape du tour revient
-dans son entrée par un fil qui passe dessous ; « Selon l'échec » a une sortie par cas. Un geste a un paramètre
+dans son entrée par un fil qui passe dessous ; « Selon l'échec » a une sortie par cas. Sous un nœud de logique, son
+expression s'affiche en pastille : hexagonale pour une condition (« bac plein ? », avec oui / non une fois évaluée),
+arrondie pour un compte (« i de 1 à 4 »). Un geste a un paramètre
 « essais » et un « si ça rate » qui ouvre sa sortie échec. Une sortie libre porte un « + » qui ouvre le choix de
 l'étape suivante ; une boucle neuve arrive avec sa case à remplir. Le code est dans `src/components/missions/` : `charte.ts` (familles, sorties, états, couleurs de l'onde),
 `catalogue.ts` (les types de nœuds — en ajouter un, c'est une entrée), `Noeud.tsx` (la tuile et la case à remplir),
 `Prototype.tsx` (canevas, liens, menu du « + », simulation), `actions.ts` (ce que les nœuds demandent au canevas),
+`apparence.ts` (icônes en points ou au trait, couleurs Spectre ou par famille — deux interrupteurs dans la barre du
+prototype), `points.ts` (les icônes au trait relues en matrice de points de 12 × 12, comme le logo de démarrage),
 `proposition.ts` (le texte de la proposition).
 
 **`#/essai/logique`** (proposition écartée : on garde le canevas n8n) : la même mission (une boucle, un geste à deux essais qui appelle l'opérateur s'il rate, une

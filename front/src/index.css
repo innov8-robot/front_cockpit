@@ -1253,8 +1253,28 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .em-tuile.choisi { border-color: rgb(255 255 255 / 0.75); }
 .em-tuile.em-forme-chapeau { border-radius: 38px 10px 10px 38px; }
 .em-tuile.em-forme-fin { border-radius: 10px 38px 38px 10px; }
-.em-tuile-icone { color: var(--famille); }
-.em-eclair { position: absolute; left: -20px; top: 50%; transform: translateY(-50%); font-size: 13px; color: #e9eef7; }
+.em-tuile-icone { color: var(--famille); filter: drop-shadow(0 0 4px color-mix(in srgb, var(--famille) 45%, transparent)); }
+/* Les icônes en points (components/missions/points.ts) : la matrice du logo de démarrage, allumée par l'icône. */
+.em-points { color: var(--famille); overflow: visible; filter: drop-shadow(0 0 2.5px color-mix(in srgb, var(--famille) 70%, transparent)); }
+.em-point { fill: currentColor; }
+.em-point-eteint { fill: rgb(201 206 214 / 0.13); }
+/* L'expression d'un nœud de logique, sous son nom : hexagonale pour une condition (bac plein ?), arrondie pour un compte. */
+.em-tuile-expr {
+  position: absolute; top: calc(100% + 26px); left: 50%; transform: translateX(-50%); max-width: 210px; padding: 1px; box-sizing: border-box;
+  border-radius: 999px; background: rgb(233 238 247 / 0.35); pointer-events: none; transition: background 0.3s;
+}
+.em-tuile-expr > span {
+  display: flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: #14181e; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; font: 600 11px/1.3 ui-monospace, 'SF Mono', monospace; color: #e9eef7;
+}
+.em-tuile-condition, .em-tuile-condition > span { border-radius: 0; clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 8px 100%, 0 50%); }
+.em-tuile-condition > span { padding: 3px 14px; }
+.em-tuile-expr b { font: 800 10px/1 ui-monospace, monospace; padding: 2px 5px; border-radius: 4px; color: #0b0d10; background: #e9eef7; }
+.em-verdict-oui { background: #3dff8a; }
+.em-verdict-oui b { background: #3dff8a; }
+.em-verdict-non { background: rgb(233 238 247 / 0.6); }
+.em-tuile-resume.em-tuile-sous-expr { top: calc(100% + 52px); }
+.em-eclair { position: absolute; left: -20px; top: 50%; transform: translateY(-50%); fill: #e9eef7; filter: drop-shadow(0 0 4px rgb(233 238 247 / 0.6)); }
 .em-tuile-nom, .em-tuile-resume {
   position: absolute; left: 50%; transform: translateX(-50%); width: 168px; text-align: center; pointer-events: none;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -1312,6 +1332,11 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .em-espace { flex: 1; }
 .em-chrono { font: 500 11px/1 ui-monospace, monospace; color: #8a93a3; }
 .em-barre-outils button { height: 32px; padding: 0 12px; border-radius: 9px; border: 1px solid rgb(255 255 255 / 0.14); background: rgb(255 255 255 / 0.04); color: #e9eef7; font: 600 0.78rem/1 'Inter', system-ui, sans-serif; cursor: pointer; }
+/* Les interrupteurs de l'apparence : icônes en points ou au trait, couleurs Spectre ou par famille. */
+.em-interrupteurs { display: flex; gap: 8px; }
+.em-segment { display: inline-flex; padding: 2px; border-radius: 9px; border: 1px solid rgb(255 255 255 / 0.12); background: rgb(255 255 255 / 0.03); }
+.em-barre-outils .em-segment button { height: 26px; padding: 0 9px; border: 0; border-radius: 7px; background: none; color: #8a93a3; font: 600 0.72rem/1 'Inter', system-ui, sans-serif; }
+.em-barre-outils .em-segment button.actif { color: #0b0d10; background: #e9eef7; }
 .em-barre-outils .em-lancer { background: #e9eef7; color: #0b0d10; border-color: #e9eef7; }
 .em-barre-outils .em-urgence { background: #ff2d3a; color: #fff; border-color: #ff2d3a; box-shadow: 0 0 16px rgb(255 45 58 / 0.45); }
 .em-chrono-urgence { color: #ff2d3a; }

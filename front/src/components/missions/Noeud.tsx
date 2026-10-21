@@ -1,8 +1,10 @@
 import { Handle, Position, useNodeConnections, type Node, type NodeProps } from '@xyflow/react';
 import { Fragment, useContext, type MouseEvent, type ReactNode } from 'react';
 import { Actions } from './actions';
+import { ApparenceContexte, teinte } from './apparence';
 import { ETATS, FAMILLE, SORTIES, type EtatNoeud, type Sortie } from './charte';
-import { ICONES, resumer, sortiesVisibles, type TypeNoeud } from './catalogue';
+import { expression, ICONES, resumer, sortiesVisibles, type TypeNoeud } from './catalogue';
+import { GRILLE, points } from './points';
 
 
 /** L'icône d'un nœud, dans le carré de la couleur de sa famille. */
@@ -43,6 +45,26 @@ export function BadgeEtat({ etat }: { etat?: EtatNoeud }) {
   const e = ETATS[etat];
   if (etat === 'cours') return <span className="em-chargement" role="status" aria-label={e.libelle} />;
   return <span className="em-badge-etat" title={e.libelle} aria-label={e.libelle}>{e.icone}</span>;
+}
+
+/** Une icône en points, comme la matrice du logo de démarrage : les points allumés dessinent l'icône, les autres veillent. */
+export function IconePoints({ d, taille = 42 }: { d: string; taille?: number }) {
+  return (
+    <svg className="em-points" width={taille} height={taille} viewBox={`0 0 ${GRILLE} ${GRILLE}`} aria-hidden="true">
+      {points(d).map((allume, k) => (
+        <circle key={k} cx={(k % GRILLE) + 0.5} cy={Math.floor(k / GRILLE) + 0.5} r={allume ? 0.36 : 0.14} className={allume ? 'em-point' : 'em-point-eteint'} />
+      ))}
+    </svg>
+  );
+}
+
+/** L'expression d'un nœud de logique, en pastille : hexagonale pour une condition, comme les booléens de Scratch. */
+function Expression({ texte, condition, verdict }: { texte: string; condition: boolean; verdict?: string }) {
+  return (
+    <div className={`em-tuile-expr ${condition ? 'em-tuile-condition' : ''} ${verdict ? `em-verdict-${verdict}` : ''}`}>
+      <span>{texte}{verdict && <b>{verdict}</b>}</span>
+    </div>
+  );
 }
 
 /** Le badge des nœuds qui font bouger le robot : quatre flèches, sans texte. */
@@ -90,16 +112,24 @@ export interface ProprietesCarte {
  * Un déclencheur a le bord gauche arrondi, une fin le bord droit.
  */
 export function CarteNoeud({ type, valeurs = {}, etat, choisi, desactive, echec, direct, prise, veille, poignees, libres, surPlus }: ProprietesCarte) {
+  const { apparence } = useContext(ApparenceContexte);
   const f = FAMILLE[type.famille];
   const sorties = sortiesVisibles(type, echec);
   const hauteur = (i: number) => `${(100 / (sorties.length + 1)) * (i + 1)}%`;
-  const resume = direct?.texte ?? resumer(type, valeurs);
+  const expr = expression(type, valeurs);
+  const resume = expr ? direct?.texte : direct?.texte ?? resumer(type, valeurs);
+  const verdict = prise === 'alors' ? 'oui' : prise === 'sinon' ? 'non' : undefined;
+  const d = ICONES[type.icone] ?? ICONES.note;
   return (
     <div className={`em-tuile em-forme-${f.forme} ${choisi ? 'choisi' : ''} ${etat ? `em-etat-${etat}` : ''} ${veille ? 'em-veille' : ''} ${desactive ? 'em-desactive' : ''}`}
-      style={{ ['--famille' as string]: f.couleur, ['--etat' as string]: etat ? ETATS[etat].couleur : 'transparent' }} title={type.aide}>
-      {type.famille === 'declencheur' && <span className="em-eclair" aria-hidden="true">⚡</span>}
-      <svg className="em-tuile-icone" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"
-        strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICONES[type.icone] ?? ICONES.note} /></svg>
+      style={{ ['--famille' as string]: teinte(type.famille, apparence.couleurs), ['--etat' as string]: etat ? ETATS[etat].couleur : 'transparent' }} title={type.aide}>
+      {type.famille === 'declencheur' && (
+        <svg className="em-eclair" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path d={ICONES.eclair} /></svg>
+      )}
+      {apparence.icones === 'points' ? <IconePoints d={d} /> : (
+        <svg className="em-tuile-icone" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"
+          strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>
+      )}
       <BadgeEtat etat={veille ? undefined : etat} />
       {type.bouge && <BadgeBouge />}
       {poignees && type.entree && <Handle type="target" position={Position.Left} className="em-poignee" />}
@@ -115,7 +145,8 @@ export function CarteNoeud({ type, valeurs = {}, etat, choisi, desactive, echec,
         </Fragment>
       ))}
       <div className="em-tuile-nom">{type.nom}</div>
-      {resume && <div className={`em-tuile-resume ${direct ? 'em-tuile-direct' : ''} ${direct?.relance ? 'em-tuile-relance' : ''}`}>{resume}</div>}
+      {expr && <Expression texte={expr.texte} condition={expr.condition} verdict={verdict} />}
+      {resume && <div className={`em-tuile-resume ${expr ? 'em-tuile-sous-expr' : ''} ${direct ? 'em-tuile-direct' : ''} ${direct?.relance ? 'em-tuile-relance' : ''}`}>{resume}</div>}
     </div>
   );
 }
