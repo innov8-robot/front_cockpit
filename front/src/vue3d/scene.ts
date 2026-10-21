@@ -343,8 +343,9 @@ export function monterScene(hote: HTMLElement): Scene3D {
       for (const o of simules) if (o) o.removeFromParent();
       detections?.afficher(false);
       detections = null;
-      hologramme!.vraie.add(reels.camera);
-      (robot!.links.torso_link ?? robot!).add(reels.lidar);
+      // Les deux nuages dans le repère du torse, comme la vue 3D viser : la hand-eye y porte la caméra.
+      const torse = robot!.links.torso_link ?? robot!;
+      torse.add(reels.camera, reels.lidar);
       appliquerVisibilite();
       return {
         image: async (t: TrameImage) => {

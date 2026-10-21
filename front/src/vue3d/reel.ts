@@ -22,8 +22,9 @@ function nuageVide(max: number, taille: number): { points: THREE.Points; positio
 }
 
 /**
- * Les nuages du vrai robot : la caméra déprojetée dans le repère de la caméra de tête (qui regarde vers -z,
- * comme une caméra three.js), le lidar dans le repère du torse. L'appelant les accroche à ces repères.
+ * Les nuages du vrai robot, tous deux dans le repère du torse comme dans la vue 3D viser : la caméra déprojetée
+ * puis portée par sa hand-eye `T_base_cam` (le repère « base » de la hand-eye est le torse), le lidar tel quel.
+ * L'appelant les accroche au lien `torso_link` du modèle.
  */
 export function creerNuagesReels() {
   const camera = nuageVide(MAX_CAMERA, 0.012);
@@ -42,13 +43,21 @@ export function creerNuagesReels() {
     contexte.drawImage(bitmap, 0, 0, p.largeur, p.hauteur);
     const rvb = contexte.getImageData(0, 0, p.largeur, p.hauteur).data;
     const [fx, fy, cx, cy] = t.intrinseques.map((v) => v / p.pas);
+    // La hand-eye, en lignes (convention OpenCV de la caméra : x à droite, y vers le bas, z devant).
+    const m = t.pose ?? [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]];
     let n = 0;
     for (let v = 0; v < p.hauteur && n < MAX_CAMERA; v++) {
       for (let u = 0; u < p.largeur; u++) {
         const mm = p.mm[v * p.largeur + u];
         if (!mm || mm > PROFONDEUR_MAX_MM) continue;
         const z = mm / 1000;
-        camera.position.set([((u - cx) / fx) * z, -((v - cy) / fy) * z, -z], n * 3);
+        const x = ((u - cx) / fx) * z;
+        const y = ((v - cy) / fy) * z;
+        camera.position.set([
+          m[0][0] * x + m[0][1] * y + m[0][2] * z + m[0][3],
+          m[1][0] * x + m[1][1] * y + m[1][2] * z + m[1][3],
+          m[2][0] * x + m[2][1] * y + m[2][2] * z + m[2][3],
+        ], n * 3);
         const k = (v * p.largeur + u) * 4;
         camera.couleur.set([rvb[k] / 255, rvb[k + 1] / 255, rvb[k + 2] / 255], n * 3);
         n++;

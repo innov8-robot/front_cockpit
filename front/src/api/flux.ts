@@ -9,6 +9,8 @@ export interface TrameImage {
   hauteur: number;
   /** `[fx, fy, cx, cy]` de l'image pleine. */
   intrinseques: [number, number, number, number] | null;
+  /** La hand-eye `T_base_cam` (4 × 4, en lignes) : de la caméra au torse. */
+  pose: number[][] | null;
   jpeg: Blob;
   /** La profondeur sous-échantillonnée, en mm. */
   profondeur: { largeur: number; hauteur: number; pas: number; mm: Uint16Array } | null;
@@ -57,7 +59,7 @@ export function decoderImage(tampon: ArrayBuffer): TrameImage {
   }
   return {
     seq: e.seq as number, largeur: e.largeur as number, hauteur: e.hauteur as number,
-    intrinseques: e.intrinseques as TrameImage['intrinseques'],
+    intrinseques: e.intrinseques as TrameImage['intrinseques'], pose: (e.pose as number[][] | null) ?? null,
     jpeg: new Blob([new Uint8Array(tampon, debut, nJpeg)], { type: 'image/jpeg' }), profondeur,
   };
 }
