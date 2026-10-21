@@ -5,7 +5,7 @@
  */
 import { TYPES_PRIMITIVE } from '../../api/libelles';
 import type { Execution, LienMission, NoeudMission, Primitive, TypePrimitive } from '../../api/types';
-import type { EtatNoeud } from '../missions/charte';
+import type { EtatNoeud, Sortie } from '../missions/charte';
 import { typeNoeud, type TypeNoeud } from '../missions/catalogue';
 import { lien, type LienCanevas } from '../missions/liens';
 import type { NoeudMission as NoeudCanevas } from '../missions/Noeud';
@@ -32,6 +32,14 @@ export function typePrimitive(p: Primitive | undefined): TypeNoeud {
   };
 }
 
+/**
+ * La poignée d'une sortie sur le canevas. L'API relie le départ par « ok » ; sa tuile, un déclencheur, n'a qu'une
+ * sortie, « suite » : sans cette traduction, React Flow ne trouve pas la poignée et le lien ne se dessine pas.
+ */
+export function poignee(source: string, sortie: Sortie): Sortie {
+  return source === 'depart' && sortie !== 'echec' ? 'suite' : sortie;
+}
+
 /** Les nœuds qu'on atteint depuis le départ : les autres ne seront jamais joués. */
 export function atteignables(liens: { source: string; target: string }[]): Set<string> {
   const vus = new Set(['depart']);
@@ -54,7 +62,7 @@ export function versCanevas(noeuds: NoeudMission[], liens: LienMission[], parId:
         valeurs: n.primitiveId ? ({ primitive: n.primitiveId } as Record<string, string>) : {}, echec: avecEchec.has(n.id),
       },
     })),
-    edges: liens.map((l) => lien(l.id, l.de, l.sortie, l.vers)),
+    edges: liens.map((l) => lien(l.id, l.de, poignee(l.de, l.sortie), l.vers)),
   };
 }
 

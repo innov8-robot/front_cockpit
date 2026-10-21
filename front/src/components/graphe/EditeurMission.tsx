@@ -13,7 +13,7 @@ import { CATALOGUE } from '../missions/catalogue';
 import { LienPulse } from '../missions/Lien';
 import { lien, tonDe, type LienCanevas } from '../missions/liens';
 import { IconeNoeud, NoeudCarte, type NoeudMission as NoeudCanevas } from '../missions/Noeud';
-import { atteignables, etatsExecution, typePrimitive, versCanevas, versMission } from './correspondance';
+import { atteignables, etatsExecution, poignee, typePrimitive, versCanevas, versMission } from './correspondance';
 
 const TYPES_NOEUDS = { carte: NoeudCarte };
 const TYPES_LIENS = { pulse: LienPulse };
@@ -233,13 +233,16 @@ function Canevas({ noeuds, liens, primitives, modifiable, execution, onChange }:
     setNodes((ns) => [...ns.map((n) => ({ ...n, selected: false })), {
       id, type: 'carte', position: pos, selected: true, data: { type: typePrimitive(p), valeurs: { primitive: p.id } },
     }]);
-    if (source) setEdges((es) => [...es.filter((e) => !(e.source === source.id && e.sourceHandle === sortie)), lien(nouvelId('l'), source.id, sortie, id)]);
+    if (source) {
+      const s = poignee(source.id, sortie);
+      setEdges((es) => [...es.filter((e) => !(e.source === source.id && e.sourceHandle === s)), lien(nouvelId('l'), source.id, s, id)]);
+    }
     if (!position) flot.setCenter(pos.x + 38, pos.y + 38, { duration: 300, zoom: flot.getZoom() });
   }
 
   function relier(c: Connection) {
     if (!c.source || !c.target || c.source === c.target) return;
-    const sortie: Sortie = c.sourceHandle === 'echec' ? 'echec' : 'ok';
+    const sortie = poignee(c.source, c.sourceHandle === 'echec' ? 'echec' : 'ok');
     // Une sortie mène à une seule suite : relier à nouveau remplace l'ancien lien.
     setEdges((es) => [...es.filter((e) => !(e.source === c.source && e.sourceHandle === sortie)), lien(nouvelId('l'), c.source!, sortie, c.target!)]);
   }

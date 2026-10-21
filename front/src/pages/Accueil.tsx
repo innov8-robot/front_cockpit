@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { api } from '../api/client';
 import type { EtatCapteurs, EtatCorps, Robot, Verdict } from '../api/types';
 import { BarreRobot } from '../components/BarreRobot';
@@ -48,6 +48,7 @@ function verdictRobot(r: Robot | undefined, corps: EtatCorps | null): { verdict:
 }
 
 export function Accueil() {
+  const lieu = useLocation();
   const hote = useRef<HTMLDivElement>(null);
   const scene = useRef<Scene3D | null>(null);
   const [pret, setPret] = useState(false);
@@ -197,7 +198,7 @@ export function Accueil() {
       {robot && <BarreMission robot={robot} />}
 
       {demarre && (
-        <Reticule projeterSol={(x, y) => scene.current?.projeterSol(x, y) ?? null}
+        <Reticule projeterSol={(x, y) => scene.current?.projeterSol(x, y) ?? null} cache={lieu.pathname.startsWith('/missions')}
           indice={(x, y) => (scene.current?.cibleSous(x, y) === 'camera' ? 'CLIC · PLEIN ÉCRAN CAMÉRA'
             : document.elementFromPoint(x, y)?.closest('.hud-carte-zone') ? 'CLIC · CARTE EN GRAND' : null)} />
       )}

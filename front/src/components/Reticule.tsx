@@ -10,10 +10,12 @@ const metres = (v: number) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(2)}`
  * suit. Au-dessus de la scène 3D, le badge dit aussi où tombe le pointeur au sol, dans le repère du robot.
  * Seulement avec une souris : au doigt, il n'y a pas de pointeur à suivre.
  */
-export function Reticule({ projeterSol, indice }: {
+export function Reticule({ projeterSol, indice, cache = false }: {
   projeterSol?: (x: number, y: number) => { x: number; y: number } | null;
   /** Une ligne d'aide sous les coordonnées, quand le pointeur survole quelque chose qu'on peut ouvrir. */
   indice?: (x: number, y: number) => string | null;
+  /** Sur un écran de travail (les missions), le réticule s'efface et le curseur ordinaire revient. */
+  cache?: boolean;
 }) {
   const lignes = useRef<{ x: HTMLDivElement | null; y: HTMLDivElement | null; badge: HTMLDivElement | null }>({ x: null, y: null, badge: null });
   const projeter = useRef(projeterSol);
@@ -66,6 +68,11 @@ export function Reticule({ projeterSol, indice }: {
       document.documentElement.classList.remove('avec-reticule', 'reticule-actif');
     };
   }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('reticule-cache', cache);
+    return () => document.documentElement.classList.remove('reticule-cache');
+  }, [cache]);
 
   return (
     <div className="reticule" aria-hidden="true">

@@ -630,13 +630,15 @@ input[type='radio'] { width: auto; min-height: 0; }
 }
 
 /* Le réticule CAO, à la souris seulement (Reticule.tsx) : croix de visée, deux lignes, badge de télémétrie. */
-.avec-reticule, .avec-reticule * { cursor: crosshair; }
+.avec-reticule:not(.reticule-cache), .avec-reticule:not(.reticule-cache) * { cursor: crosshair; }
 .avec-reticule input:not([type='range']), .avec-reticule textarea, .avec-reticule select { cursor: text; }
 /* OrbitControls pose son propre curseur en style inline sur la toile : la croix doit l'emporter. */
 .avec-reticule .accueil-scene canvas { cursor: crosshair !important; }
 .avec-reticule .react-flow__node, .avec-reticule .react-flow__handle, .avec-reticule .palette-item { cursor: grab; }
 .reticule { position: fixed; inset: 0; z-index: 30; pointer-events: none; opacity: 0; transition: opacity 0.2s; }
 .reticule-actif .reticule { opacity: 1; }
+/* Sur les écrans de travail (les missions), le réticule s'efface en douceur. */
+.reticule-cache .reticule { opacity: 0; transition: opacity 0.4s ease; }
 .reticule-x, .reticule-y, .reticule-badge { position: absolute; left: 0; top: 0; will-change: transform; }
 .reticule-x { bottom: 0; width: 1px; margin-left: -0.5px;
   background: linear-gradient(to bottom, transparent, rgb(233 238 247 / 0.42) 12%, rgb(233 238 247 / 0.42) 88%, transparent); }
