@@ -222,10 +222,9 @@ export function MiniCarte({ poste, plein, basculer }: { poste: string | null; pl
       )}
       {plein && !enSimulation && (
         <label className="hud-carte-choix" onClick={(e) => e.stopPropagation()}>CARTE
-          <select value={carteChoisie() ?? (carte?.nom === 'châssis' ? CHASSIS : carte?.nom ?? CHASSIS)}
-            onChange={(e) => choisirCarte(e.target.value)}>
-            <option value={CHASSIS}>Celle du châssis (en direct)</option>
-            {enregistrees.map((n) => <option key={n} value={n}>{n} (enregistrée)</option>)}
+          <select value={carteChoisie() ?? CHASSIS} onChange={(e) => choisirCarte(e.target.value)}>
+            <option value={CHASSIS}>En direct du châssis</option>
+            {enregistrees.map((n) => <option key={n} value={n}>{n} (enregistrée, figée)</option>)}
           </select>
         </label>
       )}

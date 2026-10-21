@@ -13,7 +13,7 @@ const CLE = 'mpc.front.carte';
 export const CHASSIS = '__chassis__';
 const EVENEMENT = 'mpc-carte-choisie';
 
-/** La carte choisie sur cet appareil : le nom d'une carte enregistrée, `CHASSIS`, ou null (l'active du serveur). */
+/** La carte choisie sur cet appareil : le nom d'une carte enregistrée, ou `CHASSIS` (défaut, comme le cockpit). */
 export function carteChoisie(): string | null {
   try {
     return localStorage.getItem(CLE);
@@ -43,16 +43,14 @@ export function listerCartes(url: string): Promise<{ active: string; cartes: { n
   return fetch(`${url}/api/cartes`).then((r) => (r.ok ? r.json() : { active: '', cartes: [] }));
 }
 
-/** Charge la carte choisie : une carte enregistrée (l'active du serveur par défaut), sinon celle du châssis. */
+/**
+ * Charge la carte choisie. Par défaut, la grille que le châssis tient en direct, comme la vue Carte du cockpit : un
+ * `.stcm` enregistré est la carte au jour de son enregistrement, le châssis l'a fait évoluer depuis.
+ */
 export async function chargerCarte(url: string): Promise<CarteServie | null> {
-  let nom = carteChoisie();
-  if (nom === null) {
-    const l = await listerCartes(url).catch(() => ({ active: '', cartes: [] }));
-    nom = l.active || l.cartes[0]?.nom || CHASSIS;
-  }
+  const nom = carteChoisie() ?? CHASSIS;
   const chemin = nom === CHASSIS ? '/api/carte' : `/api/cartes/${encodeURIComponent(nom)}`;
   const r = await fetch(`${url}${chemin}`).catch(() => null);
   if (!r?.ok) return null;
-  const c = await r.json();
-  return { postes: {}, surLeChassis: true, ...c, nom: nom === CHASSIS ? 'châssis' : nom };
+  return { postes: {}, surLeChassis: true, nom, ...(await r.json()) };
 }
