@@ -1248,8 +1248,6 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .em-signe { position: absolute; right: 9px; transform: translateY(-50%); font: 700 9.5px/1 ui-monospace, monospace; color: #c9ced6; pointer-events: none; }
 .em-signe-echec { color: #ffb02e; }
 .em-signe-faux, .em-signe-autre { color: #8a93a3; }
-.em-signe-cadre { right: auto; left: calc(100% + 10px); }
-.em-signe-tour { position: absolute; font-size: 11px; color: var(--famille); pointer-events: none; }
 .em-poignee { width: 10px !important; height: 10px !important; background: #0b0d10 !important; border: 2px solid #e9eef7 !important; }
 .em-poignee-echec { border-color: #ffb02e !important; }
 .em-poignee-faux, .em-poignee-autre { border-color: #8a93a3 !important; }
@@ -1264,22 +1262,53 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 @keyframes em-respire { 50% { box-shadow: inset 3px 0 0 var(--famille), 0 0 0 2.5px #e9eef7, 0 0 30px rgb(233 238 247 / 0.5); } }
 @media (prefers-reduced-motion: reduce) { .em-etat-cours, .em-chargement { animation-duration: 3s; } }
 
-/* Un cadre de logique : les étapes du tour sont dedans, comme un bloc en C. */
-.em-cadre {
-  position: relative; width: 100%; height: 100%; box-sizing: border-box; border-radius: 16px; color: #e9eef7; font-family: 'Inter', system-ui, sans-serif;
-  border: 1.5px dashed color-mix(in srgb, var(--famille) 60%, transparent);
-  background: color-mix(in srgb, var(--famille) 6%, rgb(10 12 15 / 0.6)); transition: box-shadow 0.3s;
+/*
+ * Une structure de logique, lue comme du pseudocode : une tête (« SI … ALORS »), un rail à gauche, des barres entre
+ * les sections (« SINON »), une ligne de fin (« FIN SI »). Géométrie : components/missions/structure.ts.
+ */
+.em-mot { font: 800 0.7rem/1 ui-monospace, 'SF Mono', monospace; letter-spacing: 0.05em; color: color-mix(in srgb, var(--famille, #e9eef7) 30%, white); }
+.em-struct { --fond-struct: color-mix(in srgb, var(--famille) 22%, #12161c); --bord-struct: color-mix(in srgb, var(--famille) 55%, transparent);
+  position: relative; width: 100%; box-sizing: border-box; color: #e9eef7; font-family: 'Inter', system-ui, sans-serif; transition: opacity 0.3s; }
+.em-struct-tete, .em-struct-barre, .em-struct-pied {
+  position: absolute; left: 0; right: 0; box-sizing: border-box; display: flex; align-items: center; gap: 8px;
+  background: var(--fond-struct); border: 1px solid var(--bord-struct); transition: box-shadow 0.3s;
 }
-.em-cadre.choisi { border-style: solid; }
-.em-cadre.em-etat-cours { box-shadow: 0 0 0 1.5px rgb(233 238 247 / 0.6), 0 0 30px rgb(233 238 247 / 0.12); animation: none; }
-.em-cadre.em-etat-ok { box-shadow: 0 0 0 1.5px #3dff8a, 0 0 24px rgb(61 255 138 / 0.18); }
-.em-cadre.em-etat-echec { box-shadow: 0 0 0 1.5px #ffb02e, 0 0 24px rgb(255 176 46 / 0.2); }
-.em-cadre-tete {
-  position: relative; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 15px 15px 0 0;
-  background: color-mix(in srgb, var(--famille) 14%, #11151a); border-bottom: 1px solid color-mix(in srgb, var(--famille) 30%, transparent);
+.em-struct-tete { top: 0; padding: 0 12px 0 8px; border-radius: 12px 12px 12px 0; box-shadow: 0 8px 22px rgb(0 0 0 / 0.35); z-index: 1; }
+.em-struct-tete .em-phrase, .em-struct-barre .em-phrase, .em-struct-pied .em-phrase { white-space: nowrap; }
+.em-struct-barre { padding: 0 12px 0 26px; border-radius: 0 10px 10px 0; border-left: 0; }
+.em-struct-barre-echec { --fond-struct: rgb(255 176 46 / 0.16); --bord-struct: rgb(255 176 46 / 0.55); }
+.em-struct-barre-echec .em-mot { color: #ffcf7a; }
+.em-struct-pied { padding: 0 12px 0 26px; border-radius: 0 12px 12px 12px; }
+.em-struct-rail { position: absolute; left: 0; box-sizing: border-box; background: var(--fond-struct); border-left: 1px solid var(--bord-struct); border-right: 1px solid var(--bord-struct); overflow: hidden; }
+.em-struct-section { position: absolute; right: 0; box-sizing: border-box; border-right: 1px dashed color-mix(in srgb, var(--famille) 22%, transparent); background: rgb(10 12 15 / 0.35); transition: background 0.3s, box-shadow 0.3s; }
+.em-struct-vide { position: absolute; left: 30px; top: 50%; transform: translateY(-50%); font: 600 10px/1 ui-monospace, monospace; letter-spacing: 0.12em; color: #5b636e; }
+/* ▸ : où commencent les étapes d'une section. */
+.em-depart { width: 12px !important; height: 12px !important; min-width: 0 !important; border: 0 !important; border-radius: 0 !important; background: var(--famille) !important;
+  clip-path: polygon(0 0, 100% 50%, 0 100%); }
+.em-depart-image { position: absolute; transform: translate(-50%, -50%); }
+.em-depart-echec { background: #ffb02e !important; }
+.em-struct-boucle { margin-left: auto; font-size: 15px; line-height: 1; color: var(--famille); }
+/* Ce qu'elle vit pendant l'exécution, dans sa tête. */
+.em-direct { font: 700 10px/1 ui-monospace, monospace; padding: 4px 7px; border-radius: 999px; color: #0b0d10; background: color-mix(in srgb, var(--famille) 75%, white); white-space: nowrap; }
+.em-direct-relance { background: #ffb02e; box-shadow: 0 0 10px rgb(255 176 46 / 0.5); }
+.em-struct-cours > .em-struct-tete { box-shadow: 0 0 0 1.5px #e9eef7, 0 0 24px rgb(233 238 247 / 0.3); }
+.em-struct-ok > .em-struct-tete, .em-struct-ok > .em-struct-pied { box-shadow: 0 0 0 1.5px #3dff8a, 0 0 18px rgb(61 255 138 / 0.22); }
+.em-struct-echec > .em-struct-tete { box-shadow: 0 0 0 1.5px #ffb02e, 0 0 18px rgb(255 176 46 / 0.3); }
+.em-struct-danger > .em-struct-tete { box-shadow: 0 0 0 1.5px #ff2d3a, 0 0 22px rgb(255 45 58 / 0.45); }
+.em-struct-saute { opacity: 0.4; }
+.em-struct.choisi > .em-struct-tete { border-color: rgb(255 255 255 / 0.7); }
+/* La section que le « SI » a prise s'éclaire ; l'autre se hachure. */
+.em-struct-prise { background: color-mix(in srgb, var(--famille) 10%, rgb(10 12 15 / 0.35)); box-shadow: inset 3px 0 0 #e9eef7; }
+.em-struct-laissee { background: repeating-linear-gradient(135deg, rgb(255 255 255 / 0.035) 0 6px, transparent 6px 14px), rgb(10 12 15 / 0.35); }
+/* Une boucle qui repart pour un tour : une onde remonte le rail, le ↻ tourne. */
+.em-struct-reprise > .em-struct-rail::after {
+  content: ''; position: absolute; left: 2px; right: 2px; height: 44px; border-radius: 6px; background: #fff;
+  box-shadow: 0 0 10px #fff, 0 0 22px var(--famille); animation: em-remonte 1s linear infinite;
 }
-.em-cadre-tete .em-phrase { flex: 1; }
-.em-tour { font: 700 10px/1 ui-monospace, monospace; padding: 4px 7px; border-radius: 999px; color: #0b0d10; background: var(--famille); }
+.em-struct-reprise .em-struct-boucle { animation: em-tourne-arriere 1s linear infinite; }
+@keyframes em-remonte { from { top: 100%; } to { top: -44px; } }
+@keyframes em-tourne-arriere { to { transform: rotate(-360deg); } }
+@media (prefers-reduced-motion: reduce) { .em-struct-reprise > .em-struct-rail::after, .em-struct-reprise .em-struct-boucle { animation-duration: 3s; } }
 
 /* Le prototype de l'éditeur : canevas, palette à droite ; menu au clic droit, réglages par-dessus la palette. */
 .em-prototype { position: relative; display: grid; grid-template-columns: 1fr 210px; height: 640px; border: 1px solid rgb(255 255 255 / 0.1); border-radius: 16px; overflow: hidden; background: #0b0d10; }
@@ -1416,6 +1445,8 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .em-onde-ex svg { overflow: visible; }
 .em-galerie { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
 .em-galerie figure { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.em-galerie:has(.em-galerie-structure) { grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); }
+.em-galerie-structure { width: 100%; }
 .em-galerie figcaption { color: #8a93a3; font-size: 0.78rem; line-height: 1.45; max-width: 250px; }
 @media (max-width: 900px) {
   .em-page { grid-template-columns: 1fr; }

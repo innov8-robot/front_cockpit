@@ -11,6 +11,12 @@ export interface Reglage {
   aide?: string;
 }
 
+/** Une section d'une structure : `titre` est sa barre (« SINON », « CAS {cas1} ») ; la première n'en a souvent pas. */
+export interface Section { cle: string; titre?: string }
+
+/** Une structure de logique : ses sections, sa ligne de fin (« FIN SI », « JUSQU'À {condition} »), et si elle boucle. */
+export interface Structure { sections: Section[]; fin: string; boucle?: boolean }
+
 /** Un type de nœud du catalogue. */
 export interface TypeNoeud {
   cle: string;
@@ -34,8 +40,8 @@ export interface TypeNoeud {
   aujourdhui?: string;
   /** Il fait bouger le robot : marqué sur le canevas, et vérifié avant le lancement. */
   bouge?: boolean;
-  /** C'est un cadre : ses étapes sont dedans, comme un bloc en C de Scratch. */
-  contient?: boolean;
+  /** Une structure de logique (si, pour, tant que…) : ses sections et son mot de fin, comme en pseudocode. */
+  structure?: Structure;
   aide: string;
 }
 
@@ -56,6 +62,9 @@ export const ICONES: Record<string, string> = {
   chaque: 'M4 6h16M4 12h16M4 18h10M18 16l2 2-2 2',
   tantque: 'M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5',
   essayer: 'M12 3v4M12 17v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M3 12h4M17 12h4',
+  pour: 'M4 7h3M4 12h3M4 17h3M11 7h9M11 12h9M11 17h9',
+  suivant: 'M4 12h12M12 7l5 5-5 5M20 5v14',
+  sortir: 'M10 4H5v16h5M14 8l4 4-4 4M18 12H9',
   variable: 'M8 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h2M16 4h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2M9 12h6',
   plus: 'M12 5v14M5 12h14',
   attendre: 'M6 2h12M6 22h12M7 2c0 6 10 6 10 10S7 16 7 22M17 2c0 6-10 6-10 10s10 4 10 10',
@@ -88,42 +97,79 @@ export const NOEUDS_GENERAUX: TypeNoeud[] = [
     aide: 'Démarrer sur un évènement extérieur (un capteur, un bouton d’appel, un autre système).',
   },
   {
-    cle: 'si', statut: 'nouveau', famille: 'logique', nom: 'Si', phrase: 'Si {condition}', icone: 'si', sorties: ['vrai', 'faux'], entree: true,
-    reglages: [{ cle: 'condition', libelle: 'Condition', type: 'condition', defaut: 'pièce restante' }],
-    aide: 'Choisir un chemin selon une condition lue sur le robot ou dans la mission.',
+    cle: 'si', statut: 'nouveau', famille: 'logique', nom: 'Si … alors … sinon', phrase: 'SI {condition} ALORS', icone: 'si', sorties: ['suite'],
+    entree: true, structure: { sections: [{ cle: 'alors' }, { cle: 'sinon', titre: 'SINON' }], fin: 'FIN SI' },
+    reglages: [{ cle: 'condition', libelle: 'Condition', type: 'condition', defaut: 'bac plein' }],
+    aide: 'Si la condition tient, les étapes d’« alors » ; sinon, celles de « sinon », qui peut rester vide. Puis la suite.',
   },
   {
-    cle: 'repeter', contient: true, statut: 'existe', famille: 'logique', nom: 'Répéter', phrase: 'Répéter {fois}×', icone: 'repeter', sorties: ['corps', 'fini'],
-    entree: true, reglages: [{ cle: 'fois', libelle: 'Nombre de tours', type: 'nombre', defaut: 3 }],
+    cle: 'repeter', statut: 'existe', famille: 'logique', nom: 'Répéter … fois', phrase: 'RÉPÉTER {fois} FOIS', icone: 'repeter', sorties: ['suite'],
+    entree: true, structure: { sections: [{ cle: 'corps' }], fin: 'FIN RÉPÉTER', boucle: true },
+    reglages: [{ cle: 'fois', libelle: 'Nombre de tours', type: 'nombre', defaut: 3 }],
     aujourdhui: "la mission entière boucle : un nombre de tours, ou jusqu’au Stop",
-    aide: 'Refaire les étapes du cadre un nombre de fois fixé, puis continuer.',
+    aide: 'Refaire les étapes un nombre de fois fixé, puis continuer.',
   },
   {
-    cle: 'pour_chaque', contient: true, statut: 'nouveau', famille: 'logique', nom: 'Pour chaque', phrase: 'Chaque {objet}', icone: 'chaque',
-    sorties: ['corps', 'fini'], entree: true,
-    reglages: [{ cle: 'objet', libelle: 'Objet', type: 'objet', defaut: 'pièce Novares' }],
+    cle: 'pour', statut: 'nouveau', famille: 'logique', nom: 'Pour … allant de … à', phrase: 'POUR {variable} ALLANT DE {de} À {a}', icone: 'pour',
+    sorties: ['suite'], entree: true, structure: { sections: [{ cle: 'corps' }], fin: 'FIN POUR', boucle: true },
+    reglages: [
+      { cle: 'variable', libelle: 'Variable', type: 'variable', defaut: 'i' },
+      { cle: 'de', libelle: 'De', type: 'nombre', defaut: 1 },
+      { cle: 'a', libelle: 'À', type: 'nombre', defaut: 4 },
+      { cle: 'pas', libelle: 'Pas', type: 'nombre', defaut: 1 },
+    ],
+    produit: ['i, le numéro du tour'],
+    aide: 'Refaire les étapes en comptant : i vaut 1, puis 2… jusqu’à 4. Les étapes lisent i (rangée i, étage i).',
+  },
+  {
+    cle: 'pour_chaque', statut: 'nouveau', famille: 'logique', nom: 'Pour chaque', phrase: 'POUR CHAQUE {objet} SUR {zone}', icone: 'chaque',
+    sorties: ['suite'], entree: true, structure: { sections: [{ cle: 'corps' }], fin: 'FIN POUR', boucle: true },
+    reglages: [
+      { cle: 'objet', libelle: 'Objet', type: 'objet', defaut: 'pièce' },
+      { cle: 'zone', libelle: 'Où', type: 'choix', options: ['la table', 'le bac A', 'la zone encadrée'], defaut: 'la table' },
+    ],
     produit: ['l’objet courant'],
-    aide: 'Refaire les étapes du cadre pour chaque objet que le robot voit, le plus proche d’abord.',
+    aide: 'Refaire les étapes pour chaque objet que le robot voit dans la zone, le plus proche d’abord.',
   },
   {
-    cle: 'tant_que', contient: true, statut: 'atome', famille: 'logique', nom: 'Tant que', phrase: 'Tant que {condition}', icone: 'tantque',
-    sorties: ['corps', 'fini'], entree: true,
+    cle: 'tant_que', statut: 'atome', famille: 'logique', nom: 'Tant que', phrase: 'TANT QUE {condition} FAIRE', icone: 'tantque',
+    sorties: ['suite'], entree: true, structure: { sections: [{ cle: 'corps' }], fin: 'FIN TANT QUE', boucle: true },
     reglages: [
       { cle: 'condition', libelle: 'Condition', type: 'condition', defaut: 'bac pas plein' },
       { cle: 'max', libelle: 'Au plus', type: 'nombre', unite: 'tours', defaut: 20, aide: 'Une boucle a toujours une limite.' },
     ],
     aujourdhui: "l’atome repeat de l’arbre (until, max_iter)",
-    aide: 'Refaire le cadre tant que la condition tient, jamais plus que la limite.',
+    aide: 'Refaire les étapes tant que la condition tient ; elle est relue avant chaque tour. Jamais plus que la limite.',
   },
   {
-    cle: 'essayer', contient: true, statut: 'existe', famille: 'logique', nom: 'Réessayer', phrase: '{fois} essais', icone: 'essayer',
-    sorties: ['ok', 'echec'], entree: true,
+    cle: 'repeter_jusqua', statut: 'atome', famille: 'logique', nom: 'Répéter … jusqu’à', phrase: 'RÉPÉTER', icone: 'repeter',
+    sorties: ['suite'], entree: true, structure: { sections: [{ cle: 'corps' }], fin: 'JUSQU’À {condition}', boucle: true },
+    reglages: [
+      { cle: 'condition', libelle: 'Condition', type: 'condition', defaut: 'pièce tenue' },
+      { cle: 'max', libelle: 'Au plus', type: 'nombre', unite: 'tours', defaut: 5, aide: 'Une boucle a toujours une limite.' },
+    ],
+    aujourdhui: "l’atome repeat de l’arbre (until)",
+    aide: 'Faire les étapes une fois, puis recommencer jusqu’à ce que la condition tienne ; elle est lue après chaque tour.',
+  },
+  {
+    cle: 'essayer', statut: 'existe', famille: 'logique', nom: 'Essayer', phrase: 'ESSAYER {fois} FOIS', icone: 'essayer', sorties: ['suite'],
+    entree: true, structure: { sections: [{ cle: 'corps' }, { cle: 'echec', titre: 'SI ÇA RATE ENCORE' }], fin: 'FIN ESSAYER' },
     reglages: [
       { cle: 'fois', libelle: 'Essais', type: 'nombre', defaut: 2 },
       { cle: 'pause', libelle: 'Entre deux essais', type: 'duree', unite: 's', defaut: 2 },
     ],
     aujourdhui: "un nombre de retentatives pour toute la mission, sur un échec marqué défaisable",
-    aide: 'Rejouer le cadre s’il échoue ; « échoué » ne sort qu’après le dernier essai.',
+    aide: 'Rejouer les étapes si l’une échoue ; après le dernier essai, faire celles de « si ça rate encore ». Puis la suite.',
+  },
+  {
+    cle: 'passer', statut: 'nouveau', famille: 'logique', nom: 'Passer au suivant', phrase: 'PASSER AU SUIVANT', icone: 'suivant', sorties: [],
+    entree: true, reglages: [],
+    aide: 'Arrêter ce tour de boucle et passer au suivant : la pièce suivante, le i suivant.',
+  },
+  {
+    cle: 'sortir', statut: 'nouveau', famille: 'logique', nom: 'Sortir de la boucle', phrase: 'SORTIR DE LA BOUCLE', icone: 'sortir', sorties: [],
+    entree: true, reglages: [],
+    aide: 'Quitter la boucle tout de suite et reprendre après sa ligne de fin.',
   },
   {
     cle: 'compteur', statut: 'nouveau', famille: 'donnees', nom: 'Compter', phrase: '{variable} +{pas}', icone: 'plus', sorties: ['suite'],
@@ -281,14 +327,15 @@ export const NOEUDS_ROBOT: TypeNoeud[] = [
     aide: 'Compter les objets visibles et ranger le nombre dans une variable : « tant que pièces restantes > 0 ».',
   },
   {
-    cle: 'selon_issue', statut: 'nouveau', famille: 'logique', nom: 'Selon l’échec', phrase: 'Selon l’échec', icone: 'si',
-    sorties: ['cas1', 'cas2', 'autre'], entree: true,
+    cle: 'selon_issue', statut: 'nouveau', famille: 'logique', nom: 'Selon l’échec', phrase: 'SELON L’ÉCHEC DE {etape}', icone: 'si',
+    sorties: ['suite'], entree: true,
+    structure: { sections: [{ cle: 'cas1', titre: 'CAS {cas1}' }, { cle: 'cas2', titre: 'CAS {cas2}' }, { cle: 'autre', titre: 'AUTREMENT' }], fin: 'FIN SELON' },
     reglages: [
       { cle: 'etape', libelle: 'Étape', type: 'texte', defaut: 'la prise' },
       { cle: 'cas1', libelle: 'Cas 1', type: 'choix', options: ['rien_pris', 'pince_fermee', 'tient_encore'], defaut: 'rien_pris' },
       { cle: 'cas2', libelle: 'Cas 2', type: 'choix', options: ['pince_fermee', 'rien_pris', 'tient_encore'], defaut: 'pince_fermee' },
     ],
-    aide: 'Le Switch de n8n : un chemin par motif d’échec (rien pris → réessayer ; pince fermée → appeler l’opérateur).',
+    aide: 'Un chemin par motif d’échec : rien pris → réessayer ; pince fermée → appeler l’opérateur ; autrement → arrêter.',
   },
 ];
 

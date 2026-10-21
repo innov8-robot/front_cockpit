@@ -6,8 +6,9 @@ import '@xyflow/react/dist/style.css';
 import { useEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent } from 'react';
 import { FAMILLE, FAMILLES, SORTIES, STATUTS, type EtatLien, type EtatNoeud, type Sortie, type Ton } from './charte';
 import { CATALOGUE, type TypeNoeud } from './catalogue';
-import { IconeNoeud, NoeudCadre, NoeudCarte, type NoeudMission } from './Noeud';
+import { IconeNoeud, NoeudCadre, NoeudCarte, type DonneesNoeud, type NoeudMission } from './Noeud';
 import { OndeChemin } from './Onde';
+import { placerSections, TETE } from './structure';
 
 /** Un pas de la simulation dure un peu plus d'une période de l'onde (1 Hz) : on la voit passer au moins une fois. */
 const PAS_MS = 1100;
@@ -17,10 +18,10 @@ const GLISSE = 'application/x-noeud-mission';
 type DonneesLien = { sortie: Sortie; etat?: EtatLien; ton?: Ton };
 type LienMission = Edge<DonneesLien, 'pulse'>;
 
-/** La couleur d'un lien parcouru : celle de l'issue de la sortie ; l'entrée dans une boucle n'est pas une issue. */
+/** La couleur d'un lien parcouru : celle de l'issue de la sortie ; entrer dans une section n'est pas une issue. */
 function tonDe(s: Sortie): Ton {
   if (s === 'echec' || s === 'faux' || s === 'autre') return 'echec';
-  return s === 'corps' ? 'neutre' : 'ok';
+  return ['corps', 'alors', 'sinon', 'cas1', 'cas2'].includes(s) ? 'neutre' : 'ok';
 }
 
 /**
@@ -39,7 +40,7 @@ function LienPulse({ id, sourceX, sourceY, targetX, targetY, sourcePosition, tar
 
 const TYPES_NOEUDS = { carte: NoeudCarte, cadre: NoeudCadre };
 /** La vue de départ cadre le début de la mission à une taille lisible ; la suite vient en suivant l'exécution. */
-const VUE_DE_DEPART = { nodes: [{ id: 'depart' }, { id: 'boucle' }, { id: 'appel' }], padding: 0.06, maxZoom: 1 };
+const VUE_DE_DEPART = { nodes: [{ id: 'depart' }, { id: 'aller' }, { id: 'essai' }], padding: 0.06, maxZoom: 1 };
 const TYPES_LIENS = { pulse: LienPulse };
 const T = (cle: string) => CATALOGUE.find((t) => t.cle === cle)!;
 const nouvelId = (prefixe: string) => `${prefixe}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -54,91 +55,132 @@ function lien(id: string, source: string, sortie: Sortie, target: string, cible?
   };
 }
 
+/** Les cotes de la mission d'exemple : une carte se centre sur le départ ▸ de sa section, une structure y aligne sa tête. */
+const CARTE = 23;
+const W_ESSAI = 520;
+const W_SI = 300;
+
 /**
- * La mission d'exemple, écrite avec le catalogue : « Vider la table dans le bac ». Pour chaque pièce vue, la prendre
- * (deux essais), la poser, compter ; une pièce imprenable appelle l'opérateur, puis la boucle reprend ; à la fin,
- * rentrer les bras et retourner à la base.
+ * La mission d'exemple, écrite avec le catalogue : « Vider la table dans le bac ».
+ *
+ *   POUR CHAQUE pièce SUR la table
+ *     ESSAYER 2 FOIS : prendre la pièce
+ *     SI ÇA RATE ENCORE : appeler l'opérateur, PASSER AU SUIVANT
+ *     FIN ESSAYER
+ *     poser dans le bac B, déposées +1
+ *     SI bac plein ALORS appeler l'opérateur SINON rien FIN SI
+ *   FIN POUR
+ *   rentrer les bras, aller à la base
  */
 function exemple(): { nodes: NoeudMission[]; edges: LienMission[] } {
   const dans = (parentId?: string) => (parentId ? { parentId, extent: 'parent' as const } : {});
   const carte = (id: string, cle: string, x: number, y: number, valeurs = {}, parentId?: string): NoeudMission => ({
     id, type: 'carte', position: { x, y }, data: { type: T(cle), valeurs }, ...dans(parentId),
   });
-  const cadre = (id: string, cle: string, x: number, y: number, w: number, h: number, valeurs = {}, parentId?: string): NoeudMission => ({
-    id, type: 'cadre', position: { x, y }, style: { width: w, height: h }, data: { type: T(cle), valeurs }, ...dans(parentId),
+  const cadre = (id: string, cle: string, x: number, y: number, w: number, donnees: Partial<DonneesNoeud>, parentId?: string): NoeudMission => ({
+    id, type: 'cadre', position: { x, y }, style: { width: w, height: placerSections(T(cle), donnees.hauteurs).hauteur },
+    data: { type: T(cle), valeurs: {}, ...donnees }, ...dans(parentId),
   });
+  const essai = placerSections(T('essayer'), [76, 76]);
+  const si = placerSections(T('si'), [76, 52]);
+  const boucle = placerSections(T('pour_chaque'), [essai.hauteur + 44]);
+  const ligne = boucle.sections[0].depart;
+  const xPoser = 40 + W_ESSAI + 44;
+  const xSi = xPoser + 470;
+  const wBoucle = xSi + W_SI + 30;
+  const xApres = 420 + wBoucle + 50;
   const nodes: NoeudMission[] = [
     carte('depart', 'au_lancement', 0, 150),
     carte('aller', 'deplacer', 180, 150, { poste: 'table' }),
-    cadre('boucle', 'pour_chaque', 400, 60, 560, 260, { objet: 'pièce' }),
-    cadre('essai', 'essayer', 24, 92, 252, 140, { fois: 2 }, 'boucle'),
-    carte('prendre', 'prise_objet', 24, 70, { primitive: 'pièce' }, 'essai'),
-    carte('deposer', 'depose_objet', 330, 104, { primitive: 'bac B' }, 'boucle'),
-    carte('compter', 'compteur', 330, 186, { variable: 'déposées' }, 'boucle'),
-    carte('appel', 'demander', 470, 380, { message: 'Retirez la pièce' }),
-    carte('rentrer', 'rentrer', 1010, 150),
-    carte('base', 'deplacer', 1270, 150, { poste: 'base' }),
-    carte('fin', 'terminer', 1520, 150, { verdict: 'réussie' }),
+    cadre('boucle', 'pour_chaque', 420, 150 + CARTE - TETE / 2, wBoucle, { valeurs: { objet: 'pièce', zone: 'la table' }, hauteurs: [essai.hauteur + 44] }),
+    cadre('essai', 'essayer', 40, ligne - TETE / 2, W_ESSAI, { valeurs: { fois: 2 }, hauteurs: [76, 76] }, 'boucle'),
+    carte('prendre', 'prise_objet', 44, essai.sections[0].depart - CARTE, { primitive: 'pièce' }, 'essai'),
+    carte('appel', 'demander', 44, essai.sections[1].depart - CARTE, { message: 'Retirez la pièce' }, 'essai'),
+    carte('passer', 'passer', 286, essai.sections[1].depart - CARTE, {}, 'essai'),
+    carte('poser', 'depose_objet', xPoser, ligne - CARTE, { primitive: 'bac B' }, 'boucle'),
+    carte('compter', 'compteur', xPoser + 240, ligne - CARTE, { variable: 'déposées' }, 'boucle'),
+    cadre('si', 'si', xSi, ligne - TETE / 2, W_SI, { valeurs: { condition: 'bac plein' }, hauteurs: [76, 52], vides: ['sinon'] }, 'boucle'),
+    carte('appel_bac', 'demander', 44, si.sections[0].depart - CARTE, { message: 'Videz le bac' }, 'si'),
+    carte('rentrer', 'rentrer', xApres, 150),
+    carte('base', 'deplacer', xApres + 240, 150, { poste: 'base' }),
+    carte('fin', 'terminer', xApres + 470, 150, { verdict: 'réussie' }),
   ];
   const edges: LienMission[] = [
     lien('e1', 'depart', 'suite', 'aller'),
     lien('e2', 'aller', 'ok', 'boucle'),
     lien('e3', 'boucle', 'corps', 'essai'),
     lien('e4', 'essai', 'corps', 'prendre'),
-    lien('e5', 'prendre', 'ok', 'essai', 'retour'),
-    lien('e6', 'essai', 'ok', 'deposer'),
-    lien('e7', 'deposer', 'ok', 'compter'),
-    lien('e8', 'compter', 'suite', 'boucle', 'retour'),
-    lien('e9', 'essai', 'echec', 'appel'),
-    lien('e10', 'appel', 'ok', 'boucle', 'retour'),
-    lien('e11', 'boucle', 'fini', 'rentrer'),
+    lien('e5', 'essai', 'echec', 'appel'),
+    lien('e6', 'appel', 'ok', 'passer'),
+    lien('e7', 'essai', 'suite', 'poser'),
+    lien('e8', 'poser', 'ok', 'compter'),
+    lien('e9', 'compter', 'suite', 'si'),
+    lien('e10', 'si', 'alors', 'appel_bac'),
+    lien('e11', 'boucle', 'suite', 'rentrer'),
     lien('e12', 'rentrer', 'ok', 'base'),
     lien('e13', 'base', 'ok', 'fin'),
   ];
   return { nodes, edges };
 }
 
-/** Un pas de la simulation : un nœud change d'état, un lien s'allume vers lui, un cadre change de tour. */
-interface Pas { noeud: string; etat: EtatNoeud; lien?: string; tour?: number; remettre?: string[] }
+/**
+ * Un pas de la simulation : un nœud change d'état ; un lien s'allume vers lui ; une structure change de tour, d'essai
+ * ou de section ; une boucle repart (son rail s'allume).
+ */
+interface Pas { noeud: string; etat: EtatNoeud; lien?: string; tour?: number; essai?: number; branche?: string; reprise?: boolean; remettre?: string[] }
 
-const TOUR_DE_BOUCLE = ['essai', 'prendre', 'deposer', 'compter', 'e3', 'e4', 'e5', 'e6', 'e7'];
+const TOUR_DE_BOUCLE = ['essai', 'prendre', 'appel', 'passer', 'poser', 'compter', 'si', 'appel_bac', 'e3', 'e4', 'e5', 'e6', 'e7', 'e8', 'e9', 'e10'];
 
-/** Deux pièces : la première passe du premier coup ; la seconde rate deux fois, l'opérateur est appelé, la boucle reprend. */
+/** Deux pièces : la première passe ; la seconde rate ses deux essais, l'opérateur est appelé, on passe à la suivante. */
 const DEROULE: Pas[] = [
   { noeud: 'depart', etat: 'ok' },
   { noeud: 'aller', etat: 'cours', lien: 'e1' }, { noeud: 'aller', etat: 'ok' },
   { noeud: 'boucle', etat: 'cours', lien: 'e2', tour: 1 },
-  { noeud: 'essai', etat: 'cours', lien: 'e3', tour: 1 },
+  { noeud: 'essai', etat: 'cours', lien: 'e3', essai: 1 },
   { noeud: 'prendre', etat: 'cours', lien: 'e4' }, { noeud: 'prendre', etat: 'ok' },
-  { noeud: 'essai', etat: 'ok', lien: 'e5' },
-  { noeud: 'deposer', etat: 'cours', lien: 'e6' }, { noeud: 'deposer', etat: 'ok' },
-  { noeud: 'compter', etat: 'cours', lien: 'e7' }, { noeud: 'compter', etat: 'ok' },
-  { noeud: 'boucle', etat: 'cours', lien: 'e8', tour: 2, remettre: TOUR_DE_BOUCLE },
-  { noeud: 'essai', etat: 'cours', lien: 'e3', tour: 1 },
+  { noeud: 'essai', etat: 'ok' },
+  { noeud: 'poser', etat: 'cours', lien: 'e7' }, { noeud: 'poser', etat: 'ok' },
+  { noeud: 'compter', etat: 'cours', lien: 'e8' }, { noeud: 'compter', etat: 'ok' },
+  { noeud: 'si', etat: 'cours', lien: 'e9' }, { noeud: 'si', etat: 'ok', branche: 'sinon' },
+  { noeud: 'boucle', etat: 'cours', tour: 2, reprise: true, remettre: TOUR_DE_BOUCLE },
+  { noeud: 'essai', etat: 'cours', lien: 'e3', essai: 1 },
   { noeud: 'prendre', etat: 'cours', lien: 'e4' }, { noeud: 'prendre', etat: 'echec' },
-  { noeud: 'essai', etat: 'cours', tour: 2, remettre: ['prendre', 'e4'] },
+  { noeud: 'essai', etat: 'cours', essai: 2, remettre: ['prendre', 'e4'] },
   { noeud: 'prendre', etat: 'cours', lien: 'e4' }, { noeud: 'prendre', etat: 'echec' },
-  { noeud: 'essai', etat: 'echec' },
-  { noeud: 'appel', etat: 'cours', lien: 'e9' }, { noeud: 'appel', etat: 'ok' },
-  { noeud: 'boucle', etat: 'cours', lien: 'e10' }, { noeud: 'boucle', etat: 'ok' },
+  { noeud: 'essai', etat: 'echec', branche: 'echec' },
+  { noeud: 'appel', etat: 'cours', lien: 'e5' }, { noeud: 'appel', etat: 'ok' },
+  { noeud: 'passer', etat: 'cours', lien: 'e6' }, { noeud: 'passer', etat: 'ok' },
+  { noeud: 'boucle', etat: 'cours', reprise: true },
+  { noeud: 'boucle', etat: 'ok' },
   { noeud: 'rentrer', etat: 'cours', lien: 'e11' }, { noeud: 'rentrer', etat: 'ok' },
   { noeud: 'base', etat: 'cours', lien: 'e12' }, { noeud: 'base', etat: 'ok' },
   { noeud: 'fin', etat: 'cours', lien: 'e13' }, { noeud: 'fin', etat: 'ok' },
 ];
 
-interface Instantane { noeuds: Map<string, EtatNoeud>; tours: Map<string, number>; liens: Map<string, EtatLien> }
+interface Instantane {
+  noeuds: Map<string, EtatNoeud>;
+  tours: Map<string, number>;
+  essais: Map<string, number>;
+  branches: Map<string, string>;
+  liens: Map<string, EtatLien>;
+}
 
 /** L'état de la mission après `k` pas : chaque nœud et chaque lien à leur dernier état. */
 function rejouer(k: number): Instantane {
-  const e: Instantane = { noeuds: new Map(), tours: new Map(), liens: new Map() };
+  const e: Instantane = { noeuds: new Map(), tours: new Map(), essais: new Map(), branches: new Map(), liens: new Map() };
   const eteindre = () => {
     for (const [id, x] of e.liens) if (x === 'actif') e.liens.set(id, 'parcouru');
   };
   for (const p of DEROULE.slice(0, k + 1)) {
-    for (const id of p.remettre ?? []) { e.noeuds.delete(id); e.liens.delete(id); }
-    if (p.lien) { eteindre(); e.liens.set(p.lien, 'actif'); }
+    for (const id of p.remettre ?? []) {
+      for (const m of [e.noeuds, e.liens, e.essais, e.branches]) m.delete(id);
+    }
+    if (p.lien || p.reprise) eteindre();
+    if (p.lien) e.liens.set(p.lien, 'actif');
     e.noeuds.set(p.noeud, p.etat);
     if (p.tour) e.tours.set(p.noeud, p.tour);
+    if (p.essai) e.essais.set(p.noeud, p.essai);
+    if (p.branche) e.branches.set(p.noeud, p.branche);
   }
   if (k >= DEROULE.length - 1) eteindre();
   return e;
@@ -273,7 +315,8 @@ function Canevas() {
       const etat = e.noeuds.get(n.id);
       return {
         ...n, data: {
-          ...n.data, tour: e.tours.get(n.id),
+          ...n.data, tour: e.tours.get(n.id), essai: e.essais.get(n.id), branche: e.branches.get(n.id),
+          reprise: k >= 0 && !urgence && DEROULE[k].noeud === n.id && DEROULE[k].reprise,
           etat: k < 0 ? undefined : urgence && etat === 'cours' ? 'danger' : etat ?? (k >= DEROULE.length - 1 ? 'saute' : 'attente'),
         },
       };
@@ -294,8 +337,9 @@ function Canevas() {
     if (!n || !zone) return;
     const { x, y, zoom } = flot.getViewport();
     const p = n.internals.positionAbsolute;
-    const w = n.measured.width ?? 160;
-    const h = n.measured.height ?? 46;
+    const structure = n.type === 'cadre';
+    const w = Math.min(n.measured.width ?? 160, structure ? 320 : Infinity);
+    const h = structure ? TETE : n.measured.height ?? 46;
     const marge = 40;
     const gauche = p.x * zoom + x;
     const haut = p.y * zoom + y;
@@ -373,8 +417,8 @@ function Canevas() {
     if (!t) return;
     const position = flot.screenToFlowPosition({ x: e.clientX, y: e.clientY });
     setNodes((ns) => [...ns, {
-      id: nouvelId('n'), type: t.contient ? 'cadre' : 'carte', position, data: { type: t, valeurs: {} },
-      ...(t.contient ? { style: { width: 320, height: 180 } } : {}),
+      id: nouvelId('n'), type: t.structure ? 'cadre' : 'carte', position, data: { type: t, valeurs: {} },
+      ...(t.structure ? { style: { width: 360, height: placerSections(t).hauteur } } : {}),
     }]);
   }
 

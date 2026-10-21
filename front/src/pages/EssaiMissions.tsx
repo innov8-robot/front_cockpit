@@ -1,6 +1,6 @@
 import { FAMILLE, FAMILLES, ETATS, SORTIES, STATUTS, TONS, type Ton } from '../components/missions/charte';
 import { CATALOGUE } from '../components/missions/catalogue';
-import { CarteNoeud } from '../components/missions/Noeud';
+import { CadreStructure, CarteNoeud } from '../components/missions/Noeud';
 import { EXIGENCES, EXISTANT, HISTOIRES, PERSONAS, PRINCIPES, QUESTIONS } from '../components/missions/proposition';
 import { OndeExemple } from '../components/missions/Onde';
 import { Prototype } from '../components/missions/Prototype';
@@ -146,7 +146,8 @@ export function EssaiMissions() {
           <ul className="em-constats">
             <li>Inter pour les phrases des nœuds (0,86 rem, gras) ; mono majuscules espacées pour les familles, sorties et états.</li>
             <li>Un nœud tient sur une ligne : une icône, deux ou trois mots, ses réglages en pastilles. Son nom complet est dans l’info-bulle et dans ses réglages.</li>
-            <li>Coins de 12 px ; cadre de boucle aux coins de 16 px, bordure pointillée de sa famille, numéro du tour en pastille.</li>
+            <li>Une structure de logique se lit comme du pseudocode : une tête (SI … ALORS, POUR i ALLANT DE 1 À 4, TANT QUE … FAIRE), des barres entre ses sections (SINON, SI ÇA RATE ENCORE), une ligne de fin (FIN SI, FIN POUR, JUSQU’À …). Mots-clés en capitales, réglages en pastilles.</li>
+            <li>▸ marque où commencent les étapes d’une section ; une section finit à sa dernière étape, sans fil de retour. Le rail de gauche est le retour de la boucle : une onde le remonte à chaque nouveau tour.</li>
             <li>Sorties : un signe à côté de la poignée (✓ réussi, ✕ échoué, oui / non), jamais d’étiquette sur les liens.</li>
             <li>Poignées de 11 px (22 px de zone tactile), cibles d’au moins 44 px sur tablette ; grille de points de 24 px.</li>
             <li>Une pastille = un réglage ; une pastille hexagonale = une condition (vrai / faux), comme les booléens de Scratch.</li>
@@ -165,7 +166,9 @@ export function EssaiMissions() {
                 <div className="em-galerie">
                   {ts.map((t) => (
                     <figure key={t.cle}>
-                      <CarteNoeud type={t} />
+                      {t.structure
+                        ? <div className="em-galerie-structure"><CadreStructure type={t} valeurs={{}} vides={t.structure.sections.map((x) => x.cle)} vide="ses étapes" /></div>
+                        : <CarteNoeud type={t} />}
                       <figcaption>
                         <span className={`em-statut em-statut-${t.statut}`} title={STATUTS[t.statut].aide}>{STATUTS[t.statut].libelle}</span>
                         {t.aide}
@@ -181,7 +184,7 @@ export function EssaiMissions() {
 
         <section id="prototype">
           <h2><span>08</span>Prototype</h2>
-          <p className="em-intro">« Vider la table dans le bac » : aller à la table, pour chaque pièce vue la prendre (deux essais), la déposer, compter ; une pièce imprenable appelle l’opérateur ; à la fin, rentrer les bras et retourner à la base. « ▶ Simuler » joue une exécution : la première pièce passe, la seconde rate deux fois et l’opérateur est appelé. Clic droit sur un nœud : ses actions ; double-clic : ses réglages ; la palette, à droite, se glisse sur le canevas. Trois autres façons de dessiner la logique : <a href="#/essai/logique">#/essai/logique</a>.</p>
+          <p className="em-intro">« Vider la table dans le bac » : aller à la table ; pour chaque pièce, essayer deux fois de la prendre, et si ça rate encore appeler l’opérateur et passer à la suivante ; la poser, compter ; si le bac est plein, appeler l’opérateur ; à la fin, rentrer les bras et retourner à la base. « ▶ Simuler » joue une exécution : la première pièce passe, la seconde rate deux fois. Clic droit sur un nœud : ses actions ; double-clic : ses réglages ; la palette, à droite, se glisse sur le canevas.</p>
           <Prototype />
         </section>
 
