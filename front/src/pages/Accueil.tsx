@@ -145,14 +145,18 @@ export function Accueil() {
         let precedente: string | null = null;
         fermer = [
           ouvrirFlux(url, '/ws/camera', (b) => {
-            const t = decoderImage(b);
+            const t = decoderImage(b as ArrayBuffer);
             reel.image(t).catch(() => undefined);
             const nouvelle = URL.createObjectURL(t.jpeg);
             setDirect(nouvelle);
             if (precedente) URL.revokeObjectURL(precedente);
             precedente = nouvelle;
           }),
-          ouvrirFlux(url, '/ws/lidar', (b) => reel.nuage(decoderNuage(b))),
+          ouvrirFlux(url, '/ws/lidar', (b) => reel.nuage(decoderNuage(b as ArrayBuffer))),
+          ouvrirFlux(url, '/ws/etat', (b) => {
+            const m = JSON.parse(typeof b === 'string' ? b : new TextDecoder().decode(b));
+            reel.articulations(m.articulations);
+          }),
         ];
       });
     }

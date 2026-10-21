@@ -57,7 +57,12 @@ export interface Scene3D {
    *
    * @returns De quoi poser une trame de chaque flux.
    */
-  brancherReel(): Promise<{ image(t: TrameImage): Promise<void>; nuage(t: TrameNuage): void }>;
+  brancherReel(): Promise<{
+    image(t: TrameImage): Promise<void>;
+    nuage(t: TrameNuage): void;
+    /** Pose le modèle aux angles mesurés (noms d'articulations de l'URDF). */
+    articulations(valeurs: Record<string, number>): void;
+  }>;
   /** Plonge dans l'écran de la caméra jusqu'à voir par l'œil du robot (true), ou en ressort (false). */
   plongerCamera(entrer: boolean): Promise<void>;
   detruire(): void;
@@ -182,6 +187,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
   }
 
   let reels: NuagesReels | null = null;
+  let posture: 'simulee' | 'mesuree' = 'simulee';
 
   function appliquerVisibilite(): void {
     if (reels) {
@@ -281,7 +287,7 @@ export function monterScene(hote: HTMLElement): Scene3D {
       mettreAJourSonar(t, monde.localToWorld(origineSonar), monde.localToWorld(oeilSonar),
         deploye === null ? 0 : Math.min(1, deploye));
     }
-    if (robot) animerRobot(robot, t);
+    if (robot && posture === 'simulee') animerRobot(robot, t);
     nuages?.mettreAJour(t);
     hologramme?.mettreAJour(t);
     voler(t);
@@ -343,6 +349,8 @@ export function monterScene(hote: HTMLElement): Scene3D {
       for (const o of simules) if (o) o.removeFromParent();
       detections?.afficher(false);
       detections = null;
+      // Le modèle suit désormais le robot : plus de respiration simulée.
+      posture = 'mesuree';
       // Les deux nuages dans le repère du torse, comme la vue 3D viser : la hand-eye y porte la caméra.
       const torse = robot!.links.torso_link ?? robot!;
       torse.add(reels.camera, reels.lidar);
@@ -354,6 +362,9 @@ export function monterScene(hote: HTMLElement): Scene3D {
           (await reels!.image(t))?.close();
         },
         nuage: (t: TrameNuage) => reels!.nuage(t),
+        articulations: (valeurs: Record<string, number>) => {
+          for (const [nom, v] of Object.entries(valeurs)) robot!.setJointValue(nom, v);
+        },
       };
     },
     demarrer() {

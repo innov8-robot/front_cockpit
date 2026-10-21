@@ -79,7 +79,7 @@ export function decoderNuage(tampon: ArrayBuffer): TrameNuage {
  *
  * @returns De quoi fermer le flux pour de bon.
  */
-export function ouvrirFlux(url: string, chemin: string, surTrame: (t: ArrayBuffer) => void,
+export function ouvrirFlux(url: string, chemin: string, surTrame: (t: ArrayBuffer | string) => void,
   surEtat?: (ouvert: boolean) => void): () => void {
   let ws: WebSocket | null = null;
   let fini = false;
