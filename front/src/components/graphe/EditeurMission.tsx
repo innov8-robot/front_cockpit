@@ -305,7 +305,7 @@ function Canevas({ noeuds, liens, primitives, modifiable, execution, trace, focu
             onNodeContextMenu={(e, n) => (modifiable && n.id !== 'depart' ? ouvrirMenu(e, n.id) : e.preventDefault())}
             onNodeDoubleClick={(_, n) => setReglages(n.id)} onPaneClick={fermer} zoomOnDoubleClick={false}
             fitView fitViewOptions={{ padding: 0.25, maxZoom: 1 }} minZoom={0.3} maxZoom={1.6} proOptions={{ hideAttribution: true }}>
-            <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#2a3038" />
+            <Background variant={BackgroundVariant.Lines} gap={48} lineWidth={1} color="rgb(255 255 255 / 0.045)" />
             <Controls showInteractive={false} position="bottom-left" />
             {modifiable && (
               <MiniMap pannable zoomable position="bottom-right" maskColor="rgb(5 6 8 / 0.75)" style={{ background: '#0b0d10', width: 140, height: 84 }}

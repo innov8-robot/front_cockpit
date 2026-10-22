@@ -25,16 +25,16 @@ const ETATS: Record<EtatLecture, { libelle: string; signe: string | null }> = {
 };
 
 /** Le signe d'un message, dans sa couleur. */
-const SIGNES: Record<MessageLecture['niveau'], string> = { succes: '✓', attention: '!', erreur: '✕', neutre: '■' };
+const SIGNES: Record<MessageLecture['niveau'], string> = { succes: '✓', attention: '!', erreur: '✕' };
 
 /**
- * Le message sous la barre, de la couleur de son halo. Une erreur reste jusqu'à ce qu'on l'acquitte ; un avertissement
- * s'efface seul, ou d'une croix.
+ * Le message sous la barre, de la couleur de son halo. Une erreur ou un arrêt reste jusqu'à ce qu'on l'acquitte ; un
+ * avertissement s'efface seul, ou d'une croix. Un arrêt (urgence, ou par l'opérateur) porte le carré.
  */
-function Message({ m, urgence, acquitter }: { m: MessageLecture; urgence: boolean; acquitter(): void }) {
+function Message({ m, urgence, arret, acquitter }: { m: MessageLecture; urgence: boolean; arret: boolean; acquitter(): void }) {
   return (
     <div className={`bl-message bl-message-${m.niveau}`} role={m.niveau === 'erreur' ? 'alert' : 'status'}>
-      <b aria-hidden="true">{urgence ? '■' : SIGNES[m.niveau]}</b>
+      <b aria-hidden="true">{urgence || arret ? '■' : SIGNES[m.niveau]}</b>
       <span>{m.texte}</span>
       {m.niveau === 'erreur' && !urgence && <button className="bl-acquitter" onClick={acquitter}>Acquitter</button>}
       {m.niveau === 'attention' && (
@@ -65,10 +65,10 @@ function IconeStop() {
 }
 
 /**
- * Le bouton stop : il faut le maintenir une seconde, l'anneau se remplit pendant l'appui. Un appui trop court le dit
- * au lieu de ne rien faire. L'arrêt d'urgence, lui, reste le bouton rouge de la barre du robot.
+ * Le bouton stop : il faut le maintenir une seconde ; pendant l'appui, il rougit et son anneau se remplit, et au bout,
+ * la mission s'arrête (le halo rouge de la barre). Un appui trop court le dit au lieu de ne rien faire.
  */
-export function BoutonStop({ arreter, actif, grand }: { arreter(): void; actif: boolean; grand?: boolean }) {
+export function BoutonStop({ arreter, actif }: { arreter(): void; actif: boolean }) {
   const [appui, setAppui] = useState(false);
   const [indice, setIndice] = useState<{ x: number; y: number } | null>(null);
   const minuteur = useRef(0);
@@ -91,7 +91,7 @@ export function BoutonStop({ arreter, actif, grand }: { arreter(): void; actif: 
     }
   };
   return (
-    <button ref={bouton} className={`bl-bouton bl-stop ${grand ? 'bl-bouton-grand' : ''} ${appui ? 'bl-stop-appui' : ''}`} disabled={!actif}
+    <button ref={bouton} className={`bl-bouton bl-stop ${appui ? 'bl-stop-appui' : ''}`} disabled={!actif}
       aria-label="Arrêter la mission : maintenir une seconde" title="Maintenir pour arrêter la mission"
       onClick={(ev) => ev.stopPropagation()} onPointerDown={(ev) => { ev.stopPropagation(); presser(); }} onPointerUp={lacher} onPointerLeave={lacher}
       onKeyDown={(ev) => { if ((ev.key === 'Enter' || ev.key === ' ') && !ev.repeat) presser(); }} onKeyUp={lacher}>
@@ -130,12 +130,12 @@ function Tuile({ n }: { n: NoeudFil }) {
  * « échec » — et la caméra la suit dans tous les sens jusqu'à l'étape suivante, qui s'ouvre à son arrivée.
  *
  * Avec `ouvrir`, la barre mène à l'exécution : un clic sur une étape du fil l'ouvre sur cette étape, un clic ailleurs
- * sur l'étape en cours. Avec `arreter`, un bouton stop à maintenir ; avec `basculer`, de quoi déplier le workflow,
- * qui se range sous la barre (`children`).
+ * sur l'étape en cours. Avec `arreter`, un bouton stop à maintenir. Ce que la barre déplie se range dessous
+ * (`children`) ; `developpe` dit qu'il est ouvert.
  */
-export function BarreFil({ l, pause, acquitter, ouvrir, arreter, developpe, basculer, children }: {
+export function BarreFil({ l, pause, acquitter, ouvrir, arreter, developpe, children }: {
   l: Lecture; pause(): void; acquitter(): void; ouvrir?(noeud: string | null): void; arreter?(): void;
-  developpe?: boolean; basculer?(): void; children?: ReactNode;
+  developpe?: boolean; children?: ReactNode;
 }) {
   const t = trajet(l);
   const { vue, monde, etincelle, arrivee } = useTravelling(t.cle, t.cible, t.lien, ANCRE);
@@ -145,7 +145,7 @@ export function BarreFil({ l, pause, acquitter, ouvrir, arreter, developpe, basc
   const fini = l.etat === 'reussie' || l.etat === 'erreur' || l.etat === 'arretee';
   const enPause = l.etat === 'pause';
   const e = ETATS[l.etat];
-  const halo = l.message?.niveau === 'erreur' ? 'erreur' : enPause ? 'pause' : l.message?.niveau === 'neutre' ? null : l.message?.niveau ?? null;
+  const halo = l.message?.niveau === 'erreur' ? 'erreur' : enPause ? 'pause' : l.message?.niveau ?? null;
   return (
     <div className="bl-pile">
       <div className={`bl-barre bl-etat-${l.etat} ${halo ? `bl-halo-${halo}` : ''} ${ouvrir ? 'bl-cliquable' : ''}`} role="toolbar"
@@ -206,14 +206,8 @@ export function BarreFil({ l, pause, acquitter, ouvrir, arreter, developpe, basc
           {enPause || fini ? <IconeLecture /> : <IconePause />}
         </button>
         {arreter && <BoutonStop arreter={arreter} actif={!fini && l.etat !== 'urgence'} />}
-        {basculer && (
-          <button className={`bl-bouton bl-deplier ${developpe ? 'bl-deplie' : ''}`} onClick={(ev) => { ev.stopPropagation(); basculer(); }}
-            aria-expanded={developpe} aria-label={developpe ? 'Replier le workflow' : 'Déplier le workflow'} title={developpe ? 'Replier' : 'Déplier le workflow'}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
-          </button>
-        )}
       </div>
-      {l.message && <Message key={l.message.texte} m={l.message} urgence={l.etat === 'urgence'} acquitter={acquitter} />}
+      {l.message && <Message key={l.message.texte} m={l.message} urgence={l.etat === 'urgence'} arret={l.etat === 'arretee'} acquitter={acquitter} />}
       {children}
     </div>
   );

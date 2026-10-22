@@ -134,7 +134,7 @@ const CAUSES: Record<string, string> = {
 const AVERTISSEMENT = 'Relocalisation faible : qualité 41 %. La mission continue.';
 const PANNE = 'Bras droit : plus de réponse depuis 2,5 s. La mission s’arrête.';
 
-/** Après une mission réussie ou arrêtée, elle reprend depuis le début au bout de ce temps (s, temps réel). */
+/** Après une mission réussie, elle reprend depuis le début au bout de ce temps (s, temps réel). */
 const REPRISE_S = 6;
 /** Un avertissement reste affiché ce temps-là (s, temps réel). */
 const AVERTISSEMENT_S = 8;
@@ -161,7 +161,7 @@ interface Moteur {
 }
 
 type Action = { type: 'tick'; reelS: number; vitesse: number }
-  | { type: 'pause' | 'rater' | 'urgence' | 'rearmer' | 'avertir' | 'planter' | 'acquitter' | 'arreter' | 'etape' };
+  | { type: 'pause' | 'rater' | 'urgence' | 'rearmer' | 'avertir' | 'planter' | 'acquitter' | 'arreter' | 'etape' | 'pasAPas' };
 
 /** Un nombre entre 0 et 1, toujours le même pour le même texte : la durée d'une étape varie d'un tour à l'autre. */
 function hachage(texte: string): number {
@@ -224,29 +224,30 @@ function terminer(m: Moteur, finS: number, rate: boolean, sortie?: Sortie, panne
   return { ...base, t: finS, noeud: null, enPause: false, fin: 'reussie', message: { niveau: 'succes', texte: `Terminée : ${tours} en ${duree(finS)}.` } };
 }
 
-/** L'opérateur arrête la mission : l'étape en cours s'interrompt, rien n'est en faute. */
+/** L'opérateur arrête la mission : l'étape en cours s'interrompt, et l'arrêt reste affiché jusqu'à l'acquittement. */
 function arreter(m: Moteur): Moteur {
   if (!m.noeud || m.fin || m.urgence) return m;
   const fait: PasLecture = { cle: cle(m.tour, m.passe.length, m.noeud), noeud: m.noeud, issue: 'echoue', par: m.par, tour: m.tour };
   return {
     ...m, passe: [...m.passe, fait], noeud: null, enPause: false, fin: 'arretee', attente: 0,
-    message: { niveau: 'neutre', texte: `Arrêtée par l’opérateur à « ${nom(m, m.noeud)} ».` },
+    message: { niveau: 'erreur', texte: `Arrêtée par l’opérateur à « ${nom(m, m.noeud)} ».` },
   };
 }
 
 function reduire(m: Moteur, a: Action): Moteur {
   switch (a.type) {
-    case 'pause': return m.fin || m.urgence ? m : m.enPause ? { ...m, enPause: false, pasAPas: false } : { ...m, enPause: true };
+    case 'pause': return m.fin || m.urgence ? m : { ...m, enPause: !m.enPause };
     case 'etape': return m.fin || m.urgence ? m : { ...m, enPause: false, pasAPas: true };
+    case 'pasAPas': return m.fin ? m : { ...m, pasAPas: !m.pasAPas };
     case 'arreter': return arreter(m);
     case 'urgence': return m.fin ? m : { ...m, urgence: true };
     case 'rearmer': return demarrer(m.mission, m.pasAPas);
     case 'rater': return m.noeud && !m.urgence ? terminer(m, m.t, true) : m;
     case 'avertir': return m.fin || m.urgence ? m : avertir(m, AVERTISSEMENT);
     case 'planter': return m.noeud && !m.urgence ? terminer(m, m.t, true, undefined, PANNE) : m;
-    case 'acquitter': return m.fin === 'erreur' ? demarrer(m.mission, m.pasAPas) : { ...m, message: m.fin ? m.message : null };
+    case 'acquitter': return m.fin === 'erreur' || m.fin === 'arretee' ? demarrer(m.mission, m.pasAPas) : { ...m, message: m.fin ? m.message : null };
     case 'tick': {
-      if (m.fin === 'reussie' || m.fin === 'arretee') {
+      if (m.fin === 'reussie') {
         return m.attente + a.reelS > REPRISE_S ? demarrer(m.mission, m.pasAPas) : { ...m, attente: m.attente + a.reelS };
       }
       const n = m.message?.niveau !== 'attention' ? m
@@ -291,9 +292,11 @@ export function useScenario(mission: MissionEssai, vitesse: number) {
   }, [vitesse]);
   return {
     lecture: lire(moteur),
-    /** Pause, ou reprise en continu (le pas à pas s'arrête). */
+    /** Pause, ou reprise ; en pas à pas, la reprise s'arrête à la fin de l'étape. */
     pause: () => envoyer({ type: 'pause' }),
-    /** Une étape, puis la pause : le pas à pas. */
+    /** Le mode pas à pas : la mission se met en pause à la fin de chaque étape. */
+    basculerPasAPas: () => envoyer({ type: 'pasAPas' }),
+    /** En pas à pas, l'étape suivante, puis la pause. */
     etape: () => envoyer({ type: 'etape' }),
     arreter: () => envoyer({ type: 'arreter' }),
     rater: () => envoyer({ type: 'rater' }),

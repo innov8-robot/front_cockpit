@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
-import { nbPrimitives } from '../api/libelles';
 import type { Execution, Mission, Primitive, Robot, Run } from '../api/types';
 import { BarreFil } from './lecture/BarreFil';
 import { lectureDirecte, lectureFinale } from './lecture/direct';
 
 /** La barre se relit à cette période : la mission en cours et son chrono vivent. */
 const RAFRAICHI_MS = 1000;
-/** Une mission réussie reste affichée ce temps-là, puis la barre revient au lancement (ms). */
+/** Une mission réussie reste affichée ce temps-là, puis la barre s'efface (ms). */
 const SUCCES_MS = 6000;
 
 /** La fin d'une mission : sa dernière exécution vue, et le run qui dit son issue. */
@@ -18,17 +17,16 @@ interface Fin { execution: Execution; run: Run }
 const dernierRun = (runs: Run[]) => runs.filter((u) => u.dureeS > 0).sort((a, b) => b.debut.localeCompare(a.debut))[0];
 
 /**
- * La barre de mission, en haut de l'accueil. Au repos : choisir une mission prête et la lancer ; un robot qui n'est pas
- * disponible ne lance rien, et la barre dit pourquoi. Pendant une mission : le fil (components/lecture), son graphe
+ * La barre de mission, en haut de l'accueil, seulement quand une mission joue : le fil (components/lecture), son graphe
  * parcouru étape par étape ; un clic ouvre son exécution sur l'étape touchée. À la fin : son issue, un halo vert qui
- * s'efface seul, ou rouge jusqu'à l'acquittement. Elle s'efface quand l'éditeur d'une mission est ouvert.
+ * s'efface seul, ou rouge jusqu'à l'acquittement. Au repos, rien : on lance une mission depuis l'écran des missions.
+ * Elle s'efface aussi quand l'éditeur d'une mission est ouvert.
  */
 export function BarreMission({ robot }: { robot: Robot }) {
   const [missions, setMissions] = useState<Mission[]>([]);
   const [primitives, setPrimitives] = useState<Primitive[]>([]);
   const [execution, setExecution] = useState<Execution | null>(null);
   const [fin, setFin] = useState<Fin | null>(null);
-  const [choix, setChoix] = useState('');
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [masquee, setMasquee] = useState<string | null>(null);
@@ -52,6 +50,7 @@ export function BarreMission({ robot }: { robot: Robot }) {
         derniere.current = x;
         setExecution(x);
         if (x) setFin(null);
+        if (x && !avant) setMasquee(null);
         if (x || !avant) return;
         api.runs({ missionId: avant.missionId }).then((runs) => {
           const run = dernierRun(runs);
@@ -70,12 +69,7 @@ export function BarreMission({ robot }: { robot: Robot }) {
     return () => clearTimeout(t);
   }, [fin]);
 
-  const jouables = missions.filter((m) => nbPrimitives(m) > 0);
-  const choisie = choix || jouables[0]?.id || '';
-  const disponible = robot.etat === 'disponible';
   const urgence = robot.etat === 'arret_urgence';
-  const raison = urgence ? 'arrêt d’urgence engagé' : robot.etat === 'hors_ligne' ? 'robot hors ligne'
-    : robot.etat === 'en_charge' ? 'robot en charge' : null;
 
   async function agir(ordre: Promise<unknown>) {
     setEnCours(true);
@@ -115,27 +109,5 @@ export function BarreMission({ robot }: { robot: Robot }) {
     );
   }
 
-  return (
-    <div className="barre-mission" role="toolbar" aria-label="Mission">
-      <div className="barre-mission-textes">
-        <small>MISSION</small>
-        {jouables.length ? (
-          <select value={choisie} onChange={(e) => setChoix(e.target.value)} aria-label="Mission à lancer">
-            {jouables.map((m) => <option key={m.id} value={m.id}>{m.nom}</option>)}
-          </select>
-        ) : (
-          <Link to="/missions/nouvelle" className="barre-mission-vide">Aucune mission · en créer une</Link>
-        )}
-      </div>
-      {choisie && (
-        <Link to={`/missions/${choisie}`} className="barre-mission-ouvrir" title="Ouvrir la mission">ÉDITER</Link>
-      )}
-      <button className="barre-mission-lancer" disabled={!choisie || !disponible || enCours}
-        title={raison ? `Impossible : ${raison}` : undefined}
-        onClick={() => { setFin(null); setMasquee(null); agir(api.lancerMission(choisie, robot.id)); }}>
-        <span aria-hidden="true">▶</span> LANCER
-      </button>
-      {(raison || erreur) && <span className="barre-mission-erreur" role="alert">{erreur ?? raison}</span>}
-    </div>
-  );
+  return null;
 }

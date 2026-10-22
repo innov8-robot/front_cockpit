@@ -10,7 +10,7 @@ import type { Lecture } from './lecture';
 
 /** L'état d'un nœud du fil, dans la langue du canevas de l'éditeur ; sans état, il n'est pas sur le chemin du tour. */
 const VERS_CANEVAS: Record<EtatFil, EtatNoeud | undefined> = {
-  ok: 'ok', echec: 'echec', cours: 'cours', pause: 'attente', danger: 'danger', erreur: 'danger', arrete: 'attente',
+  ok: 'ok', echec: 'echec', cours: 'cours', pause: 'attente', danger: 'danger', erreur: 'danger', arrete: 'danger',
   approche: 'attente', prevu: 'attente', hors: undefined,
 };
 
@@ -37,19 +37,21 @@ interface Proprietes {
   l: Lecture;
   mission: Mission;
   primitives: Primitive[];
-  /** Pause, ou reprise en continu. */
+  /** Pause, ou reprise. */
   pause(): void;
-  /** Une étape, puis la pause. */
+  /** Le mode pas à pas : la mission se met en pause à la fin de chaque étape. */
+  basculerPasAPas(): void;
+  /** En pas à pas, l'étape suivante, puis la pause. */
   etape(): void;
   arreter(): void;
 }
 
 /**
  * Le workflow déplié sous la barre : la mission dans le canevas de l'éditeur, en lecture, qui suit l'étape en cours ;
- * et les commandes de lecture, comme un débogueur — lecture (en continu), pause, étape suivante (le pas à pas : une
- * étape, puis la pause), stop à maintenir.
+ * et les commandes de lecture, toutes de la même taille — stop à maintenir, lecture / pause, le mode pas à pas, et,
+ * seulement dans ce mode, l'étape suivante. Une seule action est pleine à la fois.
  */
-export function Developpe({ l, mission, primitives, pause, etape, arreter }: Proprietes) {
+export function Developpe({ l, mission, primitives, pause, basculerPasAPas, etape, arreter }: Proprietes) {
   const fini = l.etat === 'reussie' || l.etat === 'erreur' || l.etat === 'arretee';
   const bloque = fini || l.etat === 'urgence';
   const enPause = l.etat === 'pause';
@@ -69,15 +71,20 @@ export function Developpe({ l, mission, primitives, pause, etape, arreter }: Pro
           execution={null} trace={traceDe(l)} focus={courant} onChange={() => undefined} />
         <div className="bd-transport" role="toolbar" aria-label="Commandes de lecture">
           <BoutonStop arreter={arreter} actif={!bloque} />
-          <button className={`bl-bouton bl-bouton-grand ${enPause && !l.pasAPas ? 'bl-principal' : ''}`} disabled={bloque} onClick={pause}
-            aria-label={enPause ? 'Lecture en continu' : 'Pause'} title={enPause ? 'Lecture en continu' : 'Pause'}>
+          <button className={`bl-bouton ${enPause && !l.pasAPas ? 'bl-principal' : ''}`} disabled={bloque} onClick={pause}
+            aria-label={enPause ? 'Lecture' : 'Pause'} title={enPause ? 'Lecture' : 'Pause'}>
             {enPause ? <IconeLecture /> : <IconePause />}
           </button>
-          <button className={`bl-bouton bd-etape ${enPause && l.pasAPas ? 'bl-principal' : ''}`} disabled={bloque || (!enPause && l.pasAPas)}
-            onClick={etape} aria-label="Étape suivante, puis pause" title="Étape suivante, puis pause">
-            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l10 7-10 7z" fill="currentColor" /><rect x="16" y="5" width="3" height="14" rx="1" fill="currentColor" /></svg>
-            <span>Étape suivante</span>
+          <button className={`bl-bouton bd-mode-bouton ${l.pasAPas ? 'bd-actif' : ''}`} disabled={bloque} onClick={basculerPasAPas}
+            aria-pressed={l.pasAPas} aria-label="Pas à pas" title={l.pasAPas ? 'Quitter le pas à pas' : 'Pas à pas : une pause à la fin de chaque étape'}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 19h5v-5h5V9h6" /></svg>
           </button>
+          {l.pasAPas && (
+            <button className={`bl-bouton bd-etape ${enPause ? 'bl-principal' : ''}`} disabled={bloque || !enPause} onClick={etape}
+              aria-label="Étape suivante, puis pause" title="Étape suivante, puis pause">
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l10 7-10 7z" fill="currentColor" /><rect x="16" y="5" width="3" height="14" rx="1" fill="currentColor" /></svg>
+            </button>
+          )}
         </div>
       </div>
     </section>

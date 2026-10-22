@@ -45,11 +45,11 @@ export interface PasLecture {
 export type EtatLecture = 'cours' | 'pause' | 'urgence' | 'reussie' | 'erreur' | 'arretee';
 
 /**
- * Ce que la barre dit autour d'elle : la mission a réussi (vert), un avertissement qui ne l'arrête pas (ambre), une
- * erreur qui l'a arrêtée (rouge, jusqu'à ce qu'on l'acquitte), l'opérateur l'a arrêtée (gris, rien d'alarmant).
+ * Ce que la barre dit autour d'elle : la mission a réussi (vert), un avertissement qui ne l'arrête pas (ambre), ce qui
+ * l'a arrêtée — une erreur, l'arrêt d'urgence, le stop de l'opérateur — (rouge, jusqu'à ce qu'on l'acquitte).
  */
 export interface MessageLecture {
-  niveau: 'succes' | 'attention' | 'erreur' | 'neutre';
+  niveau: 'succes' | 'attention' | 'erreur';
   texte: string;
 }
 

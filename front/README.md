@@ -74,7 +74,9 @@ l'éditeur d'origine (`EditeurGraphe`), intact, et le navigateur retient le choi
 droit, « échec » en ambre quand une primitive l'ouvre (sa fiche, au double-clic : « si ça rate »), un « + » au bout
 des sorties libres, la palette à droite ; la logique y est annoncée, grisée, tant que le back ne la joue pas. Pendant
 une mission, il lit `Execution` : le chemin joué, l'étape en cours avec son avancement, l'onde qui y mène, le tour.
-`components/graphe/correspondance.ts` fait le pont entre la mission de l'API et le canevas.
+`components/graphe/correspondance.ts` fait le pont entre la mission de l'API et le canevas. Le canevas a le fond des
+pages d'essai (`.fond-hud`) : une lueur bleue sur une grille de 48 px, qui suit le zoom. L'étape en cours, et celle
+ouverte depuis la barre de lecture, ont un halo blanc qui respire.
 
 **La logique dans le contrat.** Un nœud de mission peut être une primitive (`primitiveId`), un nœud du catalogue qui
 n'en est pas une — boucle, condition, compteur, appel à l'opérateur, fin — (`type`, sa clé au catalogue, et ses
@@ -104,10 +106,10 @@ runs et leur cause). « Nouvelle mission » y est blanc : le rouge est réservé
 
 ## La barre de la mission qui joue : le fil
 
-En haut de l'accueil (`components/BarreMission.tsx`) : au repos, choisir une mission et la lancer (LANCER est blanc,
-le vert n'est jamais un bouton) ; pendant la mission, le fil ; à la fin, son issue, lue dans son dernier run. Le nom
-de la mission ouvre son onglet Exécutions. Pendant une mission, les écrans ouverts et les calques se rangent sous le
-fil, plus haut que la barre au repos. Banc d'essai : **`#/essai/barre-lecture`**, sur une mission simulée (branche
+En haut de l'accueil (`components/BarreMission.tsx`), seulement quand une mission joue : le fil, puis son issue, lue
+dans son dernier run. Au repos, rien : on lance une mission depuis l'écran des missions. Un clic sur la barre ouvre
+l'onglet Exécutions de la mission, centré sur l'étape touchée ; la barre s'efface tant que l'éditeur d'une mission est
+ouvert. Pendant une mission, les écrans ouverts et les calques se rangent sous le fil. Banc d'essai : **`#/essai/barre-lecture`**, sur une mission simulée (branche
 « échec », tours, pause, avertissement, erreur bloquante, arrêt d'urgence) : celle du prototype de l'éditeur (une
 boucle sur les pièces, une condition, deux appels à l'opérateur, une prise qui rate), une longue, une courte. Le fil
 dessine tout nœud du catalogue — primitives, logique, opérateur, fin — avec ses sorties (alors / sinon, fini / faire) ;
@@ -121,7 +123,8 @@ n'est pas une alerte : un halo blanc qui respire), vert ce qui a réussi, ambre 
 arrêté la mission ; les actions sont blanches, pleine pour la principale (Reprendre, Acquitter), en contour pour la
 secondaire (Pause). Un halo autour de la barre et un message dessous disent l'issue : vert la mission terminée, ambre
 un avertissement ou une étape rattrapée par sa branche « échec » (il s'efface seul), rouge une erreur qui l'arrête
-(✕ sur l'étape fautive, jusqu'à l'acquittement) ou l'arrêt d'urgence (■, jusqu'au réarmement). Pour la brancher, le
+(✕ sur l'étape fautive, jusqu'à l'acquittement), le stop de l'opérateur (■, jusqu'à l'acquittement) ou l'arrêt
+d'urgence (■, jusqu'au réarmement). Pour la brancher, le
 contrat `Execution` porte, en champs optionnels que le back du robot devra servir : `joues` (les étapes jouées dans le
 tour, avec la sortie qui y a mené et leur issue — sans eux, la barre suppose que tout a réussi), `dureeEtapeS` et
 `alerte` (niveau « attention » ou « erreur », et son texte) ; `chemin` est le chemin réellement pris, puis le chemin
@@ -132,17 +135,17 @@ branche ; l'arrêt d'urgence ferme le run en cours (interrompu). Code : `compone
 
 Maquette : **`#/essai/barre-developpee`**, sur la mission simulée. Rien de ceci n'est encore dans la barre de l'accueil.
 
-1. **Un stop dans la barre.** Un carré à maintenir une seconde (l'anneau se remplit pendant l'appui ; un appui trop
-   court affiche « Maintenir pour arrêter »). L'arrêt est gris, « Arrêtée par l'opérateur à « … » », ■ sur l'étape :
-   rien n'est en faute. L'arrêt d'urgence reste le bouton rouge de la barre du robot. Le contrat a déjà
-   `arreterMission`.
-2. **Le workflow déplié.** Un chevron au bout de la barre déplie, dessous, la mission dans le canevas de l'éditeur, en
-   lecture : les états du tour, les fils pris, le temps de l'étape sous sa tuile, la vue qui suit l'étape en cours. La
-   barre reste au-dessus et le fil continue d'y courir ; replier ne coupe rien.
-3. **Lecture · pause · pas à pas, dans le déplié.** Trois commandes au bas du canevas, comme un débogueur : ▶ joue en
-   continu, ‖ met en pause, ⏭ « Étape suivante » joue une étape puis se remet en pause — c'est le pas à pas, sans
-   interrupteur de mode : ▶ en sort. Une seule action est pleine à la fois (▶ en pause, « Étape suivante » en pas à
-   pas), l'en-tête dit le mode. Il faudra au back `etapeSuivante(robotId)` et `Execution.pasAPas`.
+1. **Un stop dans la barre et dans le déplié.** Un carré à maintenir une seconde : pendant l'appui il rougit jusqu'au
+   rouge plein et son anneau se remplit ; au bout, la mission s'arrête et la barre prend le halo rouge, « Arrêtée par
+   l'opérateur à « … » », ■ rouge sur l'étape, jusqu'à l'acquittement. Un appui trop court affiche « Maintenir pour
+   arrêter ». Le contrat a déjà `arreterMission`.
+2. **Le workflow déplié.** Toucher la barre déplie, dessous, la mission dans le canevas de l'éditeur, en lecture : les
+   états du tour, les fils pris, le temps de l'étape sous sa tuile, la vue qui suit l'étape en cours ; la toucher encore
+   le replie. Le fil continue de courir dans la barre.
+3. **Lecture · pause · pas à pas, dans le déplié.** Des boutons de même taille au bas du canevas : stop, lecture /
+   pause, et l'interrupteur « pas à pas » (la mission se met en pause à la fin de chaque étape). Dans ce mode
+   seulement, « Étape suivante » apparaît. Une seule action est pleine à la fois (▶ en pause, « Étape suivante » en pas
+   à pas), l'en-tête dit le mode. Il faudra au back un mode pas à pas, `etapeSuivante(robotId)` et `Execution.pasAPas`.
 
 ## Les couleurs de la scène
 

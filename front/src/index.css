@@ -1084,60 +1084,22 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .hud-rail-lien.active .hud-rail-icone { border-color: rgb(255 45 58 / 0.5); box-shadow: 0 0 14px rgb(255 45 58 / 0.25); }
 .hud-rail-nom { font: 600 10px/1 ui-monospace, monospace; letter-spacing: 0.12em; text-transform: uppercase; }
 
-.barre-mission {
-  position: absolute; z-index: 5; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%);
-  display: flex; align-items: center; gap: 12px; max-width: calc(100% - 32px); padding: 8px 8px 8px 18px; border-radius: 18px;
-  background: rgb(10 13 17 / 0.78); border: 1px solid rgb(255 255 255 / 0.09); box-shadow: 0 14px 44px rgb(0 0 0 / 0.55);
-  backdrop-filter: blur(14px); color: #e9eef7; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-}
-.barre-mission-textes { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.barre-mission-textes small { font-size: 9px; letter-spacing: 0.18em; color: #8a93a3; }
-.barre-mission-textes strong { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
-.barre-mission select {
-  min-height: 0; width: auto; max-width: 280px; padding: 4px 26px 4px 0; border: none; background: transparent;
-  color: #e9eef7; font: 600 13px/1.2 ui-monospace, monospace; cursor: pointer;
-}
-.barre-mission select option { background: #12151a; }
-.barre-mission-vide { color: #8fb4ff; font-size: 12px; }
-.barre-mission-ouvrir {
-  padding: 9px 12px; border-radius: 10px; border: 1px solid rgb(255 255 255 / 0.1); color: #8a93a3;
-  font: 600 10px/1 ui-monospace, monospace; letter-spacing: 0.14em; text-decoration: none;
-}
-.barre-mission-ouvrir:hover { color: #e9eef7; border-color: rgb(255 255 255 / 0.25); }
-.barre-mission-lancer, .barre-mission-stop {
-  display: flex; align-items: center; gap: 8px; height: 42px; padding: 0 22px; border-radius: 12px; cursor: pointer;
-  font: 700 12px/1 ui-monospace, monospace; letter-spacing: 0.18em; border: 1px solid;
-}
-.barre-mission-lancer { color: #0b0d10; background: #e9eef7; border-color: #e9eef7; box-shadow: 0 0 18px rgb(233 238 247 / 0.2); }
-.barre-mission-lancer:hover:not(:disabled) { background: #fff; }
-.barre-mission-lancer:disabled { color: #5b636e; background: transparent; border-color: rgb(255 255 255 / 0.12); box-shadow: none; cursor: not-allowed; }
-.barre-mission-stop { color: #fff; background: rgb(255 45 58 / 0.18); border-color: #ff2d3a; }
-.barre-mission-stop:hover { background: rgb(255 45 58 / 0.32); }
-.barre-mission-voyant { width: 9px; height: 9px; border-radius: 50%; background: #3dff8a; box-shadow: 0 0 10px #3dff8a; animation: corps-alarme 1.2s steps(2) infinite; }
-.barre-mission-chrono { font-size: 18px; font-weight: 700; letter-spacing: 0.06em; }
-.barre-mission-detail { font-size: 10px; color: #8a93a3; letter-spacing: 0.08em; }
-.barre-mission-erreur { font-size: 10px; color: #ff5a64; letter-spacing: 0.06em; max-width: 220px; }
-.accueil .barre-mission, .accueil .barre-mission-fil, .accueil .hud-rail { opacity: 0; transition: opacity 0.8s ease 0.15s; }
-.accueil-demarre .barre-mission, .accueil-demarre .barre-mission-fil, .accueil-demarre .hud-rail { opacity: 1; transition-delay: 2.4s; }
-.hud-pret .barre-mission, .hud-pret .barre-mission-fil, .hud-pret .hud-rail { transition-delay: 0s !important; }
-.accueil[class*='plein-'] .barre-mission, .accueil[class*='plein-'] .barre-mission-fil, .accueil[class*='plein-'] .hud-rail { opacity: 0 !important; pointer-events: none; }
-/* Les écrans ouverts laissent la barre du robot en haut et la barre de mission en bas. */
-.avec-barre .overlay-cote, .avec-barre .overlay-grand { top: calc(84px + env(safe-area-inset-top)); bottom: calc(88px + env(safe-area-inset-bottom)); }
+.accueil .barre-mission-fil, .accueil .hud-rail { opacity: 0; transition: opacity 0.8s ease 0.15s; }
+.accueil-demarre .barre-mission-fil, .accueil-demarre .hud-rail { opacity: 1; transition-delay: 2.4s; }
+.hud-pret .barre-mission-fil, .hud-pret .hud-rail { transition-delay: 0s !important; }
+.accueil[class*='plein-'] .barre-mission-fil, .accueil[class*='plein-'] .hud-rail { opacity: 0 !important; pointer-events: none; }
+/* Les écrans ouverts laissent la barre du robot en bas ; en haut, rien au repos, le fil pendant une mission. */
+.avec-barre .overlay-cote, .avec-barre .overlay-grand { top: calc(16px + env(safe-area-inset-top)); bottom: calc(88px + env(safe-area-inset-bottom)); }
 .avec-barre .overlay-cote { right: 24px; }
 
 @media (max-width: 899px) {
-  .hud-calques { top: calc(78px + env(safe-area-inset-top)); left: 12px; }
+  .hud-calques { left: 12px; }
   .hud-rail { left: 8px; padding: 6px; }
   .hud-rail-lien { width: 56px; }
   .hud-rail-nom { font-size: 8px; }
-  .barre-mission-detail { display: none; }
 }
 @media (max-width: 599px) {
-  .barre-mission { left: 12px; right: 12px; transform: none; max-width: none; }
-  .barre-mission-ouvrir { display: none; }
 }
-/* Sous 1500 px, la barre de mission en haut ne laisse plus la place aux calques à côté d'elle : ils passent dessous. */
-@media (max-width: 1499px) { .hud-calques { top: calc(84px + env(safe-area-inset-top)); } }
 /* La barre du robot est en bas, toujours (l'E-STOP reste sous la main) : en vue caméra et en carte pleine,
    les mentions du bas remontent au-dessus d'elle. */
 .avec-barre .vue-camera-rec, .avec-barre .vue-camera-source { bottom: calc(104px + env(safe-area-inset-bottom)); }
@@ -1146,7 +1108,6 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 
 /* La barre de mission passe en haut, la barre du robot en bas ; le rail se range sous la mini-carte du coin
    haut droit. */
-.barre-mission { top: calc(16px + env(safe-area-inset-top)); bottom: auto; }
 /* Pendant une mission, la barre devient le fil (components/lecture) : plus haute, au-dessus des écrans ouverts pour que
    son message se voie ; les écrans et les calques se rangent dessous. */
 .barre-mission-fil {
@@ -1156,8 +1117,8 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .avec-barre:has(.barre-mission-fil) .overlay-cote, .avec-barre:has(.barre-mission-fil) .overlay-grand { top: calc(118px + env(safe-area-inset-top)); }
 @media (max-width: 1499px) { .accueil:has(.barre-mission-fil) .hud-calques { top: calc(118px + env(safe-area-inset-top)); } }
 @media (max-width: 599px) { .barre-mission-fil { width: calc(100% - 24px); } }
-/* Le nœud ouvert depuis la barre de lecture, dans un canevas en lecture : un anneau blanc, quel que soit son état. */
-.em-editeur-lecture .react-flow__node.selected .em-tuile { outline: 2px solid #e9eef7; outline-offset: 5px; }
+/* Le nœud ouvert depuis la barre de lecture, dans un canevas en lecture : son halo blanc respire, quel que soit son état. */
+.em-editeur-lecture .react-flow__node.selected .em-tuile { animation: em-respire-tuile 1.6s ease-in-out infinite; }
 /* L'éditeur d'une mission la montre déjà en direct : la barre s'efface, l'éditeur prend sa place en haut. */
 .avec-barre:has(.page-graphe) .overlay-grand { top: calc(16px + env(safe-area-inset-top)); }
 /* Le rail des écrans est à gauche, centré en hauteur, sous les calques : le coin haut droit est à la carte. */
@@ -1258,7 +1219,8 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 }
 .em-editeur-lecture { grid-template-columns: 1fr; }
 .em-editeur-canevas { position: relative; min-width: 0; }
-.em-editeur-canevas .react-flow { background: #0b0d10; }
+/* Le fond des pages d'essai : une lueur bleue sur une grille de 48 px, qui suit le canevas. */
+.em-editeur-canevas .react-flow { background: radial-gradient(ellipse at 50% 70%, rgb(80 120 170 / 0.18), transparent 60%), #030405; }
 .em-editeur .em-panneau { top: 10px; }
 .em-editeur-aide { position: absolute; left: 50%; top: 50%; transform: translate(-50%, 60px); margin: 0; text-align: center; color: #8a93a3; font-size: 0.88rem; line-height: 1.6; pointer-events: none; }
 .em-palette-avenir .em-palette-item { opacity: 0.45; cursor: not-allowed; }
@@ -1371,7 +1333,7 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .em-tuile.em-etat-ok { border-color: #3dff8a; box-shadow: 0 0 16px rgb(61 255 138 / 0.25); }
 .em-tuile.em-etat-echec { border-color: #ffb02e; box-shadow: 0 0 16px rgb(255 176 46 / 0.3); }
 .em-tuile.em-etat-danger { border-color: #ff2d3a; box-shadow: 0 0 22px rgb(255 45 58 / 0.45); }
-@keyframes em-respire-tuile { 50% { box-shadow: 0 0 34px rgb(233 238 247 / 0.55); } }
+@keyframes em-respire-tuile { 0%, 100% { box-shadow: 0 0 8px rgb(233 238 247 / 0.2); } 50% { box-shadow: 0 0 30px 3px rgb(233 238 247 / 0.6); } }
 .em-tuile.em-veille { border-color: rgb(233 238 247 / 0.6); box-shadow: 0 0 14px rgb(233 238 247 / 0.15); animation: none; }
 @media (prefers-reduced-motion: reduce) { .em-tuile.em-etat-cours { animation-duration: 3s; } }
 
@@ -2132,24 +2094,25 @@ button.bl-nom:hover { text-decoration: underline; text-underline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) { .bf-arrive, .bf-etiquette { animation: none; } }
 
 /* Le stop, le dépliage et le workflow déplié (maquette #/essai/barre-developpee ; components/lecture/Developpe). */
-.bl-bouton-grand { width: 60px; height: 60px; border-radius: 18px; }
 .bl-stop { position: relative; }
 .bl-stop-anneau { position: absolute; inset: -1px; width: calc(100% + 2px); height: calc(100% + 2px); overflow: visible; pointer-events: none; }
 .bl-stop-anneau rect { fill: none; stroke: #e9eef7; stroke-width: 2.5; stroke-dasharray: 1 1; stroke-dashoffset: 1; opacity: 0; }
-.bl-stop-appui { background: rgb(255 255 255 / 0.1); }
+/* Pendant l'appui, le stop rougit jusqu'au rouge plein : au bout, la mission s'arrête et la barre prend le halo rouge. */
+.bl-stop-appui { animation: bl-rougit 1s linear forwards; }
 .bl-stop-appui .bl-stop-anneau rect { opacity: 1; animation: bl-maintien 1s linear forwards; }
 @keyframes bl-maintien { to { stroke-dashoffset: 0; } }
+@keyframes bl-rougit {
+  from { background: rgb(255 45 58 / 0.08); border-color: rgb(255 45 58 / 0.4); color: #e9eef7; box-shadow: none; }
+  to { background: #ff2d3a; border-color: #ff2d3a; color: #fff; box-shadow: 0 0 28px rgb(255 45 58 / 0.7); }
+}
 .bl-stop-indice {
   position: fixed; z-index: 70; transform: translateX(-50%); padding: 6px 10px; border-radius: 8px; white-space: nowrap; pointer-events: none;
   background: #e9eef7; color: #0b0d10; font: 600 12px/1 'Inter', system-ui, sans-serif; box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);
   animation: bl-message 0.2s ease-out;
 }
-.bl-deplier svg { transition: transform 0.3s; }
-.bl-deplier.bl-deplie svg { transform: rotate(180deg); }
-.bl-etat-arretee .bl-etat { color: var(--gris); }
-.bl-message-neutre { --c: #8a93a3; }
-.bf-tuile-arrete { border-color: #8a93a3; }
-.bf-badge-arrete { background: #8a93a3; }
+.bl-etat-arretee .bl-etat { color: #ff5a64; }
+.bf-tuile-arrete { border-color: var(--rouge); box-shadow: 0 0 18px rgb(255 45 58 / 0.5); }
+.bf-badge-arrete { background: var(--rouge); box-shadow: 0 0 0 2px #0b0d10, 0 0 10px var(--rouge); }
 
 .bd-scene { max-width: 1200px; padding: 14px 0 28px; }
 .bd-points { margin-top: 6px; }
@@ -2175,6 +2138,7 @@ button.bl-nom:hover { text-decoration: underline; text-underline-offset: 3px; }
   box-shadow: 0 10px 30px rgb(0 0 0 / 0.55); backdrop-filter: blur(14px);
 }
 .bd-transport .bl-bouton { width: 52px; height: 52px; }
-.bd-transport .bl-bouton-grand { width: 60px; height: 60px; }
-.bd-transport .bd-etape { width: auto; display: flex; gap: 8px; padding: 0 16px 0 14px; font: 650 13px/1 'Inter', system-ui, sans-serif; }
+.bd-mode-bouton { color: #8a93a3; }
+.bd-mode-bouton.bd-actif { color: #fff; background: rgb(255 255 255 / 0.14); border-color: #e9eef7; }
+.bd-astuce { margin: 12px 0 0; color: #7c8798; font-size: 0.82rem; }
 
