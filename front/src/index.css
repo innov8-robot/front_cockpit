@@ -640,6 +640,10 @@ input[type='radio'] { width: auto; min-height: 0; }
 .reticule-actif .reticule { opacity: 1; }
 /* Sur les écrans de travail (les missions), le réticule s'efface en douceur. */
 .reticule-cache .reticule { opacity: 0; transition: opacity 0.4s ease; }
+/* Au-dessus de la barre de la mission et de son workflow déplié, le réticule s'efface et la souris redevient une flèche. */
+.accueil:has(.barre-mission-fil:hover) .reticule { opacity: 0; }
+.avec-reticule:not(.reticule-cache) .barre-mission-fil, .avec-reticule:not(.reticule-cache) .barre-mission-fil * { cursor: default; }
+.avec-reticule .barre-mission-fil .bl-cliquable, .avec-reticule .barre-mission-fil button { cursor: pointer; }
 .reticule-x, .reticule-y, .reticule-badge { position: absolute; left: 0; top: 0; will-change: transform; }
 .reticule-x { bottom: 0; width: 1px; margin-left: -0.5px;
   background: linear-gradient(to bottom, transparent, rgb(233 238 247 / 0.42) 12%, rgb(233 238 247 / 0.42) 88%, transparent); }
@@ -2142,6 +2146,7 @@ button.bl-nom:hover { text-decoration: underline; text-underline-offset: 3px; }
 .bd-mode-bouton.bd-actif { color: #fff; background: rgb(255 255 255 / 0.14); border-color: #e9eef7; }
 .bd-astuce { margin: 12px 0 0; color: #7c8798; font-size: 0.82rem; }
 .bd-fermer { width: 30px; height: 30px; border-radius: 8px; }
+.bd-voir { height: 30px; padding: 0 12px; font-size: 0.78rem; }
 /* Une barre qu'on peut dégager d'un glissé : le doigt la tient, la page ne défile pas. */
 .bl-degageable { touch-action: none; }
 

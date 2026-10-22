@@ -107,9 +107,9 @@ runs et leur cause). « Nouvelle mission » y est blanc : le rouge est réservé
 ## La barre de la mission qui joue : le fil
 
 En haut de l'accueil (`components/BarreMission.tsx`), seulement quand une mission joue : le fil, puis son issue, lue
-dans son dernier run. Au repos, rien : on lance une mission depuis l'écran des missions. Un clic sur la barre ouvre
-l'onglet Exécutions de la mission, centré sur l'étape touchée ; la barre s'efface tant que l'éditeur d'une mission est
-ouvert. Pendant une mission, les écrans ouverts et les calques se rangent sous le fil. Banc d'essai : **`#/essai/barre-lecture`**, sur une mission simulée (branche
+dans son dernier run. Au repos, rien : on lance une mission depuis l'écran des missions. Un clic sur la barre déplie
+le workflow en exécution (voir plus bas) ; un clic sur une étape du fil ouvre l'onglet Exécutions de la mission,
+centré sur elle ; la barre s'efface tant que l'éditeur d'une mission est ouvert. Pendant une mission, les écrans ouverts et les calques se rangent sous le fil. Banc d'essai : **`#/essai/barre-lecture`**, sur une mission simulée (branche
 « échec », tours, pause, avertissement, erreur bloquante, arrêt d'urgence) : celle du prototype de l'éditeur (une
 boucle sur les pièces, une condition, deux appels à l'opérateur, une prise qui rate), une longue, une courte. Le fil
 dessine tout nœud du catalogue — primitives, logique, opérateur, fin — avec ses sorties (alors / sinon, fini / faire) ;
@@ -135,21 +135,24 @@ tour, avec la sortie qui y a mené et leur issue — sans eux, la barre suppose 
 prévu. La simulation les sert : au tour 2, la première prise qui a une sortie « échec » rate et la mission suit sa
 branche ; l'arrêt d'urgence ferme le run en cours (interrompu). Code : `components/lecture/`.
 
-## Feuille de route de la barre de lecture
+## La barre en mission : stop, workflow déplié, pas à pas
 
-Maquette : **`#/essai/barre-developpee`**, sur la mission simulée. Rien de ceci n'est encore dans la barre de l'accueil.
+Dans la barre de l'accueil ; banc d'essai sur la mission simulée : **`#/essai/barre-developpee`**.
 
-1. **Un stop dans la barre et dans le déplié.** Un carré à maintenir une seconde : pendant l'appui il rougit jusqu'au
-   rouge plein et son anneau se remplit ; au bout, la mission s'arrête et la barre prend le halo rouge, « Arrêtée par
-   l'opérateur à « … » », ■ rouge sur l'étape, jusqu'à l'acquittement. Un appui trop court affiche « Maintenir pour
-   arrêter ». Le contrat a déjà `arreterMission`.
-2. **Le workflow déplié.** Toucher la barre déplie, dessous, la mission dans le canevas de l'éditeur, en lecture : les
-   états du tour, les fils pris, le temps de l'étape sous sa tuile, la vue qui suit l'étape en cours ; la croix, ou la
-   barre touchée encore, le replie. Le fil continue de courir dans la barre.
-3. **Lecture · pause · pas à pas, dans le déplié.** Des boutons de même taille au bas du canevas : stop, lecture /
-   pause, et l'interrupteur « pas à pas » (la mission se met en pause à la fin de chaque étape). Dans ce mode
-   seulement, « Étape suivante » apparaît. Une seule action est pleine à la fois (▶ en pause, « Étape suivante » en pas
-   à pas), l'en-tête dit le mode. Il faudra au back un mode pas à pas, `etapeSuivante(robotId)` et `Execution.pasAPas`.
+1. **Le stop.** Dans la barre et dans le déplié, un carré à maintenir une seconde : pendant l'appui il rougit jusqu'au
+   rouge plein et son anneau se remplit ; au bout, la mission s'arrête (`arreterMission`) et la barre prend le halo
+   rouge, « Arrêtée par l'opérateur à « … » », ■ rouge sur l'étape, jusqu'à l'acquittement ou un glissé. Un appui trop
+   court affiche « Maintenir pour arrêter ».
+2. **Le workflow déplié.** Un clic sur la barre déplie, dessous, la mission dans le canevas de l'éditeur, en lecture :
+   les états du tour, les fils pris, le temps de l'étape sous sa tuile, la vue qui suit l'étape en cours. La croix, ou
+   un second clic, le replie ; « Voir l'exécution » ouvre l'onglet Exécutions. Un clic sur une étape du fil, lui, ouvre
+   l'exécution sur cette étape. Le déplié ne s'ouvre que sur l'accueil : un écran ouvert par-dessus le replie.
+3. **Lecture · pause · pas à pas.** Au bas du déplié, des boutons de même taille : stop, lecture / pause, et
+   l'interrupteur « pas à pas » (la mission se met en pause à la fin de chaque étape, celle en cours comprise). Dans ce
+   mode seulement, « Étape suivante » apparaît : elle joue une étape puis remet en pause. Une seule action est pleine à
+   la fois, l'en-tête dit le mode. Le contrat porte `pasAPas(robotId, actif)`, `etapeSuivante(robotId)` et
+   `Execution.pasAPas` ; la simulation les sert (elle s'arrête pile à la fin de l'étape), le serveur du robot les
+   déclare « pas encore », comme la pause.
 
 ## Les couleurs de la scène
 

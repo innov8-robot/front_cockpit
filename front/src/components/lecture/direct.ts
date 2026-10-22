@@ -39,19 +39,28 @@ export function lectureDirecte(m: Mission, primitives: Primitive[], x: Execution
     mission: g, pas, courant, dureeS: x.dureeS, dureeEtapeS: x.dureeEtapeS ?? null, tour: x.repetition, tours: x.repetitions,
     etat: urgence ? 'urgence' : x.enPause ? 'pause' : 'cours',
     message: urgence ? MESSAGE_URGENCE : x.alerte ? { niveau: x.alerte.niveau, texte: x.alerte.texte } : null,
+    pasAPas: Boolean(x.pasAPas),
   };
 }
 
 /**
  * La mission finie, d'après son dernier run : réussie (halo vert), arrêtée par une erreur (halo rouge, l'étape en cours
- * devient l'étape fautive) ou par l'arrêt d'urgence (rouge tant qu'il n'est pas réarmé, puis une erreur à acquitter).
- * Une mission arrêtée par l'opérateur n'a pas d'issue à montrer : `null`.
+ * devient l'étape fautive), par l'opérateur (halo rouge, ■ sur l'étape, à acquitter) ou par l'arrêt d'urgence (rouge
+ * tant qu'il n'est pas réarmé, puis une erreur à acquitter).
  */
-export function lectureFinale(l: Lecture, run: Run, urgence: boolean): Lecture | null {
+export function lectureFinale(l: Lecture, run: Run, urgence: boolean): Lecture {
   const parUrgence = /urgence/i.test(run.cause ?? '');
-  if (run.issue === 'interrompu' && !parUrgence) return null;
   const reussie = run.issue === 'reussi';
   const joues = l.pas.filter((p) => p.issue !== 'prevu');
+  const ici = joues.find((p) => p.issue === 'cours');
+  if (run.issue === 'interrompu' && !parUrgence) {
+    const nom = l.mission.noeuds.find((n) => n.id === ici?.noeud)?.nom;
+    const pas = joues.map((p) => (p === ici ? { ...p, issue: 'echoue' as const } : p));
+    return {
+      ...l, pas, courant: -1, dureeS: run.dureeS, dureeEtapeS: null, etat: 'arretee', pasAPas: false,
+      message: { niveau: 'erreur', texte: nom ? `Arrêtée par l’opérateur à « ${nom} ».` : 'Arrêtée par l’opérateur.' },
+    };
+  }
   if (urgence && parUrgence) {
     return { ...l, pas: joues, courant: joues.findIndex((p) => p.issue === 'cours'), dureeS: run.dureeS, dureeEtapeS: null, etat: 'urgence', message: MESSAGE_URGENCE };
   }

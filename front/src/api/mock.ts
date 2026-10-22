@@ -15,7 +15,11 @@ interface Magasin {
   missions: Mission[];
   runs: Run[];
   /** La mission que joue le robot : son lancement, et le temps passé en pause (ms). */
-  execution?: { robotId: string; missionId: string; debut: number; pause: number; pauseDepuis: number | null } | null;
+  execution?: {
+    robotId: string; missionId: string; debut: number; pause: number; pauseDepuis: number | null;
+    /** Le pas à pas, et le temps joué (ms) où la mission se mettra en pause : la fin de l'étape en cours. */
+    pasAPas?: boolean; limite?: number | null;
+  } | null;
 }
 
 /** Une primitive simulée dure ce temps (ms) ; une décision de logique, le temps d'un coup d'œil ; un appel, celui d'un humain. */
@@ -324,6 +328,22 @@ function dureeMs(m: Mission, id: string): number {
   return !type ? DUREE_ETAPE_MS : type === 'demander' ? DUREE_APPEL_MS : DUREE_LOGIQUE_MS;
 }
 
+/** Les fins d'étape de la mission simulée, tous tours confondus, en temps joué (ms). */
+function finsEtapes(m: Mission): number[] {
+  const fins: number[] = [];
+  let t = 0;
+  for (let tour = 1; tour <= m.repetitions; tour++) {
+    for (const p of parcours(m, tour)) {
+      t += dureeMs(m, p.noeud);
+      fins.push(t);
+    }
+  }
+  return fins;
+}
+
+/** La fin de l'étape qui se joue à `joue` (ms) ; arrêtée pile sur une fin, celle de l'étape suivante. */
+const finEtape = (m: Mission, joue: number) => finsEtapes(m).find((f) => f > joue) ?? Infinity;
+
 /** Le nom d'un nœud simulé, pour une alerte. */
 function nomNoeud(m: Mission, id: string): string {
   const n = m.noeuds.find((x) => x.id === id);
@@ -346,6 +366,19 @@ function alerteDe(m: Mission, avant: PasSimule | undefined, ici: string): Alerte
 /** Le temps joué par la mission simulée, pauses retirées (ms). */
 function tempsJoue(x: NonNullable<Magasin['execution']>): number {
   return Date.now() - x.debut - x.pause - (x.pauseDepuis ? Date.now() - x.pauseDepuis : 0);
+}
+
+/** La fin de l'étape où en est la mission simulée : en pas à pas, c'est là qu'elle se mettra en pause. */
+function limiteDe(x: NonNullable<Magasin['execution']>): number | null {
+  const m = magasin.missions.find((y) => y.id === x.missionId);
+  return m ? finEtape(m, tempsJoue(x)) : null;
+}
+
+/** Reprend la mission simulée ; en pas à pas, jusqu'à la fin de l'étape qui commence. */
+function reprendre(x: NonNullable<Magasin['execution']>): void {
+  if (x.pauseDepuis !== null) x.pause += Date.now() - x.pauseDepuis;
+  x.pauseDepuis = null;
+  x.limite = x.pasAPas ? limiteDe(x) : null;
 }
 
 /** Un nombre entre 0 et 1 tiré d'un texte, toujours le même pour le même texte. */
@@ -398,6 +431,12 @@ function avancer(): Execution | null {
     magasin.execution = null;
     return null;
   }
+  // En pas à pas, la mission s'arrête pile à la fin de l'étape : la pause commence à l'instant où elle l'a atteinte.
+  if (x.limite != null && x.pauseDepuis === null && tempsJoue(x) >= x.limite) {
+    x.pauseDepuis = Date.now() - (tempsJoue(x) - x.limite);
+    x.limite = null;
+    sauver();
+  }
   const joue = tempsJoue(x);
   let reste = joue;
   let tour = 0;
@@ -440,6 +479,7 @@ function avancer(): Execution | null {
     joues: p.slice(0, i + 1).map((y, k) => ({ noeud: y.noeud, par: y.par, issue: k < i ? (y.rate ? 'echoue' : 'reussi') : 'cours' })),
     dureeEtapeS: reste / 1000,
     alerte: alerteDe(m, p[i - 1], ici),
+    pasAPas: Boolean(x.pasAPas),
   };
 }
 
@@ -555,10 +595,23 @@ export const apiSimulee: Api = {
     const x = magasin.execution;
     if (!x || x.robotId !== robotId) return Promise.reject(new Error('Aucune mission en cours'));
     if (pause && x.pauseDepuis === null) x.pauseDepuis = Date.now();
-    if (!pause && x.pauseDepuis !== null) {
-      x.pause += Date.now() - x.pauseDepuis;
-      x.pauseDepuis = null;
-    }
+    if (!pause && x.pauseDepuis !== null) reprendre(x);
+    sauver();
+    return plusTard(avancer());
+  },
+  pasAPas: (robotId, actif) => {
+    const x = magasin.execution;
+    if (!x || x.robotId !== robotId) return Promise.reject(new Error('Aucune mission en cours'));
+    x.pasAPas = actif;
+    x.limite = actif && x.pauseDepuis === null ? limiteDe(x) : null;
+    sauver();
+    return plusTard(avancer());
+  },
+  etapeSuivante: (robotId) => {
+    const x = magasin.execution;
+    if (!x || x.robotId !== robotId) return Promise.reject(new Error('Aucune mission en cours'));
+    if (!x.pasAPas) return Promise.reject(new Error('La mission n’est pas en pas à pas'));
+    if (x.pauseDepuis !== null) reprendre(x);
     sauver();
     return plusTard(avancer());
   },
@@ -568,7 +621,8 @@ export const apiSimulee: Api = {
     const m = magasin.missions.find((x) => x.id === r.missionCourante);
     const run = magasin.runs.find((u) => u.robotId === robotId && u.missionId === r.missionCourante && u.dureeS === 0);
     if (run) {
-      run.dureeS = Math.round((Date.now() - new Date(run.debut).getTime()) / 1000);
+      const x = magasin.execution;
+      run.dureeS = Math.max(1, Math.round((x ? tempsJoue(x) : Date.now() - new Date(run.debut).getTime()) / 1000));
       run.issue = 'interrompu';
       run.cause = 'Arrêtée par l’opérateur';
     }

@@ -47,6 +47,8 @@ export function apiReelle(url: string): Api {
     lancerMission: pasEncore('Le lancement des missions'),
     arreterMission: pasEncore('L’arrêt des missions'),
     pauseMission: pasEncore('La pause des missions'),
+    pasAPas: pasEncore('Le pas à pas'),
+    etapeSuivante: pasEncore('Le pas à pas'),
     execution: () => Promise.resolve(null),
   };
 }

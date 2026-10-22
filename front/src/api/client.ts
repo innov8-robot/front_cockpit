@@ -36,6 +36,10 @@ export interface Api {
   execution(robotId: string): Promise<Execution | null>;
   /** Met la mission en pause (le robot finit son mouvement et s'immobilise), ou la reprend. */
   pauseMission(robotId: string, pause: boolean): Promise<Execution | null>;
+  /** Le pas à pas : la mission se met en pause à la fin de chaque étape, celle en cours comprise. */
+  pasAPas(robotId: string, actif: boolean): Promise<Execution | null>;
+  /** En pas à pas et en pause : joue l'étape suivante, puis se remet en pause. */
+  etapeSuivante(robotId: string): Promise<Execution | null>;
 
   runs(filtre?: { robotId?: string; missionId?: string }): Promise<Run[]>;
 }

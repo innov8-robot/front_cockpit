@@ -46,6 +46,8 @@ interface Proprietes {
   arreter(): void;
   /** Replie le workflow : la mission continue. */
   fermer(): void;
+  /** Ouvre l'exécution de la mission dans l'éditeur, s'il y a de quoi. */
+  voirExecution?(): void;
 }
 
 /**
@@ -53,7 +55,7 @@ interface Proprietes {
  * et les commandes de lecture, toutes de la même taille — stop à maintenir, lecture / pause, le mode pas à pas, et,
  * seulement dans ce mode, l'étape suivante. Une seule action est pleine à la fois.
  */
-export function Developpe({ l, mission, primitives, pause, basculerPasAPas, etape, arreter, fermer }: Proprietes) {
+export function Developpe({ l, mission, primitives, pause, basculerPasAPas, etape, arreter, fermer, voirExecution }: Proprietes) {
   const fini = l.etat === 'reussie' || l.etat === 'erreur' || l.etat === 'arretee';
   const bloque = fini || l.etat === 'urgence';
   const enPause = l.etat === 'pause';
@@ -67,6 +69,7 @@ export function Developpe({ l, mission, primitives, pause, basculerPasAPas, etap
         {courant && <span className="bd-tete-etape">{nomCourant}</span>}
         <span className="lm-espace" />
         {legende && <span className={`bd-mode ${l.pasAPas ? 'bd-mode-pas' : ''}`} role="status">{legende}</span>}
+        {voirExecution && <button className="lm-bouton bd-voir" onClick={voirExecution}>Voir l’exécution</button>}
         <button className="lm-carre bd-fermer" onClick={fermer} aria-label="Replier le workflow" title="Replier : la mission continue">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>

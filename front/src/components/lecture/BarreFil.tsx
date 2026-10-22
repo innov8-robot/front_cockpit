@@ -130,13 +130,13 @@ function Tuile({ n }: { n: NoeudFil }) {
  * Quand une étape finit, une étincelle part sur le fil qu'a pris la mission — vert pour « réussi », ambre pour
  * « échec » — et la caméra la suit dans tous les sens jusqu'à l'étape suivante, qui s'ouvre à son arrivée.
  *
- * Avec `ouvrir`, la barre mène à l'exécution : un clic sur une étape du fil l'ouvre sur cette étape, un clic ailleurs
- * sur l'étape en cours. Avec `arreter`, un bouton stop à maintenir. Ce que la barre déplie se range dessous
+ * Un clic sur la barre appelle `ouvrir` (déplier le workflow, ou ouvrir l'exécution) ; un clic sur une étape du fil,
+ * `ouvrirEtape` s'il est donné. Avec `arreter`, un bouton stop à maintenir. Ce que la barre déplie se range dessous
  * (`children`) ; `developpe` dit qu'il est ouvert. Avec `degager`, une mission en pause, arrêtée ou finie se dégage
  * d'un glissé vers le haut ou vers la droite, comme une notification.
  */
-export function BarreFil({ l, pause, acquitter, ouvrir, arreter, developpe, degager, children }: {
-  l: Lecture; pause(): void; acquitter(): void; ouvrir?(noeud: string | null): void; arreter?(): void;
+export function BarreFil({ l, pause, acquitter, ouvrir, ouvrirEtape, arreter, developpe, degager, children }: {
+  l: Lecture; pause(): void; acquitter(): void; ouvrir?(): void; ouvrirEtape?(noeud: string): void; arreter?(): void;
   developpe?: boolean; degager?(): void; children?: ReactNode;
 }) {
   const etapes = trajets(l);
@@ -154,10 +154,10 @@ export function BarreFil({ l, pause, acquitter, ouvrir, arreter, developpe, dega
   return (
     <div className={`bl-pile ${degageable ? 'bl-degageable' : ''}`} ref={pile} {...gestes}>
       <div className={`bl-barre bl-etat-${l.etat} ${halo ? `bl-halo-${halo}` : ''} ${ouvrir ? 'bl-cliquable' : ''}`} role="toolbar"
-        aria-label={`Mission ${l.mission.nom}`} onClick={ouvrir && (() => ouvrir(t.noeud))}>
+        aria-label={`Mission ${l.mission.nom}`} onClick={ouvrir}>
         <div className="bl-identite">
           {ouvrir ? (
-            <button className="bl-nom" title="Voir l’exécution" onClick={(ev) => { ev.stopPropagation(); ouvrir(t.noeud); }}>{l.mission.nom}</button>
+            <button className="bl-nom" aria-expanded={developpe} onClick={(ev) => { ev.stopPropagation(); ouvrir(); }}>{l.mission.nom}</button>
           ) : <strong className="bl-nom" title={l.mission.nom}>{l.mission.nom}</strong>}
           <small className="bl-etat">
             {e.signe ? <b aria-hidden="true">{e.signe}</b> : <i aria-hidden="true" />}
@@ -187,7 +187,7 @@ export function BarreFil({ l, pause, acquitter, ouvrir, arreter, developpe, dega
               </svg>
               {f.noeuds.map((n) => (
                 <div key={n.id} className={`bf-noeud ${n === ouvert ? 'bf-arrive' : ''}`} style={{ left: n.x, top: n.y }}
-                  title={n.nom} onClick={ouvrir && ((ev) => { ev.stopPropagation(); ouvrir(n.id); })}>
+                  title={n.nom} onClick={ouvrirEtape && ((ev) => { ev.stopPropagation(); ouvrirEtape(n.id); })}>
                   <Tuile n={n} />
                 </div>
               ))}

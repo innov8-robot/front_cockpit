@@ -185,4 +185,6 @@ export interface Execution {
   dureeEtapeS?: number;
   /** La dernière alerte du robot sur cette mission, s'il y en a une en cours. */
   alerte?: AlerteMission | null;
+  /** Le pas à pas : la mission se met en pause à la fin de chaque étape. */
+  pasAPas?: boolean;
 }

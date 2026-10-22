@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import type { Execution, Mission, Primitive, Robot, Run } from '../api/types';
 import { BarreFil } from './lecture/BarreFil';
+import { Developpe } from './lecture/Developpe';
 import { lectureDirecte, lectureFinale } from './lecture/direct';
 
 /** La barre se relit à cette période : la mission en cours et son chrono vivent. */
@@ -18,10 +19,12 @@ const dernierRun = (runs: Run[]) => runs.filter((u) => u.dureeS > 0).sort((a, b)
 
 /**
  * La barre de mission, en haut de l'accueil, seulement quand une mission joue : le fil (components/lecture), son graphe
- * parcouru étape par étape ; un clic ouvre son exécution sur l'étape touchée. À la fin : son issue, un halo vert qui
- * s'efface seul, ou rouge jusqu'à l'acquittement. Au repos, rien : on lance une mission depuis l'écran des missions.
- * Elle s'efface aussi quand l'éditeur d'une mission est ouvert ; en pause ou finie, un glissé la dégage (en pause, elle
- * revient quand la mission reprend).
+ * parcouru étape par étape, un stop à maintenir et la pause. Un clic sur la barre déplie, dessous, le workflow en
+ * exécution et ses commandes (lecture / pause, pas à pas, étape suivante, stop) ; un clic sur une étape du fil ouvre
+ * son exécution dans l'éditeur. À la fin : son issue, un halo vert qui s'efface seul, ou rouge jusqu'à l'acquittement
+ * (une erreur, le stop, l'arrêt d'urgence). Au repos, rien : on lance une mission depuis l'écran des missions. Elle
+ * s'efface quand l'éditeur d'une mission est ouvert ; en pause ou finie, un glissé la dégage (en pause, elle revient
+ * quand la mission reprend).
  */
 export function BarreMission({ robot }: { robot: Robot }) {
   const [missions, setMissions] = useState<Mission[]>([]);
@@ -33,11 +36,14 @@ export function BarreMission({ robot }: { robot: Robot }) {
   const [masquee, setMasquee] = useState<string | null>(null);
   /** La mission en pause qu'on a dégagée d'un glissé : la barre revient quand elle reprend. */
   const [cachee, setCachee] = useState<string | null>(null);
+  const [developpe, setDeveloppe] = useState(false);
   const derniere = useRef<Execution | null>(null);
   const naviguer = useNavigate();
   const { pathname } = useLocation();
   /** L'éditeur d'une mission la montre déjà : la barre s'efface tant qu'il est ouvert. */
   const editeurOuvert = /^\/missions\/(?!developpees$)[^/]+$/.test(pathname);
+  /** Le workflow ne se déplie que sur l'accueil : un écran ouvert par-dessus le replie. */
+  const surAccueil = pathname === '/';
 
   useEffect(() => {
     api.primitives().then(setPrimitives).catch(() => undefined);
@@ -94,11 +100,24 @@ export function BarreMission({ robot }: { robot: Robot }) {
     if (execution.enPause && cachee === courante.id) return null;
     const l = lectureDirecte(courante, primitives, execution, urgence);
     const message = erreur ? { niveau: 'attention' as const, texte: erreur } : l.message?.texte === masquee ? null : l.message;
+    const executions = `/missions/${courante.id}?onglet=executions`;
+    const commander = (ordre: () => Promise<unknown>) => { if (!enCours) void agir(ordre()); };
+    const pause = () => commander(() => api.pauseMission(robot.id, !execution.enPause));
+    const arreter = () => commander(() => api.arreterMission(robot.id));
+    const deplie = developpe && surAccueil;
     return (
       <div className="barre-mission-fil">
-        <BarreFil l={{ ...l, message }} ouvrir={(noeud) => naviguer(`/missions/${courante.id}?onglet=executions${noeud ? `&noeud=${noeud}` : ''}`)}
-          pause={() => !enCours && agir(api.pauseMission(robot.id, !execution.enPause))}
-          acquitter={() => { setErreur(null); setMasquee(l.message?.texte ?? null); }} degager={() => setCachee(courante.id)} />
+        <BarreFil l={{ ...l, message }} developpe={deplie} pause={pause} arreter={arreter}
+          ouvrir={() => { if (!surAccueil) naviguer('/'); setDeveloppe(!deplie); }}
+          ouvrirEtape={(noeud) => naviguer(`${executions}&noeud=${noeud}`)}
+          acquitter={() => { setErreur(null); setMasquee(l.message?.texte ?? null); }} degager={() => setCachee(courante.id)}>
+          {deplie && (
+            <Developpe l={l} mission={courante} primitives={primitives} pause={pause} arreter={arreter}
+              basculerPasAPas={() => commander(() => api.pasAPas(robot.id, !execution.pasAPas))}
+              etape={() => commander(() => api.etapeSuivante(robot.id))}
+              fermer={() => setDeveloppe(false)} voirExecution={() => naviguer(executions)} />
+          )}
+        </BarreFil>
       </div>
     );
   }
