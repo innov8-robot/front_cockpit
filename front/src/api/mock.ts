@@ -476,7 +476,10 @@ function avancer(): Execution | null {
   return {
     missionId: m.id, chemin: ['depart', ...p.slice(0, i + 1).map((y) => y.noeud), ...prevus], etape: i + 1, avancement,
     repetition: tour + 1, repetitions: m.repetitions, enPause: x.pauseDepuis !== null, dureeS: joue / 1000,
-    joues: p.slice(0, i + 1).map((y, k) => ({ noeud: y.noeud, par: y.par, issue: k < i ? (y.rate ? 'echoue' : 'reussi') : 'cours' })),
+    joues: p.slice(0, i + 1).map((y, k) => ({
+      noeud: y.noeud, par: y.par, issue: k < i ? (y.rate ? 'echoue' : 'reussi') : 'cours',
+      debutS: (joue - reste - p.slice(k, i).reduce((t, z) => t + dureeMs(m, z.noeud), 0)) / 1000,
+    })),
     dureeEtapeS: reste / 1000,
     alerte: alerteDe(m, p[i - 1], ici),
     pasAPas: Boolean(x.pasAPas),

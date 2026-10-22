@@ -5,6 +5,14 @@ export interface Point { x: number; y: number }
 /** Une étape du parcours de la caméra : la clé de l'étape, le fil qui y mène, et le point à cadrer en arrivant. */
 export interface EtapeCamera { cle: string; lien: string | null; cible: Point }
 
+/** Ce que le parcours fait d'une caméra : la poser sur un point, trouver le tracé d'un fil, et dessiner chaque image. */
+export interface Camera {
+  placer(p: Point): void;
+  chemin(lien: string): SVGPathElement | null;
+  /** À chaque image : le point de la caméra, si elle est sur un fil, et la part faite du dernier fil (null avant). */
+  image?(p: Point, surFil: boolean, fait: number | null): void;
+}
+
 /** La vitesse de la caméra le long du fil (px/s), et les bornes d'un trajet (ms). */
 const VITESSE = 300;
 const DUREE_MIN = 160;
@@ -16,24 +24,16 @@ const lisse = (u: number) => (u < 0.5 ? 4 * u ** 3 : 1 - (-2 * u + 2) ** 3 / 2);
 const entre = (a: Point, b: Point, u: number): Point => ({ x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u });
 const distance = (a: Point, b: Point) => Math.hypot(b.x - a.x, b.y - a.y);
 
-/** Pose la caméra : le point `p` du monde va à l'ancre de la vue. */
-function placer(vue: HTMLElement, monde: HTMLElement, p: Point, ancre: Point) {
-  monde.style.transform = `translate(${Math.round(vue.clientWidth * ancre.x - p.x)}px, ${Math.round(vue.clientHeight * ancre.y - p.y)}px)`;
-}
-
 /**
- * Le travelling de la barre de lecture. `etapes` est le parcours de la mission jusqu'à l'étape en cours, la dernière.
- * Quand elle change, la caméra parcourt dans l'ordre chaque fil emprunté depuis la dernière étape où elle s'est posée
- * — une entrée, puis une sortie de boucle rapides, une étape sautée entre deux relectures — : l'étincelle reste sous
- * elle et le fil s'allume derrière. Sa vitesse s'adapte : plus il reste de fils à parcourir et plus les étapes
- * s'enchaînent vite, plus elle va vite. `arrivee` vaut la clé de la dernière étape atteinte : l'étape ne s'ouvre qu'à
- * l'arrivée de l'étincelle.
+ * Le parcours de la caméra, le même partout où l'on suit une mission — la barre de lecture, le workflow déplié,
+ * l'éditeur. `etapes` est le parcours de la mission jusqu'à l'étape en cours, la dernière. Quand elle change, la caméra
+ * parcourt dans l'ordre chaque fil emprunté depuis la dernière étape où elle s'est posée (une entrée puis une sortie de
+ * boucle rapides, une étape sautée entre deux relectures), et va d'autant plus vite qu'il lui reste de fils et que les
+ * étapes s'enchaînent vite. `camera` (stable) dit comment la poser ; sans elle, rien ne bouge. `arrivee` vaut la clé de
+ * la dernière étape atteinte.
  */
-export function useTravelling(etapes: EtapeCamera[], ancre: Point) {
-  const vue = useRef<HTMLDivElement>(null);
-  const monde = useRef<HTMLDivElement>(null);
-  const etincelle = useRef<SVGGElement>(null);
-  const camera = useRef<Point | null>(null);
+export function useParcours(etapes: EtapeCamera[], camera: () => Camera | null) {
+  const position = useRef<Point | null>(null);
   const file = useRef<EtapeCamera[]>([]);
   const derniere = useRef<string | null>(null);
   const image = useRef(0);
@@ -42,42 +42,34 @@ export function useTravelling(etapes: EtapeCamera[], ancre: Point) {
   const cible = etapes.at(-1);
   const [arrivee, setArrivee] = useState(cible?.cle ?? '');
 
-  /** Parcourt le fil suivant de la file, puis le suivant ; à la fin, l'étape est atteinte. */
   const parcourir = useCallback(function suivre() {
-    const v = vue.current;
-    const m = monde.current;
+    const cam = camera();
     const etape = file.current.shift();
-    if (!v || !m || !etape) return;
-    const chemin = etape.lien ? m.querySelector<SVGPathElement>(`[data-lien="${etape.lien}"]`) : null;
+    if (!cam || !etape) return;
+    const chemin = etape.lien ? cam.chemin(etape.lien) : null;
     const derniereEtape = file.current.length === 0;
-    const trace = derniereEtape ? m.querySelector<SVGPathElement>('[data-trace]') : null;
     const longueur = chemin?.getTotalLength() ?? 0;
-    const depart = camera.current ?? etape.cible;
+    const depart = position.current ?? etape.cible;
     const entree = chemin ? chemin.getPointAtLength(0) : depart;
     const sortie = chemin ? chemin.getPointAtLength(longueur) : depart;
     const a = distance(depart, entree);
     const c = distance(sortie, etape.cible);
     const total = a + longueur + c;
-    const reste = file.current.length + 1;
     const reduit = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const voulue = Math.min(DUREE_MAX, (total / VITESSE) * 1000, (rythme.current * PART_DU_RYTHME) / reste);
+    const voulue = Math.min(DUREE_MAX, (total / VITESSE) * 1000, (rythme.current * PART_DU_RYTHME) / (file.current.length + 1));
     const duree = reduit ? 0 : Math.max(DUREE_MIN, voulue);
     let t0 = -1;
     const pas = (maintenant: number) => {
       if (t0 < 0) t0 = maintenant;
       const u = duree ? Math.min(1, (maintenant - t0) / duree) : 1;
       const s = lisse(u) * total;
-      const surFil = chemin !== null && s > a && s < a + longueur;
       const p = s <= a ? entre(depart, entree, a ? s / a : 1)
         : s < a + longueur ? chemin!.getPointAtLength(s - a)
         : entre(sortie, etape.cible, c ? (s - a - longueur) / c : 1);
-      camera.current = { x: p.x, y: p.y };
-      placer(v, m, camera.current, ancre);
-      if (trace) trace.style.strokeDashoffset = String(1 - Math.min(1, Math.max(0, (s - a) / (longueur || 1))));
-      if (etincelle.current) {
-        etincelle.current.style.opacity = surFil ? '1' : '0';
-        etincelle.current.setAttribute('transform', `translate(${p.x} ${p.y})`);
-      }
+      position.current = { x: p.x, y: p.y };
+      cam.placer(position.current);
+      cam.image?.(position.current, chemin !== null && s > a && s < a + longueur,
+        derniereEtape ? Math.min(1, Math.max(0, (s - a) / (longueur || 1))) : null);
       if (u < 1) {
         image.current = requestAnimationFrame(pas);
         return;
@@ -87,16 +79,16 @@ export function useTravelling(etapes: EtapeCamera[], ancre: Point) {
       else setArrivee(etape.cle);
     };
     image.current = requestAnimationFrame(pas);
-  }, [ancre]);
+  }, [camera]);
 
   useLayoutEffect(() => {
-    const v = vue.current;
-    const m = monde.current;
-    if (!cible || !v || !m) return;
-    if (!camera.current) {
-      camera.current = cible.cible;
+    const cam = camera();
+    if (!cible || !cam) return;
+    if (!position.current) {
+      position.current = cible.cible;
       derniere.current = cible.cle;
-      placer(v, m, cible.cible, ancre);
+      cam.placer(cible.cible);
+      if (arrivee !== cible.cle) image.current = requestAnimationFrame(() => { image.current = 0; setArrivee(cible.cle); });
       return;
     }
     if (derniere.current === cible.cle) return;
@@ -107,19 +99,55 @@ export function useTravelling(etapes: EtapeCamera[], ancre: Point) {
     dernierAjout.current = maintenant;
     file.current.push(...(i >= 0 ? etapes.slice(i + 1) : [cible]));
     if (!image.current) parcourir();
-  }, [cible?.cle]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cible?.cle, camera]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => () => cancelAnimationFrame(image.current), []);
+
+  return { arrivee, position, enRoute: image };
+}
+
+/** Pose le dessin de la barre : le point `p` du monde va à l'ancre de la vue. */
+function placer(vue: HTMLElement, monde: HTMLElement, p: Point, ancre: Point) {
+  monde.style.transform = `translate(${Math.round(vue.clientWidth * ancre.x - p.x)}px, ${Math.round(vue.clientHeight * ancre.y - p.y)}px)`;
+}
+
+/**
+ * Le travelling de la barre de lecture : le parcours de la caméra (`useParcours`) sur le dessin du fil. L'étincelle
+ * reste sous la caméra et le dernier fil s'allume derrière elle (le tracé marqué `data-trace`) ; les fils sont les
+ * chemins marqués `data-lien`.
+ */
+export function useTravelling(etapes: EtapeCamera[], ancre: Point) {
+  const vue = useRef<HTMLDivElement>(null);
+  const monde = useRef<HTMLDivElement>(null);
+  const etincelle = useRef<SVGGElement>(null);
+  const camera = useCallback((): Camera | null => {
+    const v = vue.current;
+    const m = monde.current;
+    if (!v || !m) return null;
+    return {
+      placer: (p) => placer(v, m, p, ancre),
+      chemin: (lien) => m.querySelector<SVGPathElement>(`[data-lien="${lien}"]`),
+      image: (p, surFil, fait) => {
+        const trace = fait === null ? null : m.querySelector<SVGPathElement>('[data-trace]');
+        if (trace && fait !== null) trace.style.strokeDashoffset = String(1 - fait);
+        if (etincelle.current) {
+          etincelle.current.style.opacity = surFil ? '1' : '0';
+          etincelle.current.setAttribute('transform', `translate(${p.x} ${p.y})`);
+        }
+      },
+    };
+  }, [ancre]);
+  const { arrivee, position, enRoute } = useParcours(etapes, camera);
 
   useEffect(() => {
     const v = vue.current;
     if (!v) return;
     const observateur = new ResizeObserver(() => {
-      if (!image.current && camera.current && monde.current) placer(v, monde.current, camera.current, ancre);
+      if (!enRoute.current && position.current) camera()?.placer(position.current);
     });
     observateur.observe(v);
     return () => observateur.disconnect();
-  }, [ancre]);
+  }, [camera, enRoute, position]);
 
   return { vue, monde, etincelle, arrivee };
 }

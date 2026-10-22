@@ -146,11 +146,13 @@ export interface EtatCapteurs {
   lidar: Verdict;
 }
 
-/** Une étape jouée dans le tour en cours : la sortie de l'étape d'avant qui y a mené, et son issue. */
+/** Une étape jouée dans le tour en cours : la sortie de l'étape d'avant qui y a mené, son issue, et quand elle a commencé. */
 export interface EtapeJouee {
   noeud: string;
   par: Sortie;
   issue: 'reussi' | 'echoue' | 'cours';
+  /** Le temps joué depuis le lancement quand l'étape a commencé (s). */
+  debutS?: number;
 }
 
 /** Une alerte du robot pendant une mission : « attention » ne l'arrête pas, « erreur » l'a arrêtée. */

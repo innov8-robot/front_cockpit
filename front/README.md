@@ -96,6 +96,15 @@ cours en tête, en direct) ; l'**analyse** (sur une période : réussite, réuss
 fragile, causes d'échec, durée des derniers runs). Le détail par étape vient de `Run.etapes` (`api/types.ts`), que la
 simulation sert ; le back du robot devra le servir aussi. Code : `components/executions/`.
 
+**La mission qui joue, en direct.** Sous son canevas (qui suit le parcours, avec la même caméra que la barre de
+lecture et le workflow déplié), deux colonnes qui défilent seules : le **journal**, comme la console du cockpit — le
+lancement, chaque étape en arbre (┌ son nom et son genre, ce qui s'y passe : alertes, appels à l'opérateur, pause,
+reprise, pas à pas ; └ réussie ou ratée, en combien de temps, et la sortie prise : → faire, → sinon, → échec), les
+tours, puis l'issue lue dans le run — et la **frise** des étapes du tour, l'étape en cours grandissant en blanc. Le
+journal naît de la comparaison de deux relectures de l'exécution (`components/executions/journal.ts`), tenu par la
+page de la mission : il survit aux changements d'onglet et reste sous le run qui vient de finir. La frise demande
+l'heure de début de chaque étape, `EtapeJouee.debutS`, que la simulation sert.
+
 ## La liste des missions : trois propositions
 
 **`#/essai/liste-missions`**, sur les données de l'API : A · liste vivante (le panneau de côté : chaque ligne montre

@@ -57,29 +57,36 @@ function precedent(l: Lecture, i: number): string {
 const lienEntre = (l: Lecture, de: string, vers: string, sortie: Sortie) =>
   l.mission.liens.find((x) => x.de === de && x.vers === vers && x.sortie === sortie);
 
-/** Une étape du parcours de la caméra, avec le nœud qu'elle ouvre. */
-export interface EtapeTrajet extends EtapeCamera { noeud: string | null }
+/** Une étape du parcours de la mission : sa clé, son nœud, et le fil qui y mène. */
+export interface EtapeParcours { cle: string; noeud: string; lien: string | null }
 
 /**
- * Le parcours de la caméra : chaque étape jouée jusqu'à celle en cours (ou la dernière jouée, une fois la mission
- * finie), avec le fil qui y mène et le point à cadrer. Quand l'étape d'avant est plus haut, la caméra remonte un peu :
- * le fil qui arrive reste visible.
+ * Le parcours de la mission : chaque étape jouée jusqu'à celle en cours (ou la dernière jouée, une fois la mission
+ * finie, sous une clé à part), avec le fil qui y mène. C'est ce que la caméra suit, dans la barre comme dans l'éditeur.
  */
-export function trajets(l: Lecture): EtapeTrajet[] {
+export function etapesDe(l: Lecture): EtapeParcours[] {
   const fin = l.courant >= 0 ? l.courant : l.pas.length - 1;
-  const etapes: EtapeTrajet[] = [];
-  for (let i = 0; i <= fin; i++) {
-    const p = l.pas[i];
-    const n = l.mission.noeuds.find((x) => x.id === p.noeud) ?? l.mission.noeuds[0];
-    const de = precedent(l, i);
-    const ici = centre(n);
-    const avant = centre(l.mission.noeuds.find((x) => x.id === de) ?? n);
-    const cible = { x: ici.x, y: ici.y + Math.min(0, avant.y - ici.y) * CADRAGE_HAUT };
-    etapes.push({ cle: p.cle, noeud: p.noeud, cible, lien: lienEntre(l, de, p.noeud, p.par)?.id ?? null });
-  }
+  const etapes = l.pas.slice(0, fin + 1).map((p, i) => ({ cle: p.cle, noeud: p.noeud, lien: lienEntre(l, precedent(l, i), p.noeud, p.par)?.id ?? null }));
   const derniere = etapes.at(-1);
   if (l.courant < 0 && derniere) etapes[etapes.length - 1] = { ...derniere, cle: `fin:${derniere.cle}`, lien: null };
   return etapes;
+}
+
+/** Une étape du parcours de la caméra de la barre, avec le nœud qu'elle ouvre. */
+export interface EtapeTrajet extends EtapeCamera { noeud: string }
+
+/**
+ * Le parcours de la caméra de la barre : les étapes de la mission, chacune avec le point à cadrer. Quand l'étape d'avant
+ * est plus haut, la caméra remonte un peu : le fil qui arrive reste visible.
+ */
+export function trajets(l: Lecture): EtapeTrajet[] {
+  return etapesDe(l).map((e, i) => {
+    const n = l.mission.noeuds.find((x) => x.id === e.noeud) ?? l.mission.noeuds[0];
+    const de = i > 0 && l.pas[i - 1]?.tour === l.pas[i]?.tour ? l.pas[i - 1].noeud : 'depart';
+    const ici = centre(n);
+    const avant = centre(l.mission.noeuds.find((x) => x.id === de) ?? n);
+    return { ...e, cible: { x: ici.x, y: ici.y + Math.min(0, avant.y - ici.y) * CADRAGE_HAUT } };
+  });
 }
 
 function etatDuPas(l: Lecture, issue: string, arrive: boolean): EtatFil {

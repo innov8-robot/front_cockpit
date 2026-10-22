@@ -3,9 +3,11 @@ import {
   useReactFlow, type Connection,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Fragment, useContext, useEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent } from 'react';
+import { Fragment, useCallback, useContext, useEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent } from 'react';
 import { ANCRAGES, TYPES_PRIMITIVE, depuis } from '../../api/libelles';
 import { duree } from '../executions/donnees';
+import type { EtapeParcours } from '../lecture/fil';
+import { useParcours, type Camera } from '../lecture/travelling';
 import type { Execution, LienMission, NoeudMission, Primitive, TypePrimitive } from '../../api/types';
 import { Actions, type ActionsCanevas, type Point } from '../missions/actions';
 import { ApparenceContexte, teinte } from '../missions/apparence';
@@ -37,8 +39,16 @@ interface Props {
   trace?: Trace | null;
   /** Le nœud à montrer : la vue se centre dessus et il est mis en avant (un clic dans la barre de lecture). */
   focus?: string | null;
+  /**
+   * Le parcours de la mission qui joue : la vue le suit fil après fil, comme la caméra de la barre de lecture. Sans
+   * effet quand un nœud est montré (`focus`) : la vue reste où on l'a demandée.
+   */
+  parcours?: EtapeParcours[];
   onChange(noeuds: NoeudMission[], liens: LienMission[]): void;
 }
+
+/** Le centre d'une tuile du canevas, depuis son coin (px) : là où la caméra se pose sur une étape. */
+const DEMI_TUILE = 38;
 
 /** Le dernier nœud de la chaîne « réussi » qui part du départ : là où un clic dans la palette ajoute la suite. */
 function boutDeChaine(nodes: NoeudCanevas[], edges: { source: string; target: string; sourceHandle?: string | null }[]): NoeudCanevas {
@@ -175,7 +185,7 @@ function Panneau({ t, valeurs, primitive, echec, modifiable, changerEchec, ferme
 interface Menu { x: number; y: number; id: string }
 interface Choix { x: number; y: number; id: string; sortie: Sortie }
 
-function Canevas({ noeuds, liens, primitives, modifiable, execution, trace, focus, onChange }: Props) {
+function Canevas({ noeuds, liens, primitives, modifiable, execution, trace, focus, parcours, onChange }: Props) {
   const flot = useReactFlow();
   const { couleurs } = useContext(ApparenceContexte).apparence;
   const parId = useMemo(() => new Map(primitives.map((p) => [p.id, p])), [primitives]);
@@ -212,6 +222,29 @@ function Canevas({ noeuds, liens, primitives, modifiable, execution, trace, focu
     const t = setTimeout(() => void flot.setCenter(p.x + (n.measured.width ?? 76) / 2, p.y + 38, { zoom: 1, duration: 600 }), 120);
     return () => clearTimeout(t);
   }, [focus, mesures, flot]);
+
+  // La mission qui joue : la vue suit son parcours, avec la caméra de la barre de lecture. Elle se pose à l'échelle 1
+  // sur l'étape en cours, puis garde le zoom qu'on lui donne.
+  const premierePose = useRef(true);
+  const camera = useCallback((): Camera | null => {
+    const zone = boite.current?.querySelector('.react-flow')?.getBoundingClientRect();
+    if (!zone) return null;
+    return {
+      placer: (p) => {
+        const zoom = premierePose.current ? 1 : flot.getZoom();
+        premierePose.current = false;
+        void flot.setViewport({ x: zone.width / 2 - p.x * zoom, y: zone.height / 2 - p.y * zoom, zoom });
+      },
+      chemin: (lien) => boite.current?.querySelector<SVGPathElement>(`.react-flow__edge[data-id="${lien}"] path.react-flow__edge-path`) ?? null,
+    };
+  }, [flot]);
+  const suivi = useMemo(() => (mesures && parcours && !focus ? parcours.flatMap((e) => {
+    const n = flot.getInternalNode(e.noeud);
+    if (!n) return [];
+    const p = n.internals.positionAbsolute;
+    return [{ cle: e.cle, lien: e.lien, cible: { x: p.x + DEMI_TUILE, y: p.y + DEMI_TUILE } }];
+  }) : []), [mesures, parcours, focus, flot]);
+  useParcours(suivi, camera);
 
   // Ce qu'on montre sans le stocker : le marquage « non relié », la lecture seule, et l'état d'une exécution.
   const relies = useMemo(() => atteignables(edges), [edges]);

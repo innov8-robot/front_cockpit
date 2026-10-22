@@ -5,7 +5,7 @@ import type { Trace } from '../graphe/correspondance';
 import type { EtatNoeud } from '../missions/charte';
 import type { Direct } from '../missions/Noeud';
 import { BoutonStop, IconeLecture, IconePause } from './BarreFil';
-import { etatsDuTour, type EtatFil } from './fil';
+import { etapesDe, etatsDuTour, type EtatFil } from './fil';
 import type { Lecture } from './lecture';
 
 /** L'état d'un nœud du fil, dans la langue du canevas de l'éditeur ; sans état, il n'est pas sur le chemin du tour. */
@@ -76,7 +76,7 @@ export function Developpe({ l, mission, primitives, pause, basculerPasAPas, etap
       </header>
       <div className="bd-canevas">
         <EditeurMission key={mission.id} noeuds={mission.noeuds} liens={mission.liens} primitives={primitives} modifiable={false}
-          execution={null} trace={traceDe(l)} focus={courant} onChange={() => undefined} />
+          execution={null} trace={traceDe(l)} parcours={etapesDe(l)} onChange={() => undefined} />
         <div className="bd-transport" role="toolbar" aria-label="Commandes de lecture">
           <BoutonStop arreter={arreter} actif={!bloque} />
           <button className={`bl-bouton ${enPause && !l.pasAPas ? 'bl-principal' : ''}`} disabled={bloque} onClick={pause}

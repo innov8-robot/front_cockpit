@@ -2,10 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api, robotUnique } from '../api/client';
 import { nbPrimitives } from '../api/libelles';
-import type { EtatMission, Execution, LienMission, Mission, NoeudMission, Run } from '../api/types';
+import type { EtatMission, Execution, LienMission, Mission, NoeudMission, Primitive, Run } from '../api/types';
+import { clore, journaliser, type EntreeJournal } from '../components/executions/journal';
 import { OngletAnalyse } from '../components/executions/OngletAnalyse';
 import { OngletExecutions } from '../components/executions/OngletExecutions';
 import { EditeurMission } from '../components/graphe/EditeurMission';
+import { lectureDirecte } from '../components/lecture/direct';
+import { etapesDe } from '../components/lecture/fil';
 import { MenuMission, PointEtat, Trait } from '../components/listeMissions/Pieces';
 import { Chargement, Erreur, Vide } from '../components/ui';
 import { useCharge } from '../components/useCharge';
@@ -40,22 +43,47 @@ function useRuns(missionId: string | undefined, enDirect: boolean): Run[] {
 /** Un message de la barre (enregistrée, lancée, une erreur) s'efface seul après ce temps. */
 const MESSAGE_MS = 3000;
 
-/** La mission en cours sur le robot, relue chaque seconde tant qu'elle est celle qu'on regarde. */
-function useExecution(robotId: string | undefined, missionId: string, active: boolean, fini: () => void): Execution | null {
+/**
+ * La mission en cours sur le robot, relue chaque seconde tant qu'elle est celle qu'on regarde, et son journal : chaque
+ * relecture y ajoute ce qui s'est passé depuis la précédente ; à la fin, l'issue lue dans le run.
+ */
+function useExecution(robotId: string | undefined, m: Mission | null, primitives: Primitive[] | undefined, fini: () => void) {
   const [execution, setExecution] = useState<Execution | null>(null);
+  const [journal, setJournal] = useState<EntreeJournal[]>([]);
+  const missionId = m?.id ?? '';
+  const active = m?.etat === 'en_cours';
+  const contexte = useRef({ m, primitives: primitives ?? [] });
+  const avant = useRef<Execution | null>(null);
+  const prochain = useRef(0);
+  useEffect(() => { contexte.current = { m, primitives: primitives ?? [] }; });
   useEffect(() => {
     if (!robotId || !active) return;
     let vivant = true;
+    const ajouter = (lignes: Omit<EntreeJournal, 'id'>[], neuf = false) => {
+      const entrees = lignes.map((l) => ({ ...l, id: prochain.current++ }));
+      setJournal((j) => (neuf ? entrees : entrees.length ? [...j, ...entrees] : j));
+    };
     const lire = () => api.execution(robotId).then((x) => {
       if (!vivant) return;
-      setExecution(x?.missionId === missionId ? x : null);
+      const la = x?.missionId === missionId ? x : null;
+      const { m: mission, primitives: ps } = contexte.current;
+      if (la && mission) ajouter(journaliser(avant.current, la, mission, ps), !avant.current);
+      const precedente = avant.current;
+      if (!la && precedente) {
+        api.runs({ missionId }).then((runs) => {
+          const run = runs.filter((u) => u.dureeS > 0).sort((a, b) => b.debut.localeCompare(a.debut))[0];
+          if (run) ajouter(clore(precedente, run));
+        }).catch(() => undefined);
+      }
+      avant.current = la;
+      setExecution(la);
       if (!x) fini();
     }).catch(() => undefined);
     lire();
     const t = setInterval(lire, 1000);
     return () => { vivant = false; clearInterval(t); };
   }, [robotId, missionId, active]); // eslint-disable-line react-hooks/exhaustive-deps
-  return active ? execution : null;
+  return { execution: active ? execution : null, journal };
 }
 
 /** Les nœuds joués : ceux qu'on atteint depuis le départ. */
@@ -91,7 +119,7 @@ export function MissionEditeur() {
   const [m, setM] = useState<Mission | null>(null);
   const [message, setMessage] = useState<{ ton: 'ok' | 'danger'; texte: string } | null>(null);
   const champNom = useRef<HTMLInputElement>(null);
-  const execution = useExecution(robot.donnee?.id, m?.id ?? '', m?.etat === 'en_cours', source.recharger);
+  const { execution, journal } = useExecution(robot.donnee?.id, m, primitives.donnee, source.recharger);
   const [recherche, setRecherche] = useSearchParams();
   const onglet: Onglet = nouvelle ? 'editeur' : (ONGLETS.find((o) => o.cle === recherche.get('onglet'))?.cle ?? 'editeur');
   const runs = useRuns(nouvelle ? undefined : id, m?.etat === 'en_cours');
@@ -184,12 +212,13 @@ export function MissionEditeur() {
 
       {source.erreur && <Erreur message={source.erreur} />}
       {onglet === 'executions' ? (
-        <OngletExecutions m={m} primitives={primitives.donnee} runs={runs} execution={execution} voirEditeur={() => ouvrir('editeur')} />
+        <OngletExecutions m={m} primitives={primitives.donnee} runs={runs} execution={execution} journal={journal} voirEditeur={() => ouvrir('editeur')} />
       ) : onglet === 'analyse' ? (
         <OngletAnalyse m={m} primitives={primitives.donnee} runs={runs} />
       ) : (
         <EditeurMission key={`${m.id || 'nouvelle'}-${enCours}`} noeuds={m.noeuds} liens={m.liens} primitives={primitives.donnee}
           modifiable={!enCours} execution={execution}
+          parcours={execution ? etapesDe(lectureDirecte(m, primitives.donnee, execution, false)) : undefined}
           onChange={(noeuds: NoeudMission[], liens: LienMission[]) => maj({ noeuds, liens })} />
       )}
     </div>

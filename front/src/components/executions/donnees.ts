@@ -89,7 +89,7 @@ export function causes(runs: Run[]): { cause: string; issue: IssueRun; nombre: n
   return [...par.entries()].map(([cause, c]) => ({ cause, ...c })).sort((a, b) => b.nombre - a.nombre);
 }
 
-/** Un pas d'axe lisible pour une durée totale : environ cinq graduations rondes. */
-export function pasAxe(totalS: number): number {
-  return [5, 10, 15, 20, 30, 60, 120, 300].find((p) => totalS / p <= 6) ?? 600;
+/** Un pas d'axe lisible pour une durée totale : au plus `nombre` graduations rondes. */
+export function pasAxe(totalS: number, nombre = 6): number {
+  return [5, 10, 15, 20, 30, 60, 120, 300, 600].find((p) => totalS / p <= nombre) ?? 1200;
 }

@@ -1838,6 +1838,37 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .ex-issue-interrompu i { background: #5b636e; color: #e9eef7; font-size: 8px; }
 .ex-barre-reussi { background: #3dff8a; }
 .ex-barre-echoue { background: #ffb02e; }
+/* La mission qui joue : son étape en cours grandit en blanc, le journal défile comme la console du cockpit. */
+.ex-issue-cours i { background: transparent; color: #e9eef7; font-size: 13px; animation: lm-respire 1s ease-in-out infinite; }
+.ex-barre-cours { background: #e9eef7; box-shadow: 0 0 10px rgb(233 238 247 / 0.6); animation: lm-respire 1s ease-in-out infinite; }
+.ex-direct-titre { margin-left: 8px; font: 700 9.5px/1 ui-monospace, monospace; letter-spacing: 0.16em; color: #e9eef7; }
+.ex-direct-titre i { width: 6px; height: 6px; }
+.ex-titre-tour { letter-spacing: 0.12em; }
+.ex-journal {
+  list-style: none; margin: 0; padding: 10px 0; max-height: 300px; overflow-y: auto; border-radius: 12px; scrollbar-width: thin;
+  background: #07090b; border: 1px solid rgb(255 255 255 / 0.08); font: 500 12px/1.75 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+/* Sous le canevas, le journal et la frise remplissent ce qui reste de la hauteur : la dernière ligne reste à l'écran. */
+.ex-direct-bas { flex: 1 1 0; min-height: 220px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+.ex-direct-bas section { display: flex; flex-direction: column; min-height: 0; }
+.ex-direct-bas .ex-journal, .ex-defile { flex: 1; min-height: 0; max-height: none; }
+.ex-defile { overflow-y: auto; padding-right: 6px; scrollbar-width: thin; }
+.ex-detail:has(.ex-direct-bas) .ex-canevas { height: clamp(220px, 40vh, 400px); }
+@media (max-width: 1099px) { .ex-direct-bas { grid-template-columns: 1fr; } .ex-direct-bas .ex-journal, .ex-defile { height: 260px; flex: none; } }
+.ex-j { display: grid; grid-template-columns: 50px 14px 16px minmax(0, 1fr) auto; gap: 6px; align-items: baseline; padding: 0 14px; color: #9aa3ae; animation: bl-message 0.25s ease-out; }
+.ex-j time { color: #5b636e; font-variant-numeric: tabular-nums; }
+.ex-j-arbre { color: #3a4049; text-align: center; }
+.ex-j-icone { text-align: center; font-weight: 800; }
+.ex-j-texte { min-width: 0; overflow-wrap: anywhere; }
+.ex-j-detail { color: #5b636e; white-space: nowrap; }
+.ex-j-debut .ex-j-texte, .ex-j-lancement .ex-j-texte, .ex-j-issue .ex-j-texte { color: #e9eef7; font-weight: 700; }
+.ex-j-tour .ex-j-texte { color: #c9ced6; letter-spacing: 0.08em; }
+.ex-j-vit .ex-j-icone { color: #e9eef7; }
+.ex-j-ok .ex-j-icone { color: #3dff8a; }
+.ex-j-attention .ex-j-icone, .ex-j-alerte .ex-j-texte { color: #ffb02e; }
+.ex-j-erreur .ex-j-icone, .ex-j-issue.ex-j-erreur .ex-j-texte { color: #ff5a64; }
+.ex-j-neutre .ex-j-icone { color: #8a93a3; }
+.ex-j-fin.ex-j-attention .ex-j-texte { color: #ffb02e; }
 .ex-barre-interrompu { background: #5b636e; }
 .ex-rien { margin: 12px 0; color: #8a93a3; font-size: 0.86rem; }
 .ex-titre { margin: 18px 0 10px; font: 600 9.5px/1 ui-monospace, monospace; letter-spacing: 0.16em; text-transform: uppercase; color: #8a93a3; }
