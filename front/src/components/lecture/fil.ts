@@ -7,7 +7,7 @@ import { sortiesVisibles, type TypeNoeud } from '../missions/catalogue';
 import { SORTIES, type EtatLien, type Sortie, type Ton } from '../missions/charte';
 import { cheminRetour, tonDe } from '../missions/liens';
 import type { Lecture } from './lecture';
-import type { Point } from './travelling';
+import type { EtapeCamera, Point } from './travelling';
 
 /**
  * L'échelle du canevas de l'éditeur dans la barre. Le haut et le bas sont plus serrés que la largeur : une branche
@@ -57,17 +57,29 @@ function precedent(l: Lecture, i: number): string {
 const lienEntre = (l: Lecture, de: string, vers: string, sortie: Sortie) =>
   l.mission.liens.find((x) => x.de === de && x.vers === vers && x.sortie === sortie);
 
-/** Où va la caméra : l'étape en cours (ou la dernière jouée), et le fil qui y mène. */
-export function trajet(l: Lecture): { cle: string; noeud: string | null; cible: Point; lien: string | null } {
-  const i = indexCible(l);
-  const p = l.pas[i];
-  const n = l.mission.noeuds.find((x) => x.id === (p?.noeud ?? 'depart')) ?? l.mission.noeuds[0];
-  if (!p || l.courant < 0) return { cle: `fin:${p?.cle ?? ''}`, noeud: p?.noeud ?? null, cible: centre(n), lien: null };
-  const de = precedent(l, i);
-  const ici = centre(n);
-  const avant = centre(l.mission.noeuds.find((x) => x.id === de) ?? n);
-  const cible = { x: ici.x, y: ici.y + Math.min(0, avant.y - ici.y) * CADRAGE_HAUT };
-  return { cle: p.cle, noeud: p.noeud, cible, lien: lienEntre(l, de, p.noeud, p.par)?.id ?? null };
+/** Une étape du parcours de la caméra, avec le nœud qu'elle ouvre. */
+export interface EtapeTrajet extends EtapeCamera { noeud: string | null }
+
+/**
+ * Le parcours de la caméra : chaque étape jouée jusqu'à celle en cours (ou la dernière jouée, une fois la mission
+ * finie), avec le fil qui y mène et le point à cadrer. Quand l'étape d'avant est plus haut, la caméra remonte un peu :
+ * le fil qui arrive reste visible.
+ */
+export function trajets(l: Lecture): EtapeTrajet[] {
+  const fin = l.courant >= 0 ? l.courant : l.pas.length - 1;
+  const etapes: EtapeTrajet[] = [];
+  for (let i = 0; i <= fin; i++) {
+    const p = l.pas[i];
+    const n = l.mission.noeuds.find((x) => x.id === p.noeud) ?? l.mission.noeuds[0];
+    const de = precedent(l, i);
+    const ici = centre(n);
+    const avant = centre(l.mission.noeuds.find((x) => x.id === de) ?? n);
+    const cible = { x: ici.x, y: ici.y + Math.min(0, avant.y - ici.y) * CADRAGE_HAUT };
+    etapes.push({ cle: p.cle, noeud: p.noeud, cible, lien: lienEntre(l, de, p.noeud, p.par)?.id ?? null });
+  }
+  const derniere = etapes.at(-1);
+  if (l.courant < 0 && derniere) etapes[etapes.length - 1] = { ...derniere, cle: `fin:${derniere.cle}`, lien: null };
+  return etapes;
 }
 
 function etatDuPas(l: Lecture, issue: string, arrive: boolean): EtatFil {

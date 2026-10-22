@@ -20,7 +20,8 @@ const dernierRun = (runs: Run[]) => runs.filter((u) => u.dureeS > 0).sort((a, b)
  * La barre de mission, en haut de l'accueil, seulement quand une mission joue : le fil (components/lecture), son graphe
  * parcouru étape par étape ; un clic ouvre son exécution sur l'étape touchée. À la fin : son issue, un halo vert qui
  * s'efface seul, ou rouge jusqu'à l'acquittement. Au repos, rien : on lance une mission depuis l'écran des missions.
- * Elle s'efface aussi quand l'éditeur d'une mission est ouvert.
+ * Elle s'efface aussi quand l'éditeur d'une mission est ouvert ; en pause ou finie, un glissé la dégage (en pause, elle
+ * revient quand la mission reprend).
  */
 export function BarreMission({ robot }: { robot: Robot }) {
   const [missions, setMissions] = useState<Mission[]>([]);
@@ -30,6 +31,8 @@ export function BarreMission({ robot }: { robot: Robot }) {
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [masquee, setMasquee] = useState<string | null>(null);
+  /** La mission en pause qu'on a dégagée d'un glissé : la barre revient quand elle reprend. */
+  const [cachee, setCachee] = useState<string | null>(null);
   const derniere = useRef<Execution | null>(null);
   const naviguer = useNavigate();
   const { pathname } = useLocation();
@@ -51,6 +54,7 @@ export function BarreMission({ robot }: { robot: Robot }) {
         setExecution(x);
         if (x) setFin(null);
         if (x && !avant) setMasquee(null);
+        if (!x?.enPause) setCachee(null);
         if (x || !avant) return;
         api.runs({ missionId: avant.missionId }).then((runs) => {
           const run = dernierRun(runs);
@@ -87,13 +91,14 @@ export function BarreMission({ robot }: { robot: Robot }) {
   if (editeurOuvert) return null;
   const courante = execution && missions.find((m) => m.id === execution.missionId);
   if (execution && courante) {
+    if (execution.enPause && cachee === courante.id) return null;
     const l = lectureDirecte(courante, primitives, execution, urgence);
     const message = erreur ? { niveau: 'attention' as const, texte: erreur } : l.message?.texte === masquee ? null : l.message;
     return (
       <div className="barre-mission-fil">
         <BarreFil l={{ ...l, message }} ouvrir={(noeud) => naviguer(`/missions/${courante.id}?onglet=executions${noeud ? `&noeud=${noeud}` : ''}`)}
           pause={() => !enCours && agir(api.pauseMission(robot.id, !execution.enPause))}
-          acquitter={() => { setErreur(null); setMasquee(l.message?.texte ?? null); }} />
+          acquitter={() => { setErreur(null); setMasquee(l.message?.texte ?? null); }} degager={() => setCachee(courante.id)} />
       </div>
     );
   }
@@ -104,7 +109,7 @@ export function BarreMission({ robot }: { robot: Robot }) {
     return (
       <div className="barre-mission-fil">
         <BarreFil l={finale} ouvrir={() => naviguer(`/missions/${finale.mission.id}?onglet=executions`)} pause={() => undefined}
-          acquitter={() => setFin(null)} />
+          acquitter={() => setFin(null)} degager={() => setFin(null)} />
       </div>
     );
   }

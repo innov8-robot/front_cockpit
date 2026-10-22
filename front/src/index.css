@@ -2141,4 +2141,7 @@ button.bl-nom:hover { text-decoration: underline; text-underline-offset: 3px; }
 .bd-mode-bouton { color: #8a93a3; }
 .bd-mode-bouton.bd-actif { color: #fff; background: rgb(255 255 255 / 0.14); border-color: #e9eef7; }
 .bd-astuce { margin: 12px 0 0; color: #7c8798; font-size: 0.82rem; }
+.bd-fermer { width: 30px; height: 30px; border-radius: 8px; }
+/* Une barre qu'on peut dégager d'un glissé : le doigt la tient, la page ne défile pas. */
+.bl-degageable { touch-action: none; }
 

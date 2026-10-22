@@ -117,7 +117,11 @@ la prévision s'arrête devant une condition ou une boucle, et un nouveau tour d
 
 Le fil : le graphe de la mission tel que l'éditeur le dessine, réduit dans la barre. Quand une étape finit, une
 étincelle part sur le fil que la mission a pris (vert « réussi », ambre « échec ») et la caméra la suit dans tous les
-sens jusqu'à l'étape suivante, qui s'ouvre à son arrivée avec son nom. Aucune durée n'est prédite : on ne sait pas
+sens jusqu'à l'étape suivante, qui s'ouvre à son arrivée avec son nom. Quand les étapes s'enchaînent vite (une entrée
+puis une sortie de boucle, une étape sautée entre deux relectures), la caméra parcourt dans l'ordre chaque fil
+emprunté, et va d'autant plus vite qu'il lui en reste et que le rythme est rapide. En pause, arrêtée ou finie, la
+barre se dégage d'un glissé vers le haut ou vers la droite, comme une notification ; en pause, elle revient quand la
+mission reprend. Aucune durée n'est prédite : on ne sait pas
 combien de temps une étape va tourner. Le système de la barre : blanc ce qui vit, gris ce qui est suspendu (la pause
 n'est pas une alerte : un halo blanc qui respire), vert ce qui a réussi, ambre ce qui n'arrête rien mais demande de l'attention, rouge ce qui a
 arrêté la mission ; les actions sont blanches, pleine pour la principale (Reprendre, Acquitter), en contour pour la
@@ -140,8 +144,8 @@ Maquette : **`#/essai/barre-developpee`**, sur la mission simulée. Rien de ceci
    l'opérateur à « … » », ■ rouge sur l'étape, jusqu'à l'acquittement. Un appui trop court affiche « Maintenir pour
    arrêter ». Le contrat a déjà `arreterMission`.
 2. **Le workflow déplié.** Toucher la barre déplie, dessous, la mission dans le canevas de l'éditeur, en lecture : les
-   états du tour, les fils pris, le temps de l'étape sous sa tuile, la vue qui suit l'étape en cours ; la toucher encore
-   le replie. Le fil continue de courir dans la barre.
+   états du tour, les fils pris, le temps de l'étape sous sa tuile, la vue qui suit l'étape en cours ; la croix, ou la
+   barre touchée encore, le replie. Le fil continue de courir dans la barre.
 3. **Lecture · pause · pas à pas, dans le déplié.** Des boutons de même taille au bas du canevas : stop, lecture /
    pause, et l'interrupteur « pas à pas » (la mission se met en pause à la fin de chaque étape). Dans ce mode
    seulement, « Étape suivante » apparaît. Une seule action est pleine à la fois (▶ en pause, « Étape suivante » en pas

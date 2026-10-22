@@ -6,7 +6,8 @@ import { ICONES } from '../missions/catalogue';
 import { ETATS as ETATS_NOEUD, FAMILLE, TONS } from '../missions/charte';
 import { BadgeEtat, IconePoints } from '../missions/Noeud';
 import { OndeChemin } from '../missions/Onde';
-import { construireFil, trajet, type NoeudFil } from './fil';
+import { construireFil, trajets, type NoeudFil } from './fil';
+import { useGlisser } from './glisser';
 import type { EtatLecture, Lecture, MessageLecture } from './lecture';
 import { useTravelling, type Point } from './travelling';
 
@@ -131,14 +132,16 @@ function Tuile({ n }: { n: NoeudFil }) {
  *
  * Avec `ouvrir`, la barre mène à l'exécution : un clic sur une étape du fil l'ouvre sur cette étape, un clic ailleurs
  * sur l'étape en cours. Avec `arreter`, un bouton stop à maintenir. Ce que la barre déplie se range dessous
- * (`children`) ; `developpe` dit qu'il est ouvert.
+ * (`children`) ; `developpe` dit qu'il est ouvert. Avec `degager`, une mission en pause, arrêtée ou finie se dégage
+ * d'un glissé vers le haut ou vers la droite, comme une notification.
  */
-export function BarreFil({ l, pause, acquitter, ouvrir, arreter, developpe, children }: {
+export function BarreFil({ l, pause, acquitter, ouvrir, arreter, developpe, degager, children }: {
   l: Lecture; pause(): void; acquitter(): void; ouvrir?(noeud: string | null): void; arreter?(): void;
-  developpe?: boolean; children?: ReactNode;
+  developpe?: boolean; degager?(): void; children?: ReactNode;
 }) {
-  const t = trajet(l);
-  const { vue, monde, etincelle, arrivee } = useTravelling(t.cle, t.cible, t.lien, ANCRE);
+  const etapes = trajets(l);
+  const t = etapes.at(-1) ?? { cle: '', noeud: null, cible: { x: 0, y: 0 }, lien: null };
+  const { vue, monde, etincelle, arrivee } = useTravelling(etapes, ANCRE);
   const arrive = arrivee === t.cle;
   const f = construireFil(l, arrive);
   const ouvert = l.courant >= 0 && arrive ? f.noeuds.find((n) => n.id === t.noeud) : undefined;
@@ -146,8 +149,10 @@ export function BarreFil({ l, pause, acquitter, ouvrir, arreter, developpe, chil
   const enPause = l.etat === 'pause';
   const e = ETATS[l.etat];
   const halo = l.message?.niveau === 'erreur' ? 'erreur' : enPause ? 'pause' : l.message?.niveau ?? null;
+  const degageable = Boolean(degager) && (enPause || fini);
+  const { ref: pile, ...gestes } = useGlisser(degageable, degager);
   return (
-    <div className="bl-pile">
+    <div className={`bl-pile ${degageable ? 'bl-degageable' : ''}`} ref={pile} {...gestes}>
       <div className={`bl-barre bl-etat-${l.etat} ${halo ? `bl-halo-${halo}` : ''} ${ouvrir ? 'bl-cliquable' : ''}`} role="toolbar"
         aria-label={`Mission ${l.mission.nom}`} onClick={ouvrir && (() => ouvrir(t.noeud))}>
         <div className="bl-identite">
