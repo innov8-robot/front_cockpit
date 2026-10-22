@@ -100,7 +100,8 @@ simulation sert ; le back du robot devra le servir aussi. Code : `components/exe
 lecture et le workflow déplié), deux colonnes qui défilent seules : le **journal**, comme la console du cockpit — le
 lancement, chaque étape en arbre (┌ son nom et son genre, ce qui s'y passe : alertes, appels à l'opérateur, pause,
 reprise, pas à pas ; └ réussie ou ratée, en combien de temps, et la sortie prise : → faire, → sinon, → échec), les
-tours, puis l'issue lue dans le run — et la **frise** des étapes du tour, l'étape en cours grandissant en blanc. Le
+tours, puis l'issue lue dans le run — et la **frise** des étapes du tour, l'étape en cours grandissant en blanc :
+entre deux relectures, son horloge avance à chaque image et son échelle glisse au lieu de sauter. Le
 journal naît de la comparaison de deux relectures de l'exécution (`components/executions/journal.ts`), tenu par la
 page de la mission : il survit aux changements d'onglet et reste sous le run qui vient de finir. La frise demande
 l'heure de début de chaque étape, `EtapeJouee.debutS`, que la simulation sert.
@@ -116,8 +117,8 @@ runs et leur cause). « Nouvelle mission » y est blanc : le rouge est réservé
 ## La barre de la mission qui joue : le fil
 
 En haut de l'accueil (`components/BarreMission.tsx`), seulement quand une mission joue : le fil, puis son issue, lue
-dans son dernier run. Au repos, rien : on lance une mission depuis l'écran des missions. Un clic sur la barre déplie
-le workflow en exécution (voir plus bas) ; un clic sur une étape du fil ouvre l'onglet Exécutions de la mission,
+dans son dernier run. Au repos, rien : on lance une mission depuis l'écran des missions. Un clic sur la barre la
+remplace par le workflow en exécution, en plein écran (voir plus bas) ; un clic sur une étape du fil ouvre l'onglet Exécutions de la mission,
 centré sur elle ; la barre s'efface tant que l'éditeur d'une mission est ouvert. Pendant une mission, les écrans ouverts et les calques se rangent sous le fil. Banc d'essai : **`#/essai/barre-lecture`**, sur une mission simulée (branche
 « échec », tours, pause, avertissement, erreur bloquante, arrêt d'urgence) : celle du prototype de l'éditeur (une
 boucle sur les pièces, une condition, deux appels à l'opérateur, une prise qui rate), une longue, une courte. Le fil
@@ -153,9 +154,10 @@ Dans la barre de l'accueil ; banc d'essai sur la mission simulée : **`#/essai/b
    rouge plein et son anneau se remplit ; au bout, la mission s'arrête (`arreterMission`) et la barre prend le halo
    rouge, « Arrêtée par l'opérateur à « … » », ■ rouge sur l'étape, jusqu'à l'acquittement ou un glissé. Un appui trop
    court affiche « Maintenir pour arrêter ».
-2. **Le workflow déplié.** Un clic sur la barre déplie, en plein écran, la mission dans le canevas de l'éditeur, en lecture :
-   les états du tour, les fils pris, le temps de l'étape sous sa tuile, la vue qui suit l'étape en cours. La croix, ou
-   un second clic, le replie ; « Voir l'exécution » ouvre l'onglet Exécutions. Un clic sur une étape du fil, lui, ouvre
+2. **Le workflow déplié.** Un clic sur la barre la remplace — jamais les deux en même temps — par la mission en plein
+   écran, dans le canevas de l'éditeur, en lecture : en tête ce que montrait la barre (le nom, l'état, l'étape en
+   cours, le temps), son message et son halo ; les états du tour, les fils pris, la vue qui suit le parcours. La croix
+   rend la barre ; « Voir l'exécution » ouvre l'onglet Exécutions. Un clic sur une étape du fil, lui, ouvre
    l'exécution sur cette étape. Le déplié ne s'ouvre que sur l'accueil : un écran ouvert par-dessus le replie.
 3. **Lecture · pause · pas à pas.** Au bas du déplié, des boutons de même taille : stop, lecture / pause, et
    l'interrupteur « pas à pas » (la mission se met en pause à la fin de chaque étape, celle en cours comprise). Dans ce

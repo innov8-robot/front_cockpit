@@ -14,7 +14,7 @@ const VITESSES = [1, 3, 8];
 /** Ce que la maquette propose, et ce qu'il faudra au back pour le brancher. */
 const POINTS = [
   { titre: 'Stop dans la barre', texte: 'Un carré à maintenir une seconde : pendant l’appui il rougit et son anneau se remplit ; au bout, la mission s’arrête et la barre prend le halo rouge, « Arrêtée par l’opérateur », jusqu’à l’acquittement. Un appui trop court le dit. Le contrat a déjà arreterMission.' },
-  { titre: 'Le workflow déplié', texte: 'Toucher la barre déplie, dessous, la mission dans le canevas de l’éditeur, en lecture : les états du tour, les fils pris, le temps de l’étape sous sa tuile, et la vue qui suit l’étape en cours. La croix, ou toucher encore la barre, le replie. En pause, arrêtée ou finie, la barre se dégage d’un glissé vers le haut ou vers la droite.' },
+  { titre: 'Le workflow déplié', texte: 'Toucher la barre la remplace, en plein écran, par la mission dans le canevas de l’éditeur, en lecture : le nom, l’état et le temps en tête, les états du tour, les fils pris, la vue qui suit le parcours. Jamais les deux en même temps : la croix rend la barre. En pause, arrêtée ou finie, la barre se dégage d’un glissé vers le haut ou vers la droite.' },
   { titre: 'Lecture · pause · pas à pas', texte: 'Au bas du déplié, des boutons de même taille : stop, lecture / pause, et le mode pas à pas — la mission se met en pause à la fin de chaque étape. Dans ce mode seulement, « étape suivante » apparaît. Une seule action est pleine à la fois, l’en-tête dit le mode. Il faudra au back : un mode pas à pas, etapeSuivante(robotId), et Execution.pasAPas.' },
 ];
 
@@ -28,16 +28,19 @@ function Banc({ essai, vitesse }: { essai: MissionEssai; vitesse: number }) {
   if (cachee && l.etat === 'pause') {
     return <div className="bd-scene"><button className="lm-bouton" onClick={() => setCachee(false)}>Faire revenir la barre</button></div>;
   }
+  if (developpe) {
+    return (
+      <div className="bd-scene bd-scene-plein">
+        <Developpe l={l} mission={essai.mission} primitives={PRIMITIVES_ESSAI} pause={s.pause} acquitter={s.acquitter}
+          basculerPasAPas={s.basculerPasAPas} etape={s.etape} arreter={s.arreter} fermer={() => setDeveloppe(false)} />
+      </div>
+    );
+  }
   return (
     <div className="bd-scene">
-      <BarreFil l={l} pause={s.pause} acquitter={s.acquitter} arreter={s.arreter} developpe={developpe}
-        ouvrir={() => setDeveloppe(!developpe)} degager={() => (fini ? s.rearmer() : setCachee(true))}>
-        {developpe && (
-          <Developpe l={l} mission={essai.mission} primitives={PRIMITIVES_ESSAI} pause={s.pause}
-            basculerPasAPas={s.basculerPasAPas} etape={s.etape} arreter={s.arreter} fermer={() => setDeveloppe(false)} />
-        )}
-      </BarreFil>
-      {!developpe && <p className="bd-astuce">Touchez la barre pour voir le workflow en exécution. En pause, arrêtée ou finie, glissez-la vers le haut ou vers la droite pour la dégager.</p>}
+      <BarreFil l={l} pause={s.pause} acquitter={s.acquitter} arreter={s.arreter} ouvrir={() => setDeveloppe(true)}
+        degager={() => (fini ? s.rearmer() : setCachee(true))} />
+      <p className="bd-astuce">Touchez la barre pour la remplacer par le workflow en exécution ; la croix rend la barre. En pause, arrêtée ou finie, glissez-la vers le haut ou vers la droite pour la dégager.</p>
     </div>
   );
 }

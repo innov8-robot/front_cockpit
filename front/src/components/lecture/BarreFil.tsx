@@ -1,4 +1,4 @@
-import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { duree } from '../executions/donnees';
 import { teinte } from '../missions/apparence';
@@ -8,7 +8,7 @@ import { BadgeEtat, IconePoints } from '../missions/Noeud';
 import { OndeChemin } from '../missions/Onde';
 import { construireFil, trajets, type NoeudFil } from './fil';
 import { useGlisser } from './glisser';
-import type { EtatLecture, Lecture, MessageLecture } from './lecture';
+import { estFinie, haloDe, type EtatLecture, type Lecture, type MessageLecture } from './lecture';
 import { useTravelling, type Point } from './travelling';
 
 /**
@@ -32,7 +32,7 @@ const SIGNES: Record<MessageLecture['niveau'], string> = { succes: '✓', attent
  * Le message sous la barre, de la couleur de son halo. Une erreur ou un arrêt reste jusqu'à ce qu'on l'acquitte ; un
  * avertissement s'efface seul, ou d'une croix. Un arrêt (urgence, ou par l'opérateur) porte le carré.
  */
-function Message({ m, urgence, arret, acquitter }: { m: MessageLecture; urgence: boolean; arret: boolean; acquitter(): void }) {
+export function Message({ m, urgence, arret, acquitter }: { m: MessageLecture; urgence: boolean; arret: boolean; acquitter(): void }) {
   return (
     <div className={`bl-message bl-message-${m.niveau}`} role={m.niveau === 'erreur' ? 'alert' : 'status'}>
       <b aria-hidden="true">{urgence || arret ? '■' : SIGNES[m.niveau]}</b>
@@ -44,6 +44,18 @@ function Message({ m, urgence, arret, acquitter }: { m: MessageLecture; urgence:
         </button>
       )}
     </div>
+  );
+}
+
+/** L'état de la mission en une ligne : son signe, son libellé (le pas à pas s'il est en cours), le tour. */
+export function LigneEtat({ l }: { l: Lecture }) {
+  const e = ETATS[l.etat];
+  return (
+    <small className="bl-etat">
+      {e.signe ? <b aria-hidden="true">{e.signe}</b> : <i aria-hidden="true" />}
+      {l.pasAPas && !estFinie(l) ? (l.etat === 'pause' ? 'Pas à pas · en attente' : 'Pas à pas') : e.libelle}
+      {l.tours > 1 && <span className="bl-etat-tour"> · tour {l.tour}/{l.tours}</span>}
+    </small>
   );
 }
 
@@ -131,13 +143,12 @@ function Tuile({ n }: { n: NoeudFil }) {
  * « échec » — et la caméra la suit dans tous les sens jusqu'à l'étape suivante, qui s'ouvre à son arrivée.
  *
  * Un clic sur la barre appelle `ouvrir` (déplier le workflow, ou ouvrir l'exécution) ; un clic sur une étape du fil,
- * `ouvrirEtape` s'il est donné. Avec `arreter`, un bouton stop à maintenir. Ce que la barre déplie se range dessous
- * (`children`) ; `developpe` dit qu'il est ouvert. Avec `degager`, une mission en pause, arrêtée ou finie se dégage
- * d'un glissé vers le haut ou vers la droite, comme une notification.
+ * `ouvrirEtape` s'il est donné. Avec `arreter`, un bouton stop à maintenir. Avec `degager`, une mission en pause,
+ * arrêtée ou finie se dégage d'un glissé vers le haut ou vers la droite, comme une notification.
  */
-export function BarreFil({ l, pause, acquitter, ouvrir, ouvrirEtape, arreter, developpe, degager, children }: {
+export function BarreFil({ l, pause, acquitter, ouvrir, ouvrirEtape, arreter, degager }: {
   l: Lecture; pause(): void; acquitter(): void; ouvrir?(): void; ouvrirEtape?(noeud: string): void; arreter?(): void;
-  developpe?: boolean; degager?(): void; children?: ReactNode;
+  degager?(): void;
 }) {
   const etapes = trajets(l);
   const t = etapes.at(-1) ?? { cle: '', noeud: null, cible: { x: 0, y: 0 }, lien: null };
@@ -145,10 +156,9 @@ export function BarreFil({ l, pause, acquitter, ouvrir, ouvrirEtape, arreter, de
   const arrive = arrivee === t.cle;
   const f = construireFil(l, arrive);
   const ouvert = l.courant >= 0 && arrive ? f.noeuds.find((n) => n.id === t.noeud) : undefined;
-  const fini = l.etat === 'reussie' || l.etat === 'erreur' || l.etat === 'arretee';
+  const fini = estFinie(l);
   const enPause = l.etat === 'pause';
-  const e = ETATS[l.etat];
-  const halo = l.message?.niveau === 'erreur' ? 'erreur' : enPause ? 'pause' : l.message?.niveau ?? null;
+  const halo = haloDe(l);
   const degageable = Boolean(degager) && (enPause || fini);
   const { ref: pile, ...gestes } = useGlisser(degageable, degager, '.bl-barre');
   return (
@@ -157,13 +167,9 @@ export function BarreFil({ l, pause, acquitter, ouvrir, ouvrirEtape, arreter, de
         aria-label={`Mission ${l.mission.nom}`} onClick={ouvrir}>
         <div className="bl-identite">
           {ouvrir ? (
-            <button className="bl-nom" aria-expanded={developpe} onClick={(ev) => { ev.stopPropagation(); ouvrir(); }}>{l.mission.nom}</button>
+            <button className="bl-nom" onClick={(ev) => { ev.stopPropagation(); ouvrir(); }}>{l.mission.nom}</button>
           ) : <strong className="bl-nom" title={l.mission.nom}>{l.mission.nom}</strong>}
-          <small className="bl-etat">
-            {e.signe ? <b aria-hidden="true">{e.signe}</b> : <i aria-hidden="true" />}
-            {l.pasAPas && !fini ? (enPause ? 'Pas à pas · en attente' : 'Pas à pas') : e.libelle}
-            {l.tours > 1 && <span className="bl-etat-tour"> · tour {l.tour}/{l.tours}</span>}
-          </small>
+          <LigneEtat l={l} />
         </div>
 
         <div className="bl-centre">
@@ -204,7 +210,7 @@ export function BarreFil({ l, pause, acquitter, ouvrir, ouvrirEtape, arreter, de
           <b>{duree(l.dureeS)}</b>
           <small>{l.etat === 'erreur' || l.etat === 'arretee' ? 'arrêtée' : fini ? 'au total' : l.dureeEtapeS !== null ? `étape ${duree(l.dureeEtapeS)}` : ''}</small>
         </div>
-        <button className={`bl-bouton ${enPause && !(l.pasAPas && developpe) ? 'bl-principal' : ''}`} disabled={fini || l.etat === 'urgence'}
+        <button className={`bl-bouton ${enPause ? 'bl-principal' : ''}`} disabled={fini || l.etat === 'urgence'}
           onClick={(ev) => { ev.stopPropagation(); pause(); }}
           aria-label={enPause ? 'Reprendre la mission' : 'Mettre la mission en pause'}
           title={l.etat === 'urgence' ? 'Réarmez l’arrêt d’urgence d’abord' : undefined}>
@@ -213,7 +219,6 @@ export function BarreFil({ l, pause, acquitter, ouvrir, ouvrirEtape, arreter, de
         {arreter && <BoutonStop arreter={arreter} actif={!fini && l.etat !== 'urgence'} />}
       </div>
       {l.message && <Message key={l.message.texte} m={l.message} urgence={l.etat === 'urgence'} arret={l.etat === 'arretee'} acquitter={acquitter} />}
-      {children}
     </div>
   );
 }

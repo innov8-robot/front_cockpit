@@ -4,9 +4,9 @@ import { EditeurMission } from '../graphe/EditeurMission';
 import type { Trace } from '../graphe/correspondance';
 import type { EtatNoeud } from '../missions/charte';
 import type { Direct } from '../missions/Noeud';
-import { BoutonStop, IconeLecture, IconePause } from './BarreFil';
+import { BoutonStop, IconeLecture, IconePause, LigneEtat, Message } from './BarreFil';
 import { etapesDe, etatsDuTour, type EtatFil } from './fil';
-import type { Lecture } from './lecture';
+import { estFinie, haloDe, type Lecture } from './lecture';
 
 /** L'état d'un nœud du fil, dans la langue du canevas de l'éditeur ; sans état, il n'est pas sur le chemin du tour. */
 const VERS_CANEVAS: Record<EtatFil, EtatNoeud | undefined> = {
@@ -44,36 +44,50 @@ interface Proprietes {
   /** En pas à pas, l'étape suivante, puis la pause. */
   etape(): void;
   arreter(): void;
-  /** Replie le workflow : la mission continue. */
+  /** Replie le workflow, la barre revient : la mission continue. */
   fermer(): void;
+  /** Acquitte le message de la mission (une erreur, un avertissement). */
+  acquitter(): void;
   /** Ouvre l'exécution de la mission dans l'éditeur, s'il y a de quoi. */
   voirExecution?(): void;
 }
 
 /**
- * Le workflow déplié sous la barre : la mission dans le canevas de l'éditeur, en lecture, qui suit l'étape en cours ;
- * et les commandes de lecture, toutes de la même taille — stop à maintenir, lecture / pause, le mode pas à pas, et,
- * seulement dans ce mode, l'étape suivante. Une seule action est pleine à la fois.
+ * Le workflow déplié, à la place de la barre (jamais les deux en même temps) : en tête ce que montrait la barre — le
+ * nom de la mission, son état, l'étape en cours, le temps —, son message et son halo ; la mission dans le canevas de
+ * l'éditeur, en lecture, qui suit le parcours ; et les commandes de lecture, toutes de la même taille — stop à
+ * maintenir, lecture / pause, le mode pas à pas, et, seulement dans ce mode, l'étape suivante. Une seule action est
+ * pleine à la fois.
  */
-export function Developpe({ l, mission, primitives, pause, basculerPasAPas, etape, arreter, fermer, voirExecution }: Proprietes) {
-  const fini = l.etat === 'reussie' || l.etat === 'erreur' || l.etat === 'arretee';
+export function Developpe({ l, mission, primitives, pause, basculerPasAPas, etape, arreter, fermer, acquitter, voirExecution }: Proprietes) {
+  const fini = estFinie(l);
+  const halo = haloDe(l);
   const bloque = fini || l.etat === 'urgence';
   const enPause = l.etat === 'pause';
   const courant = l.courant >= 0 ? l.pas[l.courant].noeud : null;
   const nomCourant = l.mission.noeuds.find((n) => n.id === courant)?.nom;
   const legende = fini ? null : l.pasAPas ? (enPause ? 'Pas à pas · en attente' : 'Pas à pas · une étape') : enPause ? 'En pause' : 'En continu';
   return (
-    <section className="bd-panneau" aria-label="Le workflow" onClick={(e) => e.stopPropagation()}>
+    <section className={`bd-panneau bl-etat-${l.etat} ${halo ? `bl-halo-${halo}` : ''}`} aria-label={`Mission ${l.mission.nom}`}
+      onClick={(e) => e.stopPropagation()}>
       <header className="bd-tete">
-        <span>Le workflow</span>
+        <div className="bl-identite bd-identite">
+          <strong className="bl-nom" title={l.mission.nom}>{l.mission.nom}</strong>
+          <LigneEtat l={l} />
+        </div>
         {courant && <span className="bd-tete-etape">{nomCourant}</span>}
         <span className="lm-espace" />
         {legende && <span className={`bd-mode ${l.pasAPas ? 'bd-mode-pas' : ''}`} role="status">{legende}</span>}
+        <div className="bl-temps bd-temps">
+          <b>{duree(l.dureeS)}</b>
+          <small>{l.dureeEtapeS !== null && !fini ? `étape ${duree(l.dureeEtapeS)}` : ''}</small>
+        </div>
         {voirExecution && <button className="lm-bouton bd-voir" onClick={voirExecution}>Voir l’exécution</button>}
         <button className="lm-carre bd-fermer" onClick={fermer} aria-label="Replier le workflow" title="Replier : la mission continue">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
       </header>
+      {l.message && <Message key={l.message.texte} m={l.message} urgence={l.etat === 'urgence'} arret={l.etat === 'arretee'} acquitter={acquitter} />}
       <div className="bd-canevas">
         <EditeurMission key={mission.id} noeuds={mission.noeuds} liens={mission.liens} primitives={primitives} modifiable={false}
           execution={null} trace={traceDe(l)} parcours={etapesDe(l)} onChange={() => undefined} />

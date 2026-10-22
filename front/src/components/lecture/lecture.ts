@@ -74,6 +74,19 @@ export interface Lecture {
   pasAPas?: boolean;
 }
 
+/** La mission est finie : réussie, en erreur, ou arrêtée. */
+export const estFinie = (l: Lecture) => l.etat === 'reussie' || l.etat === 'erreur' || l.etat === 'arretee';
+
+/**
+ * Le halo autour de ce qui montre la mission (la barre, le workflow déplié) : le rouge d'une erreur ou d'un arrêt
+ * d'abord, puis le blanc de la pause, puis l'ambre d'un avertissement, le vert d'une mission terminée.
+ */
+export function haloDe(l: Lecture): string | null {
+  if (l.message?.niveau === 'erreur') return 'erreur';
+  if (l.etat === 'pause') return 'pause';
+  return l.message?.niveau ?? null;
+}
+
 /** Les sorties qu'on suit pour prévoir la suite : celles qui ne dépendent d'aucune condition. */
 const SANS_CONDITION: Sortie[] = ['ok', 'suite'];
 

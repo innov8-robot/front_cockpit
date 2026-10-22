@@ -1123,8 +1123,18 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 @media (max-width: 599px) { .barre-mission-fil { width: calc(100% - 24px); } }
 /* Le workflow déplié prend tout l'écran : la barre s'élargit, le canevas descend jusqu'à la barre du robot. */
 .barre-mission-fil.bl-plein { left: 24px; right: 24px; width: auto; transform: none; bottom: calc(98px + env(safe-area-inset-bottom)); }
-.bl-plein .bl-pile { height: 100%; }
-.bl-plein .bd-panneau { flex: 1; height: auto; min-height: 0; }
+.bl-plein > .bd-panneau { height: 100%; }
+.bd-scene-plein .bd-panneau { height: clamp(420px, 70vh, 760px); }
+.bd-panneau > .bl-message { align-self: center; margin-top: 10px; }
+/* En tête du workflow déplié, ce que montrait la barre, dans les mêmes caractères qu'elle. */
+.bd-identite { width: auto; max-width: 340px; gap: 7px; }
+.bd-tete .bl-nom { font: 650 15px/1.15 'Inter', system-ui, sans-serif; letter-spacing: 0; text-transform: none; color: #e9eef7; }
+.bd-tete .bl-etat { text-transform: uppercase; }
+.bd-temps { min-width: 0; padding-left: 14px; gap: 6px; }
+.bd-temps b { font-size: 18px; letter-spacing: 0.04em; color: #e9eef7; }
+.bd-temps small { text-transform: none; letter-spacing: 0.1em; }
+/* En plein écran, la vue 3D est cachée : son réticule aussi. */
+.accueil:has(.bl-plein) .reticule { opacity: 0; }
 @media (max-width: 599px) { .barre-mission-fil.bl-plein { left: 12px; right: 12px; } }
 /* Le nœud ouvert depuis la barre de lecture, dans un canevas en lecture : son halo blanc respire, quel que soit son état. */
 .em-editeur-lecture .react-flow__node.selected .em-tuile { animation: em-respire-tuile 1.6s ease-in-out infinite; }
@@ -1998,20 +2008,20 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
   backdrop-filter: blur(14px); font-family: 'Inter', system-ui, sans-serif; transition: border-color 0.3s, box-shadow 0.3s;
 }
 /* Le halo autour de la barre : vert la mission a réussi, ambre un avertissement qui n'arrête rien, rouge ce qui l'a arrêtée. */
-.bl-barre.bl-halo-succes { border-color: rgb(61 255 138 / 0.7); box-shadow: 0 0 0 1px rgb(61 255 138 / 0.35), 0 0 30px rgb(61 255 138 / 0.3), 0 14px 44px rgb(0 0 0 / 0.55); }
-.bl-barre.bl-halo-attention { border-color: rgb(255 176 46 / 0.75); box-shadow: 0 0 0 1px rgb(255 176 46 / 0.35), 0 0 30px rgb(255 176 46 / 0.3), 0 14px 44px rgb(0 0 0 / 0.55); }
-.bl-barre.bl-halo-erreur {
+:is(.bl-barre, .bd-panneau).bl-halo-succes { border-color: rgb(61 255 138 / 0.7); box-shadow: 0 0 0 1px rgb(61 255 138 / 0.35), 0 0 30px rgb(61 255 138 / 0.3), 0 14px 44px rgb(0 0 0 / 0.55); }
+:is(.bl-barre, .bd-panneau).bl-halo-attention { border-color: rgb(255 176 46 / 0.75); box-shadow: 0 0 0 1px rgb(255 176 46 / 0.35), 0 0 30px rgb(255 176 46 / 0.3), 0 14px 44px rgb(0 0 0 / 0.55); }
+:is(.bl-barre, .bd-panneau).bl-halo-erreur {
   border-color: rgb(255 45 58 / 0.8); box-shadow: 0 0 0 1px rgb(255 45 58 / 0.4), 0 0 34px rgb(255 45 58 / 0.4), 0 14px 44px rgb(0 0 0 / 0.55);
   animation: bl-halo-erreur 0.45s ease-out 2;
 }
 @keyframes bl-halo-erreur { 50% { box-shadow: 0 0 0 2px rgb(255 45 58 / 0.8), 0 0 60px rgb(255 45 58 / 0.7), 0 14px 44px rgb(0 0 0 / 0.55); } }
 /* En pause, un halo blanc qui respire lentement : la mission attend, rien n'est en faute. */
-.bl-barre.bl-halo-pause { border-color: rgb(233 238 247 / 0.55); animation: bl-halo-pause 2.4s ease-in-out infinite; }
+:is(.bl-barre, .bd-panneau).bl-halo-pause { border-color: rgb(233 238 247 / 0.55); animation: bl-halo-pause 2.4s ease-in-out infinite; }
 @keyframes bl-halo-pause {
   0%, 100% { box-shadow: 0 0 0 1px rgb(233 238 247 / 0.15), 0 0 14px rgb(233 238 247 / 0.12), 0 14px 44px rgb(0 0 0 / 0.55); }
   50% { box-shadow: 0 0 0 1px rgb(233 238 247 / 0.45), 0 0 34px rgb(233 238 247 / 0.38), 0 14px 44px rgb(0 0 0 / 0.55); }
 }
-@media (prefers-reduced-motion: reduce) { .bl-barre.bl-halo-pause { animation: none; box-shadow: 0 0 0 1px rgb(233 238 247 / 0.35), 0 0 24px rgb(233 238 247 / 0.25), 0 14px 44px rgb(0 0 0 / 0.55); } }
+@media (prefers-reduced-motion: reduce) { :is(.bl-barre, .bd-panneau).bl-halo-pause { animation: none; box-shadow: 0 0 0 1px rgb(233 238 247 / 0.35), 0 0 24px rgb(233 238 247 / 0.25), 0 14px 44px rgb(0 0 0 / 0.55); } }
 .bl-pile { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .bl-pile > .bl-barre { align-self: stretch; }
 .bl-message {
@@ -2156,7 +2166,6 @@ button.bl-nom:hover { text-decoration: underline; text-underline-offset: 3px; }
 
 .bd-scene { max-width: 1200px; padding: 14px 0 28px; }
 .bd-points { margin-top: 6px; }
-.bl-pile > .bd-panneau { align-self: stretch; }
 .bd-panneau {
   position: relative; display: flex; flex-direction: column; height: clamp(320px, 52vh, 480px); overflow: hidden; border-radius: 18px;
   background: rgb(10 13 17 / 0.86); border: 1px solid rgb(255 255 255 / 0.09); box-shadow: 0 14px 44px rgb(0 0 0 / 0.55);

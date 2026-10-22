@@ -85,17 +85,57 @@ function Frise({ etapes, totalS, m, primitives, etroite }: { etapes: EtapeFrise[
 
 /**
  * Les étapes du tour en cours de la mission qui joue, pour la frise : chacune depuis son début jusqu'au début de la
- * suivante, celle en cours jusqu'à maintenant. Sans heures de début, pas de frise.
+ * suivante, celle en cours jusqu'à `maintenant` (temps joué, s). Sans heures de début, pas de frise.
  */
-function etapesEnDirect(x: Execution): { etapes: EtapeFrise[]; totalS: number } | null {
+function etapesEnDirect(x: Execution, maintenant: number): EtapeFrise[] | null {
   const joues = x.joues ?? [];
   if (!joues.length || joues.some((j) => j.debutS === undefined)) return null;
   const t0 = joues[0].debutS!;
-  const etapes = joues.map((j, i) => {
+  return joues.map((j, i) => {
     const debutS = j.debutS! - t0;
-    return { noeud: j.noeud, debutS, dureeS: Math.max(0, (joues[i + 1]?.debutS ?? x.dureeS) - t0 - debutS), issue: j.issue, cause: null };
+    return { noeud: j.noeud, debutS, dureeS: Math.max(0, (joues[i + 1]?.debutS ?? maintenant) - t0 - debutS), issue: j.issue, cause: null };
   });
-  return { etapes, totalS: x.dureeS - t0 };
+}
+
+/** L'échelle de la frise en direct prend cette avance, et s'élargit quand l'étape en cours en a mangé la plupart. */
+const AVANCE_ECHELLE = 1.4;
+const BORD_ECHELLE = 0.85;
+/** La part du chemin vers la nouvelle échelle faite à chaque image : elle glisse au lieu de sauter. */
+const GLISSE_ECHELLE = 0.08;
+
+/**
+ * La frise de la mission qui joue, fluide : entre deux relectures, son horloge avance à chaque image (pas en pause, et
+ * jamais à reculons), l'étape en cours s'allonge en continu, et l'échelle glisse vers sa nouvelle largeur au lieu de
+ * sauter à chaque seconde.
+ */
+function FriseDirecte({ x, m, primitives }: { x: Execution; m: Mission; primitives: Primitive[] }) {
+  const [vue, setVue] = useState({ t: x.dureeS, echelle: 0 });
+  const recu = useRef({ x, a: 0 });
+  const horloge = useRef({ t: x.dureeS, cible: 0, montree: 0, tour: x.repetition });
+  useEffect(() => { recu.current = { x, a: performance.now() }; }, [x]);
+  useEffect(() => {
+    let id = 0;
+    const image = () => {
+      const { x: e, a } = recu.current;
+      const h = horloge.current;
+      const t0 = e.joues?.[0]?.debutS ?? 0;
+      if (h.tour !== e.repetition) Object.assign(h, { t: e.dureeS, cible: 0, montree: 0, tour: e.repetition });
+      h.t = e.enPause ? e.dureeS : Math.max(h.t, e.dureeS + (performance.now() - a) / 1000);
+      if (h.t - t0 > h.cible * BORD_ECHELLE) h.cible = Math.max(30, (h.t - t0) * AVANCE_ECHELLE);
+      h.montree = h.montree ? h.montree + (h.cible - h.montree) * GLISSE_ECHELLE : h.cible;
+      setVue({ t: h.t, echelle: h.montree });
+      id = requestAnimationFrame(image);
+    };
+    id = requestAnimationFrame(image);
+    return () => cancelAnimationFrame(id);
+  }, []);
+  const etapes = etapesEnDirect(x, vue.t);
+  if (!etapes) return <p className="ex-rien">Le robot ne donne pas encore l’heure de ses étapes : pas de frise en direct.</p>;
+  return (
+    <DefileBas compte={etapes.length}>
+      <Frise etapes={etapes} totalS={vue.echelle || 30} m={m} primitives={primitives} etroite />
+    </DefileBas>
+  );
 }
 
 /** Le signe d'une ligne du journal : son trait d'arbre (début et fin d'étape), et son icône. */
@@ -234,11 +274,7 @@ export function OngletExecutions({ m, primitives, runs, execution, journal, voir
               <section>
                 <h3 className="ex-titre">Les étapes
                   {enDirect.repetitions > 1 && <span className="ex-titre-tour"> · tour {enDirect.repetition}/{enDirect.repetitions}</span>}</h3>
-                {(() => {
-                  const f = etapesEnDirect(enDirect);
-                  return f ? <DefileBas compte={f.etapes.length}><Frise etapes={f.etapes} totalS={f.totalS} m={m} primitives={primitives} etroite /></DefileBas>
-                    : <p className="ex-rien">Le robot ne donne pas encore l’heure de ses étapes : pas de frise en direct.</p>;
-                })()}
+                <FriseDirecte x={enDirect} m={m} primitives={primitives} />
               </section>
             </div>
           </>
