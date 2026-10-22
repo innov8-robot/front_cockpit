@@ -120,7 +120,8 @@ Le fil : le graphe de la mission tel que l'éditeur le dessine, réduit dans la 
 sens jusqu'à l'étape suivante, qui s'ouvre à son arrivée avec son nom. Quand les étapes s'enchaînent vite (une entrée
 puis une sortie de boucle, une étape sautée entre deux relectures), la caméra parcourt dans l'ordre chaque fil
 emprunté, et va d'autant plus vite qu'il lui en reste et que le rythme est rapide. En pause, arrêtée ou finie, la
-barre se dégage d'un glissé vers le haut ou vers la droite, comme une notification ; en pause, elle revient quand la
+barre se dégage d'un glissé vers le haut ou vers la droite, comme une notification : le premier sens du geste fixe
+l'axe (jamais en diagonale), et seule la barre se glisse, pas le workflow déplié ; en pause, elle revient quand la
 mission reprend. Aucune durée n'est prédite : on ne sait pas
 combien de temps une étape va tourner. Le système de la barre : blanc ce qui vit, gris ce qui est suspendu (la pause
 n'est pas une alerte : un halo blanc qui respire), vert ce qui a réussi, ambre ce qui n'arrête rien mais demande de l'attention, rouge ce qui a
@@ -143,7 +144,7 @@ Dans la barre de l'accueil ; banc d'essai sur la mission simulée : **`#/essai/b
    rouge plein et son anneau se remplit ; au bout, la mission s'arrête (`arreterMission`) et la barre prend le halo
    rouge, « Arrêtée par l'opérateur à « … » », ■ rouge sur l'étape, jusqu'à l'acquittement ou un glissé. Un appui trop
    court affiche « Maintenir pour arrêter ».
-2. **Le workflow déplié.** Un clic sur la barre déplie, dessous, la mission dans le canevas de l'éditeur, en lecture :
+2. **Le workflow déplié.** Un clic sur la barre déplie, en plein écran, la mission dans le canevas de l'éditeur, en lecture :
    les états du tour, les fils pris, le temps de l'étape sous sa tuile, la vue qui suit l'étape en cours. La croix, ou
    un second clic, le replie ; « Voir l'exécution » ouvre l'onglet Exécutions. Un clic sur une étape du fil, lui, ouvre
    l'exécution sur cette étape. Le déplié ne s'ouvre que sur l'accueil : un écran ouvert par-dessus le replie.

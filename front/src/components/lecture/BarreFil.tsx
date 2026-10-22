@@ -150,7 +150,7 @@ export function BarreFil({ l, pause, acquitter, ouvrir, ouvrirEtape, arreter, de
   const e = ETATS[l.etat];
   const halo = l.message?.niveau === 'erreur' ? 'erreur' : enPause ? 'pause' : l.message?.niveau ?? null;
   const degageable = Boolean(degager) && (enPause || fini);
-  const { ref: pile, ...gestes } = useGlisser(degageable, degager);
+  const { ref: pile, ...gestes } = useGlisser(degageable, degager, '.bl-barre');
   return (
     <div className={`bl-pile ${degageable ? 'bl-degageable' : ''}`} ref={pile} {...gestes}>
       <div className={`bl-barre bl-etat-${l.etat} ${halo ? `bl-halo-${halo}` : ''} ${ouvrir ? 'bl-cliquable' : ''}`} role="toolbar"

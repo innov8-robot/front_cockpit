@@ -1121,6 +1121,11 @@ a.hud-jauges:hover .hud-corps { color: #ff5a64; }
 .avec-barre:has(.barre-mission-fil) .overlay-cote, .avec-barre:has(.barre-mission-fil) .overlay-grand { top: calc(118px + env(safe-area-inset-top)); }
 @media (max-width: 1499px) { .accueil:has(.barre-mission-fil) .hud-calques { top: calc(118px + env(safe-area-inset-top)); } }
 @media (max-width: 599px) { .barre-mission-fil { width: calc(100% - 24px); } }
+/* Le workflow déplié prend tout l'écran : la barre s'élargit, le canevas descend jusqu'à la barre du robot. */
+.barre-mission-fil.bl-plein { left: 24px; right: 24px; width: auto; transform: none; bottom: calc(98px + env(safe-area-inset-bottom)); }
+.bl-plein .bl-pile { height: 100%; }
+.bl-plein .bd-panneau { flex: 1; height: auto; min-height: 0; }
+@media (max-width: 599px) { .barre-mission-fil.bl-plein { left: 12px; right: 12px; } }
 /* Le nœud ouvert depuis la barre de lecture, dans un canevas en lecture : son halo blanc respire, quel que soit son état. */
 .em-editeur-lecture .react-flow__node.selected .em-tuile { animation: em-respire-tuile 1.6s ease-in-out infinite; }
 /* L'éditeur d'une mission la montre déjà en direct : la barre s'efface, l'éditeur prend sa place en haut. */
